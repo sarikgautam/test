@@ -69,7 +69,7 @@ export function UpcomingMatches() {
                 className="group relative bg-card rounded-xl border border-border overflow-hidden card-hover animate-fade-in-up"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gold via-cricket-green to-gold" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-primary" />
                 
                 <div className="p-6">
                   {/* Match Number */}

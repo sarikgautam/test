@@ -6,10 +6,10 @@ export function RegistrationCTA() {
   return (
     <section className="py-16 md:py-24 relative overflow-hidden">
       {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy-dark to-navy" />
-      <div className="absolute inset-0 opacity-30">
+      <div className="absolute inset-0 bg-secondary" />
+      <div className="absolute inset-0 opacity-30 dark:opacity-30">
         <div className="absolute top-0 left-1/3 w-96 h-96 bg-primary/30 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/3 w-80 h-80 bg-cricket-green/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/3 w-80 h-80 bg-accent/30 rounded-full blur-3xl" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">

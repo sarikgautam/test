@@ -6,10 +6,10 @@ export function HeroSection() {
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
       {/* Background Effects */}
-      <div className="absolute inset-0 bg-gradient-to-b from-navy via-navy-dark to-background" />
-      <div className="absolute inset-0 opacity-30">
+      <div className="absolute inset-0 bg-gradient-to-b from-secondary via-background to-background" />
+      <div className="absolute inset-0 opacity-30 dark:opacity-30">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-cricket-green/20 rounded-full blur-3xl animate-pulse-slow delay-500" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/20 rounded-full blur-3xl animate-pulse-slow delay-500" />
       </div>
       
       {/* Cricket Ball Pattern */}
