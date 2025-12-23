@@ -184,16 +184,22 @@ export type Database = {
       }
       players: {
         Row: {
+          address: string | null
           auction_status: Database["public"]["Enums"]["player_auction_status"]
           base_price: number
           batting_style: string | null
           bowling_style: string | null
           created_at: string
+          current_team: string | null
           date_of_birth: string | null
           email: string
+          emergency_contact_email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           full_name: string
           id: string
           jersey_number: number | null
+          payment_receipt_url: string | null
           phone: string | null
           photo_url: string | null
           role: Database["public"]["Enums"]["player_role"]
@@ -202,16 +208,22 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
           auction_status?: Database["public"]["Enums"]["player_auction_status"]
           base_price?: number
           batting_style?: string | null
           bowling_style?: string | null
           created_at?: string
+          current_team?: string | null
           date_of_birth?: string | null
           email: string
+          emergency_contact_email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name: string
           id?: string
           jersey_number?: number | null
+          payment_receipt_url?: string | null
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["player_role"]
@@ -220,16 +232,22 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
           auction_status?: Database["public"]["Enums"]["player_auction_status"]
           base_price?: number
           batting_style?: string | null
           bowling_style?: string | null
           created_at?: string
+          current_team?: string | null
           date_of_birth?: string | null
           email?: string
+          emergency_contact_email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name?: string
           id?: string
           jersey_number?: number | null
+          payment_receipt_url?: string | null
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["player_role"]
@@ -351,6 +369,7 @@ export type Database = {
       tournament_settings: {
         Row: {
           auction_date: string | null
+          bank_details: string | null
           countdown_description: string | null
           created_at: string
           end_date: string | null
@@ -365,6 +384,7 @@ export type Database = {
         }
         Insert: {
           auction_date?: string | null
+          bank_details?: string | null
           countdown_description?: string | null
           created_at?: string
           end_date?: string | null
@@ -379,6 +399,7 @@ export type Database = {
         }
         Update: {
           auction_date?: string | null
+          bank_details?: string | null
           countdown_description?: string | null
           created_at?: string
           end_date?: string | null
