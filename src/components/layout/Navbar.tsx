@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Trophy, Users, Calendar, BarChart3, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import gcnplLogo from "@/assets/gcnpl-logo.png";
 
 const navLinks = [
   { href: "/", label: "Home", icon: Trophy },
@@ -23,9 +24,11 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-gold to-gold-dark flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-              <Trophy className="w-5 h-5 md:w-6 md:h-6 text-navy-dark" />
-            </div>
+            <img 
+              src={gcnplLogo} 
+              alt="GCNPL Logo" 
+              className="w-10 h-10 md:w-12 md:h-12 object-contain group-hover:scale-105 transition-transform duration-300"
+            />
             <div className="hidden sm:block">
               <h1 className="font-display text-xl md:text-2xl tracking-wide text-foreground">GCNPL</h1>
               <p className="text-[10px] md:text-xs text-muted-foreground -mt-1">Gold Coast Nepalese Premier League</p>
