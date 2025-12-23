@@ -83,7 +83,7 @@ export function StandingsPreview() {
                         </div>
                       </td>
                       <td className="text-center py-4 px-4 text-foreground">{standing.matches_played}</td>
-                      <td className="text-center py-4 px-4 text-cricket-green font-medium">{standing.wins}</td>
+                      <td className="text-center py-4 px-4 text-primary font-medium">{standing.wins}</td>
                       <td className="text-center py-4 px-4 text-destructive font-medium">{standing.losses}</td>
                       <td className="text-center py-4 px-4 text-muted-foreground">
                         {Number(standing.net_run_rate) >= 0 ? "+" : ""}
