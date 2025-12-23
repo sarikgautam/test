@@ -1,5 +1,6 @@
 import { Layout } from "@/components/layout/Layout";
 import { HeroSection } from "@/components/home/HeroSection";
+import { CountdownSection } from "@/components/home/CountdownSection";
 import { UpcomingMatches } from "@/components/home/UpcomingMatches";
 import { TeamsShowcase } from "@/components/home/TeamsShowcase";
 import { StandingsPreview } from "@/components/home/StandingsPreview";
@@ -9,6 +10,7 @@ const Index = () => {
   return (
     <Layout>
       <HeroSection />
+      <CountdownSection />
       <UpcomingMatches />
       <TeamsShowcase />
       <StandingsPreview />
