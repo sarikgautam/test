@@ -15,13 +15,12 @@ export default {
   	extend: {
   		fontFamily: {
   			sans: [
-  				'Source Sans Pro',
+  				'Roboto',
   				'ui-sans-serif',
   				'system-ui',
   				'-apple-system',
   				'BlinkMacSystemFont',
   				'Segoe UI',
-  				'Roboto',
   				'Helvetica Neue',
   				'Arial',
   				'Noto Sans',
@@ -33,7 +32,7 @@ export default {
   				'sans-serif'
   			],
   			serif: [
-  				'Source Serif Pro',
+  				'Libre Caslon Text',
   				'ui-serif',
   				'Georgia',
   				'Cambria',
@@ -42,7 +41,7 @@ export default {
   				'serif'
   			],
   			mono: [
-  				'Source Code Pro',
+  				'Roboto Mono',
   				'ui-monospace',
   				'SFMono-Regular',
   				'Menlo',
@@ -194,8 +193,11 @@ export default {
   			'glow-pulse': 'glow-pulse 2s ease-in-out infinite'
   		},
   		backgroundImage: {
+  			'0': 0,
+  			'60': 60,
   			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-  			'cricket-pattern': 'url(\\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23fbbf24' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\\")'
+  			'cricket-pattern': 'url(\\\\"data:image/svg+xml,%3Csvg width=',
+  			' xmlns=': 'http'
   		},
   		boxShadow: {
   			'2xs': 'var(--shadow-2xs)',
