@@ -1,0 +1,239 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Save, Settings } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
+
+type TournamentSettings = Database["public"]["Tables"]["tournament_settings"]["Row"];
+
+export default function SettingsAdmin() {
+  const [formData, setFormData] = useState<Partial<TournamentSettings>>({});
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["tournament-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tournament_settings")
+        .select("*")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      setFormData(settings);
+    }
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: Partial<TournamentSettings>) => {
+      if (settings?.id) {
+        const { error } = await supabase
+          .from("tournament_settings")
+          .update({
+            tournament_name: data.tournament_name,
+            season: data.season,
+            start_date: data.start_date,
+            end_date: data.end_date,
+            auction_date: data.auction_date,
+            registration_open: data.registration_open,
+            min_players_per_team: data.min_players_per_team,
+            max_players_per_team: data.max_players_per_team,
+          })
+          .eq("id", settings.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("tournament_settings").insert({
+          tournament_name: data.tournament_name || "Gold Coast Nepalese Premier League",
+          season: data.season || "2025",
+          start_date: data.start_date,
+          end_date: data.end_date,
+          auction_date: data.auction_date,
+          registration_open: data.registration_open ?? true,
+          min_players_per_team: data.min_players_per_team || 11,
+          max_players_per_team: data.max_players_per_team || 15,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tournament-settings"] });
+      toast({ title: "Settings saved successfully" });
+    },
+    onError: (error) => {
+      toast({ title: "Error saving settings", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveMutation.mutate(formData);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-12 w-64" />
+        <Skeleton className="h-96 rounded-lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display text-3xl text-gradient-gold">Tournament Settings</h1>
+        <p className="text-muted-foreground mt-1">Configure tournament parameters</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              General Settings
+            </CardTitle>
+            <CardDescription>Basic tournament information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tournament_name">Tournament Name</Label>
+                <Input
+                  id="tournament_name"
+                  value={formData.tournament_name || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tournament_name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="season">Season</Label>
+                <Input
+                  id="season"
+                  value={formData.season || ""}
+                  onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start_date">Start Date</Label>
+                <Input
+                  id="start_date"
+                  type="date"
+                  value={formData.start_date || ""}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_date">End Date</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={formData.end_date || ""}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="auction_date">Auction Date</Label>
+                <Input
+                  id="auction_date"
+                  type="datetime-local"
+                  value={formData.auction_date?.slice(0, 16) || ""}
+                  onChange={(e) => setFormData({ ...formData, auction_date: e.target.value })}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle>Team Configuration</CardTitle>
+            <CardDescription>Player limits per team</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="min_players">Minimum Players per Team</Label>
+                <Input
+                  id="min_players"
+                  type="number"
+                  value={formData.min_players_per_team || 11}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      min_players_per_team: parseInt(e.target.value),
+                    })
+                  }
+                  min={1}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max_players">Maximum Players per Team</Label>
+                <Input
+                  id="max_players"
+                  type="number"
+                  value={formData.max_players_per_team || 15}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      max_players_per_team: parseInt(e.target.value),
+                    })
+                  }
+                  min={1}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle>Registration</CardTitle>
+            <CardDescription>Control player registration</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="registration_open" className="text-base">
+                  Registration Open
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow new players to register for the auction
+                </p>
+              </div>
+              <Switch
+                id="registration_open"
+                checked={formData.registration_open ?? true}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, registration_open: checked })
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button type="submit" disabled={saveMutation.isPending}>
+            <Save className="w-4 h-4 mr-2" />
+            Save Settings
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
