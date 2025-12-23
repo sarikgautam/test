@@ -1,5 +1,6 @@
-import { Trophy, Mail, MapPin, Facebook, Instagram, Youtube } from "lucide-react";
+import { Mail, MapPin, Facebook, Instagram, Youtube } from "lucide-react";
 import { Link } from "react-router-dom";
+import gcnplLogo from "@/assets/gcnpl-logo.png";
 
 export function Footer() {
   return (
@@ -9,11 +10,13 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold to-gold-dark flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-navy-dark" />
-              </div>
+              <img 
+                src={gcnplLogo} 
+                alt="GCNPL Logo" 
+                className="w-12 h-12 object-contain"
+              />
               <div>
-                <h3 className="font-display text-2xl tracking-wide">GCNPL</h3>
+                <h3 className="font-display text-2xl tracking-wide text-foreground">GCNPL</h3>
                 <p className="text-xs text-muted-foreground">Gold Coast Nepalese Premier League</p>
               </div>
             </Link>
