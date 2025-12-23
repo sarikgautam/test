@@ -351,6 +351,7 @@ export type Database = {
       tournament_settings: {
         Row: {
           auction_date: string | null
+          countdown_description: string | null
           created_at: string
           end_date: string | null
           id: string
@@ -364,6 +365,7 @@ export type Database = {
         }
         Insert: {
           auction_date?: string | null
+          countdown_description?: string | null
           created_at?: string
           end_date?: string | null
           id?: string
@@ -377,6 +379,7 @@ export type Database = {
         }
         Update: {
           auction_date?: string | null
+          countdown_description?: string | null
           created_at?: string
           end_date?: string | null
           id?: string

@@ -8,10 +8,14 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Save, Settings } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Save, Settings, Clock } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-type TournamentSettings = Database["public"]["Tables"]["tournament_settings"]["Row"];
+type TournamentSettingsRow = Database["public"]["Tables"]["tournament_settings"]["Row"];
+type TournamentSettings = TournamentSettingsRow & { countdown_description?: string };
+
+
 
 export default function SettingsAdmin() {
   const [formData, setFormData] = useState<Partial<TournamentSettings>>({});
@@ -38,19 +42,22 @@ export default function SettingsAdmin() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<TournamentSettings>) => {
+      const updateData = {
+        tournament_name: data.tournament_name,
+        season: data.season,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        auction_date: data.auction_date,
+        registration_open: data.registration_open,
+        min_players_per_team: data.min_players_per_team,
+        max_players_per_team: data.max_players_per_team,
+        countdown_description: data.countdown_description,
+      };
+      
       if (settings?.id) {
         const { error } = await supabase
           .from("tournament_settings")
-          .update({
-            tournament_name: data.tournament_name,
-            season: data.season,
-            start_date: data.start_date,
-            end_date: data.end_date,
-            auction_date: data.auction_date,
-            registration_open: data.registration_open,
-            min_players_per_team: data.min_players_per_team,
-            max_players_per_team: data.max_players_per_team,
-          })
+          .update(updateData as any)
           .eq("id", settings.id);
         if (error) throw error;
       } else {
@@ -63,7 +70,8 @@ export default function SettingsAdmin() {
           registration_open: data.registration_open ?? true,
           min_players_per_team: data.min_players_per_team || 11,
           max_players_per_team: data.max_players_per_team || 15,
-        });
+          countdown_description: data.countdown_description,
+        } as any);
         if (error) throw error;
       }
     },
@@ -156,6 +164,33 @@ export default function SettingsAdmin() {
                   onChange={(e) => setFormData({ ...formData, auction_date: e.target.value })}
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Countdown Settings
+            </CardTitle>
+            <CardDescription>Configure the countdown timer on the home page</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="countdown_description">Countdown Description</Label>
+              <Textarea
+                id="countdown_description"
+                placeholder="Get ready for the most exciting cricket tournament!"
+                value={(formData as any).countdown_description || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, countdown_description: e.target.value })
+                }
+                rows={3}
+              />
+              <p className="text-sm text-muted-foreground">
+                This message will appear above the countdown timer on the home page
+              </p>
             </div>
           </CardContent>
         </Card>
