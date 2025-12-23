@@ -179,7 +179,7 @@ export default function AuctionAdmin() {
                   </div>
                   <p className="text-xs text-muted-foreground mb-1">Remaining</p>
                   <p className="font-bold text-sm">
-                    ₹{(team.remaining_budget / 100000).toFixed(1)}L
+                    ${(team.remaining_budget / 1000).toFixed(0)}K
                   </p>
                 </CardContent>
               </Card>
@@ -225,7 +225,7 @@ export default function AuctionAdmin() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Base Price</span>
                     <span className="font-bold text-primary">
-                      ₹{player.base_price.toLocaleString()}
+                      ${player.base_price.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export default function AuctionAdmin() {
                   <h3 className="font-bold text-lg">{selectedPlayer.full_name}</h3>
                   <Badge variant="secondary">{roleLabels[selectedPlayer.role]}</Badge>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Base Price: ₹{selectedPlayer.base_price.toLocaleString()}
+                    Base Price: ${selectedPlayer.base_price.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -275,7 +275,7 @@ export default function AuctionAdmin() {
                           value={team.id}
                           disabled={team.remaining_budget < parseInt(soldPrice || "0")}
                         >
-                          {team.name} (₹{(team.remaining_budget / 100000).toFixed(1)}L left)
+                          {team.name} (${(team.remaining_budget / 1000).toFixed(0)}K left)
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -283,7 +283,7 @@ export default function AuctionAdmin() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Sold Price (₹)</Label>
+                  <Label>Sold Price ($)</Label>
                   <Input
                     type="number"
                     value={soldPrice}

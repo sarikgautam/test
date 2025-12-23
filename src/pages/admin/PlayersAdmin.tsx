@@ -186,7 +186,7 @@ export default function PlayersAdmin() {
                   <TableCell className="font-medium">{player.full_name}</TableCell>
                   <TableCell className="text-muted-foreground">{player.email}</TableCell>
                   <TableCell>{roleLabels[player.role]}</TableCell>
-                  <TableCell>₹{player.base_price.toLocaleString()}</TableCell>
+                  <TableCell>${player.base_price.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge variant={statusVariants[player.auction_status]}>
                       {player.auction_status}
@@ -194,7 +194,7 @@ export default function PlayersAdmin() {
                   </TableCell>
                   <TableCell>{getTeamName(player.team_id)}</TableCell>
                   <TableCell>
-                    {player.sold_price ? `₹${player.sold_price.toLocaleString()}` : "-"}
+                    {player.sold_price ? `$${player.sold_price.toLocaleString()}` : "-"}
                   </TableCell>
                   <TableCell>
                     <Button
