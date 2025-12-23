@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Teams from "./pages/Teams";
@@ -26,34 +27,36 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/teams" element={<Teams />} />
-            <Route path="/fixtures" element={<Fixtures />} />
-            <Route path="/standings" element={<Standings />} />
-            <Route path="/stats" element={<Stats />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="teams" element={<TeamsAdmin />} />
-              <Route path="players" element={<PlayersAdmin />} />
-              <Route path="matches" element={<MatchesAdmin />} />
-              <Route path="standings" element={<StandingsAdmin />} />
-              <Route path="stats" element={<StatsAdmin />} />
-              <Route path="auction" element={<AuctionAdmin />} />
-              <Route path="settings" element={<SettingsAdmin />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/teams" element={<Teams />} />
+              <Route path="/fixtures" element={<Fixtures />} />
+              <Route path="/standings" element={<Standings />} />
+              <Route path="/stats" element={<Stats />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="teams" element={<TeamsAdmin />} />
+                <Route path="players" element={<PlayersAdmin />} />
+                <Route path="matches" element={<MatchesAdmin />} />
+                <Route path="standings" element={<StandingsAdmin />} />
+                <Route path="stats" element={<StatsAdmin />} />
+                <Route path="auction" element={<AuctionAdmin />} />
+                <Route path="settings" element={<SettingsAdmin />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

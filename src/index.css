@@ -6,7 +6,71 @@
 
 @layer base {
   :root {
-    /* Gold Coast Nepalese Premier League Theme - Green */
+    /* Gold Coast Nepalese Premier League Theme - Light Mode */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 152 76% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 94%;
+    --muted-foreground: 220 15% 45%;
+
+    --accent: 168 84% 35%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 85%;
+    --input: 214 32% 91%;
+    --ring: 152 76% 40%;
+
+    --radius: 0.75rem;
+
+    /* Custom Colors */
+    --emerald: 152 76% 40%;
+    --emerald-dark: 152 76% 30%;
+    --emerald-light: 152 76% 55%;
+    --navy: 222 47% 11%;
+    --navy-dark: 222 47% 6%;
+    --navy-light: 222 30% 20%;
+    --cricket-green: 160 84% 35%;
+    --cricket-green-dark: 160 84% 25%;
+    --nepal-red: 0 76% 50%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(152, 76%, 40%) 0%, hsl(168, 76%, 35%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(210, 40%, 98%) 0%, hsl(210, 40%, 94%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0, 0%, 100%) 0%, hsl(210, 40%, 98%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(160, 84%, 35%) 0%, hsl(160, 84%, 25%) 100%);
+
+    /* Shadows */
+    --shadow-primary: 0 4px 30px -5px hsl(152, 76%, 40%, 0.2);
+    --shadow-card: 0 8px 32px -8px hsl(222, 47%, 11%, 0.1);
+    --shadow-glow: 0 0 40px hsl(152, 76%, 40%, 0.15);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 152 76% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 94%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 85%;
+    --sidebar-ring: 152 76% 40%;
+  }
+
+  .dark {
+    /* Gold Coast Nepalese Premier League Theme - Dark Mode */
     --background: 222 47% 6%;
     --foreground: 150 40% 96%;
 
@@ -34,8 +98,6 @@
     --border: 222 30% 20%;
     --input: 222 30% 18%;
     --ring: 152 76% 45%;
-
-    --radius: 0.75rem;
 
     /* Custom Colors */
     --emerald: 152 76% 45%;
@@ -67,28 +129,6 @@
     --sidebar-accent-foreground: 150 40% 96%;
     --sidebar-border: 222 30% 20%;
     --sidebar-ring: 152 76% 45%;
-  }
-
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 150 40% 96%;
-    --card: 222 40% 10%;
-    --card-foreground: 150 40% 96%;
-    --popover: 222 40% 10%;
-    --popover-foreground: 150 40% 96%;
-    --primary: 152 76% 45%;
-    --primary-foreground: 222 47% 6%;
-    --secondary: 222 30% 18%;
-    --secondary-foreground: 150 40% 96%;
-    --muted: 222 25% 15%;
-    --muted-foreground: 220 15% 60%;
-    --accent: 168 84% 39%;
-    --accent-foreground: 222 47% 6%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 150 40% 96%;
-    --border: 222 30% 20%;
-    --input: 222 30% 18%;
-    --ring: 152 76% 45%;
   }
 }
 

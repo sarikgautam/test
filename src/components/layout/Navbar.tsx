@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Trophy, Users, Calendar, BarChart3, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import gcnplLogo from "@/assets/gcnpl-logo.png";
 
 const navLinks = [
@@ -58,20 +59,24 @@ export function Navbar() {
             })}
           </div>
 
-          {/* CTA Button */}
-          <div className="hidden lg:block">
+          {/* CTA Button & Theme Toggle */}
+          <div className="hidden lg:flex items-center gap-2">
+            <ThemeToggle />
             <Button variant="hero" size="lg" asChild>
               <Link to="/register">Join Auction</Link>
             </Button>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden p-2 rounded-lg hover:bg-secondary transition-colors"
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* Mobile Menu Button & Theme Toggle */}
+          <div className="flex lg:hidden items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            >
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
