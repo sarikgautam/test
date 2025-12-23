@@ -286,10 +286,10 @@ export default function TeamsAdmin() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    ₹{team.budget.toLocaleString()}
+                    ${team.budget.toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    ₹{team.remaining_budget.toLocaleString()}
+                    ${team.remaining_budget.toLocaleString()}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
