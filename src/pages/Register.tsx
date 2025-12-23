@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, UserPlus, Loader2 } from "lucide-react";
-
 const registerSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
   email: z.string().email("Invalid email address"),
@@ -20,23 +19,34 @@ const registerSchema = z.object({
   role: z.enum(["batsman", "bowler", "all_rounder", "wicket_keeper"]),
   batting_style: z.string().optional(),
   bowling_style: z.string().optional(),
-  base_price: z.number().min(5000).default(10000),
+  base_price: z.number().min(5000).default(10000)
 });
-
 type RegisterFormData = z.infer<typeof registerSchema>;
-
 const Register = () => {
   const [isSuccess, setIsSuccess] = useState(false);
-  const { toast } = useToast();
-
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<RegisterFormData>({
+  const {
+    toast
+  } = useToast();
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: {
+      errors
+    }
+  } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: "batsman", base_price: 10000 },
+    defaultValues: {
+      role: "batsman",
+      base_price: 10000
+    }
   });
-
   const mutation = useMutation({
     mutationFn: async (data: RegisterFormData) => {
-      const { error } = await supabase.from("players").insert([{
+      const {
+        error
+      } = await supabase.from("players").insert([{
         full_name: data.full_name,
         email: data.email,
         phone: data.phone || null,
@@ -45,22 +55,27 @@ const Register = () => {
         batting_style: data.batting_style || null,
         bowling_style: data.bowling_style || null,
         base_price: data.base_price,
-        auction_status: "registered",
+        auction_status: "registered"
       }]);
       if (error) throw error;
     },
     onSuccess: () => {
       setIsSuccess(true);
-      toast({ title: "Registration Successful!", description: "You have been added to the auction pool." });
+      toast({
+        title: "Registration Successful!",
+        description: "You have been added to the auction pool."
+      });
     },
     onError: (error: any) => {
-      toast({ title: "Registration Failed", description: error.message || "Please try again.", variant: "destructive" });
-    },
+      toast({
+        title: "Registration Failed",
+        description: error.message || "Please try again.",
+        variant: "destructive"
+      });
+    }
   });
-
   if (isSuccess) {
-    return (
-      <Layout>
+    return <Layout>
         <div className="min-h-[80vh] flex items-center justify-center px-4">
           <div className="text-center max-w-md animate-fade-in-up">
             <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
@@ -71,12 +86,9 @@ const Register = () => {
             <Button variant="hero" size="lg" onClick={() => setIsSuccess(false)}>Register Another Player</Button>
           </div>
         </div>
-      </Layout>
-    );
+      </Layout>;
   }
-
-  return (
-    <Layout>
+  return <Layout>
       <div className="min-h-screen py-12 px-4">
         <div className="container max-w-2xl mx-auto">
           <div className="text-center mb-10">
@@ -85,12 +97,12 @@ const Register = () => {
               <span className="text-sm font-medium text-primary">Player Registration</span>
             </div>
             <h1 className="font-display text-4xl md:text-5xl tracking-wide mb-4">
-              Join the <span className="text-gradient-gold">Auction</span>
+              Join the <span className="text-gradient-gold bg-secondary-foreground text-primary-foreground">Auction</span>
             </h1>
             <p className="text-muted-foreground">Register to be part of GCNPL Season 2025</p>
           </div>
 
-          <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-6 bg-card rounded-xl border border-border p-6 md:p-8">
+          <form onSubmit={handleSubmit(data => mutation.mutate(data))} className="space-y-6 bg-card rounded-xl border border-border p-6 md:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="full_name">Full Name *</Label>
@@ -112,7 +124,7 @@ const Register = () => {
               </div>
               <div className="space-y-2">
                 <Label>Playing Role *</Label>
-                <Select defaultValue="batsman" onValueChange={(val) => setValue("role", val as any)}>
+                <Select defaultValue="batsman" onValueChange={val => setValue("role", val as any)}>
                   <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="batsman">Batsman</SelectItem>
@@ -124,7 +136,7 @@ const Register = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="batting_style">Batting Style</Label>
-                <Select onValueChange={(val) => setValue("batting_style", val)}>
+                <Select onValueChange={val => setValue("batting_style", val)}>
                   <SelectTrigger><SelectValue placeholder="Select batting style" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Right-hand bat">Right-hand Bat</SelectItem>
@@ -134,7 +146,7 @@ const Register = () => {
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="bowling_style">Bowling Style</Label>
-                <Select onValueChange={(val) => setValue("bowling_style", val)}>
+                <Select onValueChange={val => setValue("bowling_style", val)}>
                   <SelectTrigger><SelectValue placeholder="Select bowling style" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Right-arm fast">Right-arm Fast</SelectItem>
@@ -154,8 +166,6 @@ const Register = () => {
           </form>
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Register;
