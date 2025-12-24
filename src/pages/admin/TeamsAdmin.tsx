@@ -71,7 +71,7 @@ export default function TeamsAdmin() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const activeSeason = useActiveSeason();
+  const { activeSeason } = useActiveSeason();
 
   const { data: teams, isLoading } = useQuery({
     queryKey: ["admin-teams"],

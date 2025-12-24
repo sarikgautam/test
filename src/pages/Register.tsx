@@ -43,7 +43,7 @@ const Register = () => {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [uploadErrors, setUploadErrors] = useState<{ photo?: string; receipt?: string }>({});
   const { toast } = useToast();
-  const activeSeason = useActiveSeason();
+  const { activeSeason } = useActiveSeason();
 
   const { data: settings } = useQuery({
     queryKey: ["tournament-settings"],

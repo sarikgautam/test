@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Gavel, User, TrendingUp, Trophy } from "lucide-react";
 import { useActiveSeason } from "@/hooks/useSeason";
 import { AuctionCountdown } from "@/components/auction/AuctionCountdown";
@@ -30,7 +31,7 @@ interface SoldCelebrationData {
 }
 
 export default function Auction() {
-  const activeSeason = useActiveSeason();
+  const { activeSeason, isLoading: seasonLoading } = useActiveSeason();
   const queryClient = useQueryClient();
   const [bidHistory, setBidHistory] = useState<BidEntry[]>([]);
   const [showCelebration, setShowCelebration] = useState<SoldCelebrationData | null>(null);
@@ -204,17 +205,20 @@ export default function Auction() {
           </p>
         </div>
 
-        {!liveAuction?.is_live ? (
+        {seasonLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-32 w-full max-w-2xl mx-auto" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        ) : !liveAuction?.is_live ? (
           <div className="space-y-8">
             {/* Show countdown only if auction date is set and in the future */}
-            {activeSeason?.auction_date && new Date(activeSeason.auction_date) > new Date() ? (
+            {activeSeason?.auction_date && new Date(activeSeason.auction_date) > new Date() && (
               <AuctionCountdown auctionDate={activeSeason.auction_date} />
-            ) : (
-              /* Show recent 3 sold players when no auction scheduled */
-              <RecentSoldPlayers seasonId={activeSeason?.id} limit={3} />
             )}
 
-            {/* Show all sold players */}
+            {/* Always show recent sold players and full list */}
+            <RecentSoldPlayers seasonId={activeSeason?.id} limit={3} />
             <SoldPlayersList seasonId={activeSeason?.id} />
           </div>
         ) : (

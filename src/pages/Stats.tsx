@@ -57,7 +57,7 @@ const Stats = () => {
   const [teamFilter, setTeamFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
   
-  const activeSeason = useActiveSeason();
+  const { activeSeason } = useActiveSeason();
 
   const { data: seasons } = useQuery({
     queryKey: ["all-seasons"],

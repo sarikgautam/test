@@ -45,7 +45,14 @@ export function RecentSoldPlayers({ seasonId, limit = 3 }: RecentSoldPlayersProp
   }
 
   if (!soldPlayers || soldPlayers.length === 0) {
-    return null;
+    return (
+      <Card className="border-border/50 max-w-2xl mx-auto">
+        <CardContent className="p-6 text-center">
+          <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground">No players have been sold recently.</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

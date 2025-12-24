@@ -87,7 +87,14 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
   }
 
   if (!soldPlayers || soldPlayers.length === 0) {
-    return null;
+    return (
+      <Card className="border-border/50">
+        <CardContent className="p-8 text-center">
+          <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">No players have been sold yet.</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   const filteredPlayers = getFilteredPlayers(activeTab);
