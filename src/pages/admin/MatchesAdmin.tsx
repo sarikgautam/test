@@ -465,12 +465,16 @@ export default function MatchesAdmin() {
                           <SelectValue placeholder="Select winner" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value={formData.home_team_id}>
-                            {getTeamName(formData.home_team_id)}
-                          </SelectItem>
-                          <SelectItem value={formData.away_team_id}>
-                            {getTeamName(formData.away_team_id)}
-                          </SelectItem>
+                          {formData.home_team_id && (
+                            <SelectItem value={formData.home_team_id}>
+                              {getTeamName(formData.home_team_id)}
+                            </SelectItem>
+                          )}
+                          {formData.away_team_id && (
+                            <SelectItem value={formData.away_team_id}>
+                              {getTeamName(formData.away_team_id)}
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
