@@ -113,6 +113,31 @@ export default function SettingsAdmin() {
     },
   });
 
+  const toggleRegistrationMutation = useMutation({
+    mutationFn: async (registrationOpen: boolean) => {
+      if (!settings?.id) {
+        throw new Error("Settings not found");
+      }
+      const { error } = await supabase
+        .from("tournament_settings")
+        .update({ registration_open: registrationOpen })
+        .eq("id", settings.id);
+      if (error) throw error;
+    },
+    onSuccess: (_, registrationOpen) => {
+      queryClient.invalidateQueries({ queryKey: ["tournament-settings"] });
+      toast({ title: registrationOpen ? "Registration opened" : "Registration closed" });
+    },
+    onError: (error) => {
+      toast({ title: "Error updating registration status", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleToggleRegistration = (checked: boolean) => {
+    setFormData({ ...formData, registration_open: checked });
+    toggleRegistrationMutation.mutate(checked);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     saveMutation.mutate(formData);
@@ -283,9 +308,8 @@ export default function SettingsAdmin() {
               <Switch
                 id="registration_open"
                 checked={formData.registration_open ?? true}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, registration_open: checked })
-                }
+                onCheckedChange={handleToggleRegistration}
+                disabled={toggleRegistrationMutation.isPending}
               />
             </div>
           </CardContent>
