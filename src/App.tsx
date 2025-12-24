@@ -14,6 +14,7 @@ import Stats from "./pages/Stats";
 import Register from "./pages/Register";
 import Auth from "./pages/Auth";
 import Auction from "./pages/Auction";
+import AuctionStats from "./pages/AuctionStats";
 import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auction" element={<Auction />} />
+              <Route path="/auction/stats" element={<AuctionStats />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="teams" element={<TeamsAdmin />} />
