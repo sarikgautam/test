@@ -318,14 +318,14 @@ export default function TeamsAdmin() {
                 <div className="space-y-2">
                   <Label htmlFor="captain_id">Team Captain</Label>
                   <Select
-                    value={formData.captain_id}
-                    onValueChange={(value) => setFormData({ ...formData, captain_id: value })}
+                    value={formData.captain_id || "none"}
+                    onValueChange={(value) => setFormData({ ...formData, captain_id: value === "none" ? "" : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select captain" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No captain selected</SelectItem>
+                      <SelectItem value="none">No captain selected</SelectItem>
                       {getTeamPlayers(editingTeam.id).map((player) => (
                         <SelectItem key={player.id} value={player.id}>
                           {player.full_name}
