@@ -470,9 +470,12 @@ export type Database = {
       teams: {
         Row: {
           budget: number
+          captain_id: string | null
           created_at: string
+          description: string | null
           id: string
           logo_url: string | null
+          manager_name: string | null
           name: string
           owner_name: string | null
           primary_color: string
@@ -483,9 +486,12 @@ export type Database = {
         }
         Insert: {
           budget?: number
+          captain_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           logo_url?: string | null
+          manager_name?: string | null
           name: string
           owner_name?: string | null
           primary_color?: string
@@ -496,9 +502,12 @@ export type Database = {
         }
         Update: {
           budget?: number
+          captain_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           logo_url?: string | null
+          manager_name?: string | null
           name?: string
           owner_name?: string | null
           primary_color?: string
@@ -507,7 +516,15 @@ export type Database = {
           short_name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teams_captain_id_fkey"
+            columns: ["captain_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tournament_settings: {
         Row: {

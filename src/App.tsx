@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Teams from "./pages/Teams";
+import TeamDetails from "./pages/TeamDetails";
 import Fixtures from "./pages/Fixtures";
 import Standings from "./pages/Standings";
 import Stats from "./pages/Stats";
@@ -37,6 +38,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/teams" element={<Teams />} />
+              <Route path="/teams/:teamId" element={<TeamDetails />} />
               <Route path="/fixtures" element={<Fixtures />} />
               <Route path="/standings" element={<Standings />} />
               <Route path="/stats" element={<Stats />} />
