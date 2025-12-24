@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, MapPin, Clock } from "lucide-react";
+import { Calendar, MapPin, Clock, ChevronRight, Trophy } from "lucide-react";
 import { formatLocalTime } from "@/lib/utils";
 
 const Fixtures = () => {
+  const navigate = useNavigate();
+  
   const { data: matches, isLoading } = useQuery({
     queryKey: ["matches"],
     queryFn: async () => {
@@ -28,6 +31,12 @@ const Fixtures = () => {
     return <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || ""}`}>{status.toUpperCase()}</span>;
   };
 
+  const handleMatchClick = (matchId: string, status: string) => {
+    if (status === "completed") {
+      navigate(`/fixtures/${matchId}`);
+    }
+  };
+
   return (
     <Layout>
       <div className="min-h-screen py-12 px-4">
@@ -42,12 +51,22 @@ const Fixtures = () => {
           ) : matches && matches.length > 0 ? (
             <div className="space-y-4">
               {matches.map((match) => (
-                <div key={match.id} className="bg-card rounded-xl border border-border overflow-hidden card-hover">
+                <div 
+                  key={match.id} 
+                  className={`bg-card rounded-xl border border-border overflow-hidden card-hover ${match.status === "completed" ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
+                  onClick={() => handleMatchClick(match.id, match.status)}
+                >
                   <div className="p-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">Match {match.match_number}</span>
                         {getStatusBadge(match.status)}
+                        {match.status === "completed" && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <ChevronRight className="w-4 h-4" />
+                            View Scorecard
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{formatLocalTime(match.match_date, "MMM d, yyyy")}</span>
@@ -72,7 +91,14 @@ const Fixtures = () => {
                         {match.away_team_score && <p className="text-xl font-bold text-primary mt-1">{match.away_team_score}</p>}
                       </div>
                     </div>
-                    {match.winner && <p className="text-center mt-4 text-sm text-emerald-400">Winner: {match.winner.name}</p>}
+                    {match.winner && (
+                      <div className="text-center mt-4">
+                        <span className="inline-flex items-center gap-2 text-sm text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full">
+                          <Trophy className="w-4 h-4" />
+                          {match.winner.name} Won
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
