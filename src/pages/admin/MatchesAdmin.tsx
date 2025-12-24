@@ -30,7 +30,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Calendar } from "lucide-react";
-import { formatAEST } from "@/lib/utils";
+import { formatAEST, aestToUTC, utcToAESTInput } from "@/lib/utils";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -93,7 +93,7 @@ export default function MatchesAdmin() {
         match_number: data.match_number,
         home_team_id: data.home_team_id,
         away_team_id: data.away_team_id,
-        match_date: data.match_date,
+        match_date: aestToUTC(data.match_date),
         venue: data.venue,
         status: data.status,
         season_id: selectedSeasonId,
@@ -118,7 +118,7 @@ export default function MatchesAdmin() {
           match_number: data.match_number,
           home_team_id: data.home_team_id,
           away_team_id: data.away_team_id,
-          match_date: data.match_date,
+          match_date: aestToUTC(data.match_date),
           venue: data.venue,
           status: data.status,
           home_team_score: data.home_team_score || null,
@@ -180,7 +180,7 @@ export default function MatchesAdmin() {
       match_number: match.match_number,
       home_team_id: match.home_team_id,
       away_team_id: match.away_team_id,
-      match_date: match.match_date.slice(0, 16),
+      match_date: utcToAESTInput(match.match_date),
       venue: match.venue,
       status: match.status,
       home_team_score: match.home_team_score || "",
@@ -307,7 +307,7 @@ export default function MatchesAdmin() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="match_date">Match Date & Time</Label>
+                  <Label htmlFor="match_date">Match Date & Time (AEST)</Label>
                   <Input
                     id="match_date"
                     type="datetime-local"
@@ -315,6 +315,7 @@ export default function MatchesAdmin() {
                     onChange={(e) => setFormData({ ...formData, match_date: e.target.value })}
                     required
                   />
+                  <p className="text-xs text-muted-foreground">Enter time in AEST (Australian Eastern Standard Time)</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="venue">Venue</Label>
