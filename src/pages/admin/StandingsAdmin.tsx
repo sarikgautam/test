@@ -14,12 +14,28 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Save, RefreshCw, Trophy } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 
 type Standing = Database["public"]["Tables"]["standings"]["Row"];
 type Team = Database["public"]["Tables"]["teams"]["Row"];
 
-interface StandingWithTeam extends Standing {
+interface StandingWithTeam {
+  id: string;
+  team_id: string;
+  season_id: string | null;
+  matches_played: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  no_results: number;
+  points: number;
+  runs_scored: number;
+  runs_conceded: number;
+  overs_faced: number;
+  overs_bowled: number;
+  net_run_rate: number;
+  updated_at: string;
   team?: Team;
 }
 
@@ -27,9 +43,10 @@ export default function StandingsAdmin() {
   const [editableStandings, setEditableStandings] = useState<StandingWithTeam[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedSeasonId } = useSeason();
 
   const { data: standings, isLoading } = useQuery({
-    queryKey: ["admin-standings"],
+    queryKey: ["admin-standings", selectedSeasonId],
     queryFn: async () => {
       const { data: teams, error: teamsError } = await supabase
         .from("teams")
@@ -37,9 +54,11 @@ export default function StandingsAdmin() {
         .order("name");
       if (teamsError) throw teamsError;
 
-      const { data: standingsData, error: standingsError } = await supabase
-        .from("standings")
-        .select("*");
+      let query = supabase.from("standings").select("*");
+      if (selectedSeasonId) {
+        query = query.eq("season_id", selectedSeasonId);
+      }
+      const { data: standingsData, error: standingsError } = await query;
       if (standingsError) throw standingsError;
 
       // Map teams to standings, creating entries for teams without standings
@@ -51,6 +70,7 @@ export default function StandingsAdmin() {
         return {
           id: "",
           team_id: team.id,
+          season_id: selectedSeasonId,
           matches_played: 0,
           wins: 0,
           losses: 0,
@@ -69,6 +89,7 @@ export default function StandingsAdmin() {
 
       return result;
     },
+    enabled: !!selectedSeasonId,
   });
 
   useEffect(() => {
@@ -82,6 +103,7 @@ export default function StandingsAdmin() {
       for (const standing of standingsToSave) {
         const data = {
           team_id: standing.team_id,
+          season_id: selectedSeasonId,
           matches_played: standing.matches_played,
           wins: standing.wins,
           losses: standing.losses,
@@ -108,7 +130,7 @@ export default function StandingsAdmin() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-standings"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-standings", selectedSeasonId] });
       toast({ title: "Standings saved successfully" });
     },
     onError: (error) => {

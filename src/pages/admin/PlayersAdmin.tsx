@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Trash2, Users } from "lucide-react";
+import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 
 type Player = Database["public"]["Tables"]["players"]["Row"];
@@ -30,20 +31,28 @@ type Team = Database["public"]["Tables"]["teams"]["Row"];
 export default function PlayersAdmin() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { selectedSeasonId } = useSeason();
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: players, isLoading } = useQuery({
-    queryKey: ["admin-players"],
+    queryKey: ["admin-players", selectedSeasonId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("players")
         .select("*")
         .order("created_at", { ascending: false });
+      
+      if (selectedSeasonId) {
+        query = query.eq("season_id", selectedSeasonId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Player[];
     },
+    enabled: !!selectedSeasonId,
   });
 
   const { data: teams } = useQuery({
@@ -61,7 +70,7 @@ export default function PlayersAdmin() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-players"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
       toast({ title: "Player deleted successfully" });
     },
     onError: (error) => {
@@ -92,7 +101,7 @@ export default function PlayersAdmin() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-players"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
       toast({ title: "Player updated successfully" });
     },
     onError: (error) => {

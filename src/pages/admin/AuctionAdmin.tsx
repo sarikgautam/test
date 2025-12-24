@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Gavel, User, DollarSign, Users } from "lucide-react";
+import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 
 type Player = Database["public"]["Tables"]["players"]["Row"];
@@ -35,18 +36,26 @@ export default function AuctionAdmin() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedSeasonId } = useSeason();
 
   const { data: players, isLoading: playersLoading } = useQuery({
-    queryKey: ["auction-players"],
+    queryKey: ["auction-players", selectedSeasonId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("players")
         .select("*")
         .eq("auction_status", "registered")
         .order("base_price", { ascending: false });
+      
+      if (selectedSeasonId) {
+        query = query.eq("season_id", selectedSeasonId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Player[];
     },
+    enabled: !!selectedSeasonId,
   });
 
   const { data: teams, isLoading: teamsLoading } = useQuery({
@@ -93,7 +102,7 @@ export default function AuctionAdmin() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auction-players"] });
+      queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
       queryClient.invalidateQueries({ queryKey: ["auction-teams"] });
       toast({ title: "Player sold successfully!" });
       closeDialog();
@@ -112,7 +121,7 @@ export default function AuctionAdmin() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auction-players"] });
+      queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
       toast({ title: "Player marked as unsold" });
       closeDialog();
     },
