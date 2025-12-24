@@ -30,7 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, ClipboardList, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, ClipboardList, Users, Upload, Save } from "lucide-react";
 import { formatAEST } from "@/lib/utils";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
@@ -55,6 +55,10 @@ interface PlayerStatForm {
   run_outs: number;
 }
 
+interface BulkStatEntry extends PlayerStatForm {
+  player_name?: string;
+}
+
 const defaultStatForm: PlayerStatForm = {
   player_id: "",
   runs_scored: 0,
@@ -73,8 +77,10 @@ const defaultStatForm: PlayerStatForm = {
 export default function MatchResultsAdmin() {
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [isStatDialogOpen, setIsStatDialogOpen] = useState(false);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [editingStat, setEditingStat] = useState<PlayerStat | null>(null);
   const [statForm, setStatForm] = useState<PlayerStatForm>(defaultStatForm);
+  const [bulkStats, setBulkStats] = useState<Map<string, BulkStatEntry>>(new Map());
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -211,10 +217,84 @@ export default function MatchResultsAdmin() {
     },
   });
 
+  const bulkCreateMutation = useMutation({
+    mutationFn: async (entries: BulkStatEntry[]) => {
+      const statsToInsert = entries.map((entry) => ({
+        player_id: entry.player_id,
+        match_id: selectedMatchId!,
+        season_id: selectedSeasonId!,
+        runs_scored: entry.runs_scored,
+        balls_faced: entry.balls_faced,
+        fours: entry.fours,
+        sixes: entry.sixes,
+        overs_bowled: entry.overs_bowled,
+        runs_conceded: entry.runs_conceded,
+        wickets: entry.wickets,
+        maidens: entry.maidens,
+        catches: entry.catches,
+        stumpings: entry.stumpings,
+        run_outs: entry.run_outs,
+      }));
+      const { error } = await supabase.from("player_stats").insert(statsToInsert);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["match-stats", selectedMatchId] });
+      toast({ title: "Bulk stats added successfully" });
+      setBulkStats(new Map());
+      setIsBulkDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({ title: "Error adding bulk stats", description: error.message, variant: "destructive" });
+    },
+  });
+
   const resetStatForm = () => {
     setStatForm(defaultStatForm);
     setEditingStat(null);
     setIsStatDialogOpen(false);
+  };
+
+  const initBulkStats = () => {
+    const newBulkStats = new Map<string, BulkStatEntry>();
+    playersWithoutStats?.forEach((player) => {
+      newBulkStats.set(player.id, {
+        ...defaultStatForm,
+        player_id: player.id,
+        player_name: player.full_name,
+      });
+    });
+    setBulkStats(newBulkStats);
+    setIsBulkDialogOpen(true);
+  };
+
+  const updateBulkStat = (playerId: string, field: keyof PlayerStatForm, value: number) => {
+    setBulkStats((prev) => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(playerId);
+      if (existing) {
+        newMap.set(playerId, { ...existing, [field]: value });
+      }
+      return newMap;
+    });
+  };
+
+  const handleBulkSubmit = () => {
+    const entries = Array.from(bulkStats.values()).filter(
+      (entry) =>
+        entry.runs_scored > 0 ||
+        entry.balls_faced > 0 ||
+        Number(entry.overs_bowled) > 0 ||
+        entry.wickets > 0 ||
+        entry.catches > 0 ||
+        entry.stumpings > 0 ||
+        entry.run_outs > 0
+    );
+    if (entries.length === 0) {
+      toast({ title: "No stats to save", description: "Enter at least one stat value", variant: "destructive" });
+      return;
+    }
+    bulkCreateMutation.mutate(entries);
   };
 
   const handleEditStat = (stat: PlayerStat) => {
@@ -334,10 +414,16 @@ export default function MatchResultsAdmin() {
                 {selectedMatch.home_team_score} - {selectedMatch.away_team_score} | {selectedMatch.match_summary}
               </p>
             </div>
-            <Button onClick={() => setIsStatDialogOpen(true)} disabled={!playersWithoutStats?.length}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Player Stats
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={initBulkStats} disabled={!playersWithoutStats?.length}>
+                <Upload className="w-4 h-4 mr-2" />
+                Bulk Entry
+              </Button>
+              <Button onClick={() => setIsStatDialogOpen(true)} disabled={!playersWithoutStats?.length}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Player Stats
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {statsLoading ? (
@@ -546,6 +632,167 @@ export default function MatchResultsAdmin() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Entry Dialog */}
+      <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Bulk Stats Entry
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enter stats for all players at once. Only players with at least one non-zero stat will be saved.
+            </p>
+            
+            <div className="border rounded-lg border-border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="sticky left-0 bg-background z-10">Player</TableHead>
+                    <TableHead className="text-center w-16">Runs</TableHead>
+                    <TableHead className="text-center w-16">Balls</TableHead>
+                    <TableHead className="text-center w-16">4s</TableHead>
+                    <TableHead className="text-center w-16">6s</TableHead>
+                    <TableHead className="text-center w-16">Overs</TableHead>
+                    <TableHead className="text-center w-16">RC</TableHead>
+                    <TableHead className="text-center w-16">Wkts</TableHead>
+                    <TableHead className="text-center w-16">Mdn</TableHead>
+                    <TableHead className="text-center w-16">Ct</TableHead>
+                    <TableHead className="text-center w-16">St</TableHead>
+                    <TableHead className="text-center w-16">RO</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from(bulkStats.entries()).map(([playerId, entry]) => (
+                    <TableRow key={playerId}>
+                      <TableCell className="sticky left-0 bg-background font-medium">
+                        {entry.player_name}
+                        <span className="text-xs text-muted-foreground ml-2">
+                          ({getPlayerTeam(playerId)})
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.runs_scored || ""}
+                          onChange={(e) => updateBulkStat(playerId, "runs_scored", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.balls_faced || ""}
+                          onChange={(e) => updateBulkStat(playerId, "balls_faced", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.fours || ""}
+                          onChange={(e) => updateBulkStat(playerId, "fours", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.sixes || ""}
+                          onChange={(e) => updateBulkStat(playerId, "sixes", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.overs_bowled || ""}
+                          onChange={(e) => updateBulkStat(playerId, "overs_bowled", parseFloat(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.runs_conceded || ""}
+                          onChange={(e) => updateBulkStat(playerId, "runs_conceded", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.wickets || ""}
+                          onChange={(e) => updateBulkStat(playerId, "wickets", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.maidens || ""}
+                          onChange={(e) => updateBulkStat(playerId, "maidens", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.catches || ""}
+                          onChange={(e) => updateBulkStat(playerId, "catches", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.stumpings || ""}
+                          onChange={(e) => updateBulkStat(playerId, "stumpings", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-center p-1"
+                          value={entry.run_outs || ""}
+                          onChange={(e) => updateBulkStat(playerId, "run_outs", parseInt(e.target.value) || 0)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsBulkDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleBulkSubmit} disabled={bulkCreateMutation.isPending}>
+                <Save className="w-4 h-4 mr-2" />
+                {bulkCreateMutation.isPending ? "Saving..." : "Save All Stats"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

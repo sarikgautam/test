@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Teams from "./pages/Teams";
 import TeamDetails from "./pages/TeamDetails";
 import Fixtures from "./pages/Fixtures";
+import MatchScorecard from "./pages/MatchScorecard";
 import Standings from "./pages/Standings";
 import Stats from "./pages/Stats";
 import Register from "./pages/Register";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/teams" element={<Teams />} />
               <Route path="/teams/:teamId" element={<TeamDetails />} />
               <Route path="/fixtures" element={<Fixtures />} />
+              <Route path="/fixtures/:matchId" element={<MatchScorecard />} />
               <Route path="/standings" element={<Standings />} />
               <Route path="/stats" element={<Stats />} />
               <Route path="/register" element={<Register />} />
