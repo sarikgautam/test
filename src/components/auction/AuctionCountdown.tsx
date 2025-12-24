@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, Calendar } from "lucide-react";
-import { format } from "date-fns";
+import { formatAEST } from "@/lib/utils";
 
 interface AuctionCountdownProps {
   auctionDate: string | null;
@@ -76,7 +76,7 @@ export function AuctionCountdown({ auctionDate }: AuctionCountdownProps) {
           <div className="flex items-center justify-center gap-2 text-primary mb-2">
             <Calendar className="w-5 h-5" />
             <span className="font-medium">
-              {format(new Date(auctionDate), "EEEE, MMMM d, yyyy 'at' h:mm a")}
+              {formatAEST(auctionDate, "EEEE, MMMM d, yyyy 'at' h:mm a")}
             </span>
           </div>
           <h2 className="text-2xl font-display text-gradient-gold">Auction Starts In</h2>

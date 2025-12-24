@@ -19,6 +19,7 @@ import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp, Cale
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
+import { formatAEST } from "@/lib/utils";
 
 type Player = Database["public"]["Tables"]["players"]["Row"];
 type Team = Database["public"]["Tables"]["teams"]["Row"];
@@ -459,7 +460,7 @@ export default function AuctionAdmin() {
           </div>
           {selectedSeason?.auction_date && (
             <p className="text-sm text-muted-foreground mt-2">
-              Currently set to: {format(new Date(selectedSeason.auction_date), "PPP 'at' h:mm a")}
+              Currently set to: {formatAEST(selectedSeason.auction_date, "PPP 'at' h:mm a")}
             </p>
           )}
         </CardContent>
