@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,10 @@ import {
   DollarSign, 
   Search, 
   Gavel,
-  ArrowLeft
+  ArrowLeft,
+  TrendingUp,
+  TrendingDown,
+  XCircle
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +37,14 @@ interface SoldPlayer {
   } | null;
 }
 
+interface UnsoldPlayer {
+  id: string;
+  full_name: string;
+  role: string;
+  base_price: number;
+  photo_url: string | null;
+}
+
 interface TeamStats {
   id: string;
   name: string;
@@ -47,10 +58,10 @@ interface TeamStats {
 }
 
 const formatPrice = (price: number) => {
-  if (price >= 100000) {
-    return `₹${(price / 100000).toFixed(1)}L`;
+  if (price >= 1000) {
+    return `$${(price / 1000).toFixed(1)}K`;
   }
-  return `₹${price.toLocaleString()}`;
+  return `$${price.toLocaleString()}`;
 };
 
 const getRoleBadgeColor = (role: string) => {
@@ -78,6 +89,7 @@ export default function AuctionStats() {
   const { activeSeason, isLoading: seasonLoading } = useActiveSeason();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [viewMode, setViewMode] = useState<"roles" | "teams">("roles");
 
   const { data: soldPlayers, isLoading: playersLoading } = useQuery({
     queryKey: ["auction-stats-players", activeSeason?.id],
@@ -104,6 +116,24 @@ export default function AuctionStats() {
     enabled: !!activeSeason?.id,
   });
 
+  const { data: unsoldPlayers } = useQuery({
+    queryKey: ["auction-stats-unsold", activeSeason?.id],
+    queryFn: async () => {
+      if (!activeSeason?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("players")
+        .select("id, full_name, role, base_price, photo_url")
+        .eq("season_id", activeSeason.id)
+        .eq("auction_status", "unsold")
+        .order("full_name");
+
+      if (error) throw error;
+      return data as UnsoldPlayer[];
+    },
+    enabled: !!activeSeason?.id,
+  });
+
   const { data: teams } = useQuery({
     queryKey: ["auction-stats-teams"],
     queryFn: async () => {
@@ -118,30 +148,66 @@ export default function AuctionStats() {
   });
 
   // Calculate team stats
-  const teamStats: TeamStats[] = teams?.map(team => {
-    const teamPlayers = soldPlayers?.filter(p => p.teams?.id === team.id) || [];
-    const totalSpent = teamPlayers.reduce((sum, p) => sum + (p.sold_price || 0), 0);
-    
-    return {
-      ...team,
-      players: teamPlayers,
-      totalSpent,
-    };
-  }).filter(t => t.players.length > 0) || [];
+  const teamStats: TeamStats[] = useMemo(() => {
+    return teams?.map(team => {
+      const teamPlayers = soldPlayers?.filter(p => p.teams?.id === team.id) || [];
+      const totalSpent = teamPlayers.reduce((sum, p) => sum + (p.sold_price || 0), 0);
+      
+      return {
+        ...team,
+        players: teamPlayers,
+        totalSpent,
+      };
+    }).filter(t => t.players.length > 0) || [];
+  }, [teams, soldPlayers]);
 
-  const filteredPlayers = soldPlayers?.filter(player => {
-    const matchesSearch = player.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      player.teams?.name.toLowerCase().includes(searchQuery.toLowerCase());
+  // Calculate stats
+  const stats = useMemo(() => {
+    const prices = soldPlayers?.map(p => p.sold_price || 0).filter(p => p > 0) || [];
+    const totalSpent = prices.reduce((sum, p) => sum + p, 0);
+    const avgPrice = prices.length > 0 ? totalSpent / prices.length : 0;
     
-    if (activeTab === "all") return matchesSearch;
-    return matchesSearch && player.role === activeTab;
-  }) || [];
+    // Calculate median
+    const sortedPrices = [...prices].sort((a, b) => a - b);
+    const medianPrice = sortedPrices.length > 0 
+      ? sortedPrices.length % 2 === 0
+        ? (sortedPrices[sortedPrices.length / 2 - 1] + sortedPrices[sortedPrices.length / 2]) / 2
+        : sortedPrices[Math.floor(sortedPrices.length / 2)]
+      : 0;
+
+    return {
+      totalPlayers: soldPlayers?.length || 0,
+      totalSpent,
+      highestBid: soldPlayers?.[0]?.sold_price || 0,
+      topBidPlayer: soldPlayers?.[0] || null,
+      avgPrice,
+      medianPrice,
+      unsoldCount: unsoldPlayers?.length || 0,
+    };
+  }, [soldPlayers, unsoldPlayers]);
+
+  const filteredPlayers = useMemo(() => {
+    let players = soldPlayers || [];
+    
+    // Filter by search
+    if (searchQuery) {
+      players = players.filter(player =>
+        player.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        player.teams?.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // Filter by tab
+    if (viewMode === "roles" && activeTab !== "all") {
+      players = players.filter(player => player.role === activeTab);
+    } else if (viewMode === "teams" && activeTab !== "all") {
+      players = players.filter(player => player.teams?.id === activeTab);
+    }
+    
+    return players;
+  }, [soldPlayers, searchQuery, activeTab, viewMode]);
 
   const isLoading = seasonLoading || playersLoading;
-
-  const totalPlayersCount = soldPlayers?.length || 0;
-  const totalSpent = soldPlayers?.reduce((sum, p) => sum + (p.sold_price || 0), 0) || 0;
-  const highestBid = soldPlayers?.[0]?.sold_price || 0;
 
   return (
     <Layout>
@@ -168,43 +234,122 @@ export default function AuctionStats() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Card className="border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 rounded-full bg-primary/20">
-                <Users className="w-6 h-6 text-primary" />
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-primary/20">
+                <Users className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Players Sold</p>
-                <p className="text-2xl font-bold">{totalPlayersCount}</p>
+                <p className="text-xs text-muted-foreground">Players Sold</p>
+                <p className="text-xl font-bold">{stats.totalPlayers}</p>
               </div>
             </CardContent>
           </Card>
           
           <Card className="border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 rounded-full bg-green-500/20">
-                <DollarSign className="w-6 h-6 text-green-500" />
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-green-500/20">
+                <DollarSign className="w-5 h-5 text-green-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Spent</p>
-                <p className="text-2xl font-bold">{formatPrice(totalSpent)}</p>
+                <p className="text-xs text-muted-foreground">Total Spent</p>
+                <p className="text-xl font-bold">{formatPrice(stats.totalSpent)}</p>
               </div>
             </CardContent>
           </Card>
           
           <Card className="border-border/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 rounded-full bg-yellow-500/20">
-                <Gavel className="w-6 h-6 text-yellow-500" />
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-yellow-500/20">
+                <Gavel className="w-5 h-5 text-yellow-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Highest Bid</p>
-                <p className="text-2xl font-bold">{formatPrice(highestBid)}</p>
+                <p className="text-xs text-muted-foreground">Top Bid</p>
+                <p className="text-xl font-bold">{formatPrice(stats.highestBid)}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-blue-500/20">
+                <TrendingUp className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Avg Price</p>
+                <p className="text-xl font-bold">{formatPrice(stats.avgPrice)}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-purple-500/20">
+                <TrendingDown className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Median Price</p>
+                <p className="text-xl font-bold">{formatPrice(stats.medianPrice)}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-red-500/20">
+                <XCircle className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Unsold</p>
+                <p className="text-xl font-bold">{stats.unsoldCount}</p>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Top Bid Player */}
+        {stats.topBidPlayer && (
+          <Card className="border-border/50 border-yellow-500/30 bg-yellow-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-full bg-yellow-500/20">
+                  <Trophy className="w-6 h-6 text-yellow-500" />
+                </div>
+                <div className="flex items-center gap-4 flex-1">
+                  {stats.topBidPlayer.photo_url ? (
+                    <img
+                      src={stats.topBidPlayer.photo_url}
+                      alt={stats.topBidPlayer.full_name}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                      <Users className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-yellow-500 font-medium">Highest Paid Player</p>
+                    <p className="text-lg font-bold">{stats.topBidPlayer.full_name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className={getRoleBadgeColor(stats.topBidPlayer.role)}>
+                        {formatRole(stats.topBidPlayer.role)}
+                      </Badge>
+                      {stats.topBidPlayer.teams && (
+                        <span className="text-sm text-muted-foreground">
+                          → {stats.topBidPlayer.teams.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-lg px-4 py-2">
+                  {formatPrice(stats.topBidPlayer.sold_price || 0)}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Team Breakdown */}
         {teamStats.length > 0 && (
@@ -252,30 +397,101 @@ export default function AuctionStats() {
           </Card>
         )}
 
+        {/* Unsold Players */}
+        {unsoldPlayers && unsoldPlayers.length > 0 && (
+          <Card className="border-border/50 border-red-500/20">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-500" />
+                Unsold Players ({unsoldPlayers.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {unsoldPlayers.map(player => (
+                  <div
+                    key={player.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card/50"
+                  >
+                    {player.photo_url ? (
+                      <img
+                        src={player.photo_url}
+                        alt={player.full_name}
+                        className="w-10 h-10 rounded-full object-cover grayscale opacity-70"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                        <Users className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-muted-foreground">{player.full_name}</p>
+                      <Badge variant="outline" className={`text-xs ${getRoleBadgeColor(player.role)}`}>
+                        {formatRole(player.role)}
+                      </Badge>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      Base: {formatPrice(player.base_price)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Players List */}
         <Card className="border-border/50">
           <CardHeader>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <CardTitle className="text-lg">Sold Players</CardTitle>
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search players or teams..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === "roles" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => { setViewMode("roles"); setActiveTab("all"); }}
+                  >
+                    By Role
+                  </Button>
+                  <Button
+                    variant={viewMode === "teams" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => { setViewMode("teams"); setActiveTab("all"); }}
+                  >
+                    By Team
+                  </Button>
+                </div>
+                <div className="relative w-full md:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search players or teams..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="mb-4">
+              <TabsList className="mb-4 flex-wrap h-auto gap-1">
                 <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="batsman">Batsmen</TabsTrigger>
-                <TabsTrigger value="bowler">Bowlers</TabsTrigger>
-                <TabsTrigger value="all_rounder">All-Rounders</TabsTrigger>
-                <TabsTrigger value="wicket_keeper">Keepers</TabsTrigger>
+                {viewMode === "roles" ? (
+                  <>
+                    <TabsTrigger value="batsman">Batsmen</TabsTrigger>
+                    <TabsTrigger value="bowler">Bowlers</TabsTrigger>
+                    <TabsTrigger value="all_rounder">All-Rounders</TabsTrigger>
+                    <TabsTrigger value="wicket_keeper">Keepers</TabsTrigger>
+                  </>
+                ) : (
+                  teamStats.map(team => (
+                    <TabsTrigger key={team.id} value={team.id}>
+                      {team.short_name}
+                    </TabsTrigger>
+                  ))
+                )}
               </TabsList>
 
               <TabsContent value={activeTab}>
