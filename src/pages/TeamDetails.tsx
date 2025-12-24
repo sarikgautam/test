@@ -33,13 +33,17 @@ interface Team {
   manager_name: string | null;
 }
 
-interface Player {
-  id: string;
-  full_name: string;
-  photo_url: string | null;
-  role: string;
+interface PlayerRegistration {
   jersey_number: number | null;
-  team_id: string | null;
+  sold_price: number | null;
+  player: {
+    id: string;
+    full_name: string;
+    photo_url: string | null;
+    role: string;
+    batting_style: string | null;
+    bowling_style: string | null;
+  };
 }
 
 interface PlayerStats {
@@ -88,16 +92,20 @@ const TeamDetails = () => {
     },
   });
 
-  const { data: players } = useQuery({
+  const { data: playerRegistrations } = useQuery({
     queryKey: ["team-players", teamId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("players")
-        .select("*")
+        .from("player_season_registrations")
+        .select(`
+          jersey_number,
+          sold_price,
+          player:players!inner(id, full_name, photo_url, role, batting_style, bowling_style)
+        `)
         .eq("team_id", teamId)
         .eq("auction_status", "sold");
       if (error) throw error;
-      return data as Player[];
+      return data as unknown as PlayerRegistration[];
     },
     enabled: !!teamId,
   });
@@ -105,8 +113,8 @@ const TeamDetails = () => {
   const { data: playerStats } = useQuery({
     queryKey: ["team-player-stats", teamId],
     queryFn: async () => {
-      if (!players?.length) return [];
-      const playerIds = players.map(p => p.id);
+      if (!playerRegistrations?.length) return [];
+      const playerIds = playerRegistrations.map(p => p.player.id);
       const { data, error } = await supabase
         .from("player_stats")
         .select("player_id, runs_scored, wickets")
@@ -114,7 +122,7 @@ const TeamDetails = () => {
       if (error) throw error;
       return data as PlayerStats[];
     },
-    enabled: !!players?.length,
+    enabled: !!playerRegistrations?.length,
   });
 
   const { data: matches } = useQuery({
@@ -131,7 +139,7 @@ const TeamDetails = () => {
     enabled: !!teamId,
   });
 
-  const captain = players?.find(p => p.id === team?.captain_id);
+  const captain = playerRegistrations?.find(p => p.player.id === team?.captain_id);
   
   // Aggregate stats per player
   const aggregatedStats = playerStats?.reduce((acc, stat) => {
@@ -144,20 +152,22 @@ const TeamDetails = () => {
     return acc;
   }, {} as Record<string, { runs: number; wickets: number; matches: number }>);
 
-  const topRunScorers = players
+  const topRunScorers = playerRegistrations
     ?.map(p => ({
-      ...p,
-      runs: aggregatedStats?.[p.id]?.runs || 0,
-      matches: aggregatedStats?.[p.id]?.matches || 0,
+      ...p.player,
+      jersey_number: p.jersey_number,
+      runs: aggregatedStats?.[p.player.id]?.runs || 0,
+      matches: aggregatedStats?.[p.player.id]?.matches || 0,
     }))
     .sort((a, b) => b.runs - a.runs)
     .slice(0, 3);
 
-  const topWicketTakers = players
+  const topWicketTakers = playerRegistrations
     ?.map(p => ({
-      ...p,
-      wickets: aggregatedStats?.[p.id]?.wickets || 0,
-      matches: aggregatedStats?.[p.id]?.matches || 0,
+      ...p.player,
+      jersey_number: p.jersey_number,
+      wickets: aggregatedStats?.[p.player.id]?.wickets || 0,
+      matches: aggregatedStats?.[p.player.id]?.matches || 0,
     }))
     .sort((a, b) => b.wickets - a.wickets)
     .slice(0, 3);
@@ -299,7 +309,7 @@ const TeamDetails = () => {
                       <Trophy className="w-5 h-5" style={{ color: team.primary_color }} />
                       <div className="text-left">
                         <p className="text-xs text-muted-foreground">Captain</p>
-                        <p className="font-medium">{captain.full_name}</p>
+                        <p className="font-medium">{captain.player.full_name}</p>
                       </div>
                     </div>
                   )}
@@ -423,19 +433,19 @@ const TeamDetails = () => {
               </div>
               <div>
                 <h2 className="font-display text-2xl md:text-3xl">Full Squad</h2>
-                <p className="text-muted-foreground">{players?.length || 0} players</p>
+                <p className="text-muted-foreground">{playerRegistrations?.length || 0} players</p>
               </div>
             </div>
 
-            {players?.length ? (
+            {playerRegistrations?.length ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {players.map((player) => {
-                  const stats = aggregatedStats?.[player.id];
-                  const isCaptain = player.id === team.captain_id;
+                {playerRegistrations.map((reg) => {
+                  const stats = aggregatedStats?.[reg.player.id];
+                  const isCaptain = reg.player.id === team.captain_id;
                   
                   return (
                     <div 
-                      key={player.id} 
+                      key={reg.player.id} 
                       className="group relative bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 transition-all duration-300"
                     >
                       {isCaptain && (
@@ -454,10 +464,10 @@ const TeamDetails = () => {
                       
                       <div className="p-5">
                         <div className="flex items-start gap-4">
-                          {player.photo_url ? (
+                          {reg.player.photo_url ? (
                             <img 
-                              src={player.photo_url} 
-                              alt={player.full_name}
+                              src={reg.player.photo_url} 
+                              alt={reg.player.full_name}
                               className="w-16 h-16 rounded-xl object-cover"
                             />
                           ) : (
@@ -470,18 +480,18 @@ const TeamDetails = () => {
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              {player.jersey_number && (
+                              {reg.jersey_number && (
                                 <span 
                                   className="text-xs font-bold px-2 py-0.5 rounded"
                                   style={{ backgroundColor: `${team.primary_color}20`, color: team.primary_color }}
                                 >
-                                  #{player.jersey_number}
+                                  #{reg.jersey_number}
                                 </span>
                               )}
                             </div>
-                            <h4 className="font-medium truncate mt-1">{player.full_name}</h4>
+                            <h4 className="font-medium truncate mt-1">{reg.player.full_name}</h4>
                             <Badge variant="outline" className="mt-1 text-xs">
-                              {getRoleLabel(player.role)}
+                              {getRoleLabel(reg.player.role)}
                             </Badge>
                           </div>
                         </div>
