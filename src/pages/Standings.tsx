@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp } from "lucide-react";
-
+import { Link } from "react-router-dom";
 const Standings = () => {
   // Get active season
   const { data: activeSeason } = useQuery({
@@ -67,10 +67,23 @@ const Standings = () => {
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? "bg-primary text-primary-foreground" : i < 4 ? "bg-secondary" : "bg-muted text-muted-foreground"}`}>{i + 1}</div>
                         </td>
                         <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: s.team?.primary_color || "#1e3a8a" }}>{s.team?.short_name?.substring(0, 2)}</div>
-                            <span className="font-medium">{s.team?.name}</span>
-                          </div>
+                          <Link to={`/teams/${s.team?.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                            {s.team?.logo_url ? (
+                              <img 
+                                src={s.team.logo_url} 
+                                alt={s.team.name} 
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div 
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" 
+                                style={{ backgroundColor: s.team?.primary_color || "#1e3a8a" }}
+                              >
+                                {s.team?.short_name?.substring(0, 2)}
+                              </div>
+                            )}
+                            <span className="font-medium hover:text-primary transition-colors">{s.team?.name}</span>
+                          </Link>
                         </td>
                         <td className="text-center py-4 px-4">{s.matches_played}</td>
                         <td className="text-center py-4 px-4 text-emerald-400 font-medium">{s.wins}</td>
