@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,26 +13,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gavel, User, DollarSign, Users } from "lucide-react";
+import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp } from "lucide-react";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 
 type Player = Database["public"]["Tables"]["players"]["Row"];
 type Team = Database["public"]["Tables"]["teams"]["Row"];
 
+interface BidEntry {
+  team_id: string;
+  team_name: string;
+  team_short_name: string;
+  amount: number;
+  timestamp: string;
+}
+
 export default function AuctionAdmin() {
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [soldTeamId, setSoldTeamId] = useState("");
-  const [soldPrice, setSoldPrice] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedPlayerId, setSelectedPlayerId] = useState("");
+  const [incrementAmount, setIncrementAmount] = useState("5000");
+  const [basePrice, setBasePrice] = useState("10000");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -46,11 +47,11 @@ export default function AuctionAdmin() {
         .select("*")
         .eq("auction_status", "registered")
         .order("base_price", { ascending: false });
-      
+
       if (selectedSeasonId) {
         query = query.eq("season_id", selectedSeasonId);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data as Player[];
@@ -70,42 +71,174 @@ export default function AuctionAdmin() {
     },
   });
 
+  const { data: liveAuction, refetch: refetchAuction } = useQuery({
+    queryKey: ["live-auction-admin", selectedSeasonId],
+    queryFn: async () => {
+      if (!selectedSeasonId) return null;
+      const { data, error } = await supabase
+        .from("live_auction")
+        .select("*")
+        .eq("season_id", selectedSeasonId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedSeasonId,
+  });
+
+  const { data: currentPlayer } = useQuery({
+    queryKey: ["current-auction-player", liveAuction?.current_player_id],
+    queryFn: async () => {
+      if (!liveAuction?.current_player_id) return null;
+      const { data, error } = await supabase
+        .from("players")
+        .select("*")
+        .eq("id", liveAuction.current_player_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!liveAuction?.current_player_id,
+  });
+
+  // Set base price when player is selected
+  useEffect(() => {
+    if (selectedPlayerId) {
+      const player = players?.find((p) => p.id === selectedPlayerId);
+      if (player) {
+        setBasePrice(player.base_price.toString());
+      }
+    }
+  }, [selectedPlayerId, players]);
+
+  const startAuctionMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedSeasonId || !selectedPlayerId) return;
+      
+      const player = players?.find((p) => p.id === selectedPlayerId);
+      if (!player) return;
+
+      const auctionData = {
+        season_id: selectedSeasonId,
+        current_player_id: selectedPlayerId,
+        current_bid: parseFloat(basePrice),
+        current_bidding_team_id: null,
+        base_price: parseFloat(basePrice),
+        increment_amount: parseFloat(incrementAmount),
+        is_live: true,
+        bid_history: [],
+      };
+
+      if (liveAuction) {
+        const { error } = await supabase
+          .from("live_auction")
+          .update(auctionData)
+          .eq("id", liveAuction.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("live_auction")
+          .insert(auctionData);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      refetchAuction();
+      toast({ title: "Auction started for player!" });
+    },
+    onError: (error) => {
+      toast({ title: "Error starting auction", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const placeBidMutation = useMutation({
+    mutationFn: async (teamId: string) => {
+      if (!liveAuction) return;
+
+      const team = teams?.find((t) => t.id === teamId);
+      if (!team) return;
+
+      const newBid = liveAuction.current_bid + liveAuction.increment_amount;
+      
+      if (newBid > team.remaining_budget) {
+        throw new Error("Team doesn't have enough budget");
+      }
+
+      const bidEntry: BidEntry = {
+        team_id: teamId,
+        team_name: team.name,
+        team_short_name: team.short_name,
+        amount: newBid,
+        timestamp: new Date().toISOString(),
+      };
+
+      const currentHistory = (liveAuction.bid_history as unknown as BidEntry[]) || [];
+
+      const { error } = await supabase
+        .from("live_auction")
+        .update({
+          current_bid: newBid,
+          current_bidding_team_id: teamId,
+          bid_history: [...currentHistory, bidEntry] as unknown as Database["public"]["Tables"]["live_auction"]["Update"]["bid_history"],
+        })
+        .eq("id", liveAuction.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchAuction();
+      queryClient.invalidateQueries({ queryKey: ["auction-teams"] });
+    },
+    onError: (error) => {
+      toast({ title: "Error placing bid", description: error.message, variant: "destructive" });
+    },
+  });
+
   const sellPlayerMutation = useMutation({
-    mutationFn: async ({
-      playerId,
-      teamId,
-      price,
-    }: {
-      playerId: string;
-      teamId: string;
-      price: number;
-    }) => {
+    mutationFn: async () => {
+      if (!liveAuction || !liveAuction.current_player_id || !liveAuction.current_bidding_team_id) {
+        throw new Error("No active bid to finalize");
+      }
+
       // Update player
       const { error: playerError } = await supabase
         .from("players")
         .update({
           auction_status: "sold",
-          team_id: teamId,
-          sold_price: price,
+          team_id: liveAuction.current_bidding_team_id,
+          sold_price: liveAuction.current_bid,
         })
-        .eq("id", playerId);
+        .eq("id", liveAuction.current_player_id);
       if (playerError) throw playerError;
 
       // Update team budget
-      const team = teams?.find((t) => t.id === teamId);
+      const team = teams?.find((t) => t.id === liveAuction.current_bidding_team_id);
       if (team) {
         const { error: teamError } = await supabase
           .from("teams")
-          .update({ remaining_budget: team.remaining_budget - price })
-          .eq("id", teamId);
+          .update({ remaining_budget: team.remaining_budget - liveAuction.current_bid })
+          .eq("id", team.id);
         if (teamError) throw teamError;
       }
+
+      // Reset auction state
+      const { error: auctionError } = await supabase
+        .from("live_auction")
+        .update({
+          current_player_id: null,
+          current_bid: 0,
+          current_bidding_team_id: null,
+          is_live: false,
+          bid_history: [],
+        })
+        .eq("id", liveAuction.id);
+      if (auctionError) throw auctionError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
       queryClient.invalidateQueries({ queryKey: ["auction-teams"] });
+      refetchAuction();
+      setSelectedPlayerId("");
       toast({ title: "Player sold successfully!" });
-      closeDialog();
     },
     onError: (error) => {
       toast({ title: "Error selling player", description: error.message, variant: "destructive" });
@@ -113,45 +246,67 @@ export default function AuctionAdmin() {
   });
 
   const markUnsoldMutation = useMutation({
-    mutationFn: async (playerId: string) => {
-      const { error } = await supabase
+    mutationFn: async () => {
+      if (!liveAuction || !liveAuction.current_player_id) return;
+
+      const { error: playerError } = await supabase
         .from("players")
         .update({ auction_status: "unsold" })
-        .eq("id", playerId);
-      if (error) throw error;
+        .eq("id", liveAuction.current_player_id);
+      if (playerError) throw playerError;
+
+      const { error: auctionError } = await supabase
+        .from("live_auction")
+        .update({
+          current_player_id: null,
+          current_bid: 0,
+          current_bidding_team_id: null,
+          is_live: false,
+          bid_history: [],
+        })
+        .eq("id", liveAuction.id);
+      if (auctionError) throw auctionError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
+      refetchAuction();
+      setSelectedPlayerId("");
       toast({ title: "Player marked as unsold" });
-      closeDialog();
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
-  const openDialog = (player: Player) => {
-    setSelectedPlayer(player);
-    setSoldTeamId("");
-    setSoldPrice(player.base_price.toString());
-    setIsDialogOpen(true);
-  };
+  const pauseAuctionMutation = useMutation({
+    mutationFn: async () => {
+      if (!liveAuction) return;
+      const { error } = await supabase
+        .from("live_auction")
+        .update({ is_live: false })
+        .eq("id", liveAuction.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchAuction();
+      toast({ title: "Auction paused" });
+    },
+  });
 
-  const closeDialog = () => {
-    setSelectedPlayer(null);
-    setSoldTeamId("");
-    setSoldPrice("");
-    setIsDialogOpen(false);
-  };
-
-  const handleSell = () => {
-    if (!selectedPlayer || !soldTeamId || !soldPrice) return;
-    sellPlayerMutation.mutate({
-      playerId: selectedPlayer.id,
-      teamId: soldTeamId,
-      price: parseInt(soldPrice),
-    });
-  };
+  const resumeAuctionMutation = useMutation({
+    mutationFn: async () => {
+      if (!liveAuction) return;
+      const { error } = await supabase
+        .from("live_auction")
+        .update({ is_live: true })
+        .eq("id", liveAuction.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchAuction();
+      toast({ title: "Auction resumed" });
+    },
+  });
 
   const roleLabels: Record<string, string> = {
     batsman: "Batsman",
@@ -161,22 +316,22 @@ export default function AuctionAdmin() {
   };
 
   const isLoading = playersLoading || teamsLoading;
+  const isAuctionActive = liveAuction?.is_live && liveAuction?.current_player_id;
+  const currentBiddingTeam = teams?.find((t) => t.id === liveAuction?.current_bidding_team_id);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl text-gradient-gold">Live Auction</h1>
+        <h1 className="font-display text-3xl text-gradient-gold">Live Auction Control</h1>
         <p className="text-muted-foreground mt-1">
-          Sell registered players to teams
+          Manage the live auction and place bids
         </p>
       </div>
 
       {/* Team Budgets */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {teamsLoading
-          ? Array(6)
-              .fill(0)
-              .map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)
+          ? Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)
           : teams?.map((team) => (
               <Card key={team.id} className="border-border/50">
                 <CardContent className="p-4 text-center">
@@ -195,11 +350,188 @@ export default function AuctionAdmin() {
             ))}
       </div>
 
+      {/* Current Auction */}
+      {isAuctionActive && currentPlayer && (
+        <Card className="border-2 border-primary/50 bg-gradient-to-br from-primary/10 to-transparent">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Gavel className="w-5 h-5 text-primary animate-pulse" />
+                <span>Now Auctioning</span>
+              </div>
+              <div className="flex gap-2">
+                {liveAuction?.is_live ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => pauseAuctionMutation.mutate()}
+                  >
+                    <Pause className="w-4 h-4 mr-1" /> Pause
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => resumeAuctionMutation.mutate()}
+                  >
+                    <Play className="w-4 h-4 mr-1" /> Resume
+                  </Button>
+                )}
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row items-center gap-6 mb-6">
+              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+                {currentPlayer.photo_url ? (
+                  <img
+                    src={currentPlayer.photo_url}
+                    alt={currentPlayer.full_name}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <User className="w-10 h-10 text-muted-foreground" />
+                )}
+              </div>
+              <div className="text-center md:text-left flex-grow">
+                <h3 className="text-2xl font-bold">{currentPlayer.full_name}</h3>
+                <Badge variant="secondary">{roleLabels[currentPlayer.role]}</Badge>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Base: ${liveAuction?.base_price?.toLocaleString()} | Increment: ${liveAuction?.increment_amount?.toLocaleString()}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Current Bid</p>
+                <p className="text-4xl font-bold text-primary">
+                  ${liveAuction?.current_bid?.toLocaleString()}
+                </p>
+                {currentBiddingTeam && (
+                  <p className="text-sm mt-1">by {currentBiddingTeam.name}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Bid Buttons */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+              {teams?.map((team) => {
+                const nextBid = (liveAuction?.current_bid || 0) + (liveAuction?.increment_amount || 0);
+                const canAfford = team.remaining_budget >= nextBid;
+                const isHighestBidder = team.id === liveAuction?.current_bidding_team_id;
+
+                return (
+                  <Button
+                    key={team.id}
+                    variant={isHighestBidder ? "default" : "outline"}
+                    className="h-auto py-3 flex flex-col items-center gap-1"
+                    disabled={!canAfford || isHighestBidder}
+                    onClick={() => placeBidMutation.mutate(team.id)}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                      style={{ backgroundColor: team.primary_color, color: team.secondary_color }}
+                    >
+                      {team.short_name}
+                    </div>
+                    <span className="text-xs">{team.name}</span>
+                    {!isHighestBidder && canAfford && (
+                      <span className="text-xs text-muted-foreground">
+                        <TrendingUp className="w-3 h-3 inline mr-1" />
+                        +${liveAuction?.increment_amount?.toLocaleString()}
+                      </span>
+                    )}
+                    {isHighestBidder && (
+                      <Badge variant="secondary" className="text-xs">Highest</Badge>
+                    )}
+                    {!canAfford && (
+                      <span className="text-xs text-destructive">No budget</span>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => markUnsoldMutation.mutate()}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Mark Unsold
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => sellPlayerMutation.mutate()}
+                disabled={!liveAuction?.current_bidding_team_id}
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Sell to {currentBiddingTeam?.short_name || "Team"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Start New Auction */}
+      {!isAuctionActive && (
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Play className="w-5 h-5 text-primary" />
+              Start Auction for Player
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-4 gap-4 mb-4">
+              <div className="md:col-span-2">
+                <Label>Select Player</Label>
+                <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a player" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {players?.map((player) => (
+                      <SelectItem key={player.id} value={player.id}>
+                        {player.full_name} - {roleLabels[player.role]} (${player.base_price.toLocaleString()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Base Price ($)</Label>
+                <Input
+                  type="number"
+                  value={basePrice}
+                  onChange={(e) => setBasePrice(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Increment ($)</Label>
+                <Input
+                  type="number"
+                  value={incrementAmount}
+                  onChange={(e) => setIncrementAmount(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button
+              onClick={() => startAuctionMutation.mutate()}
+              disabled={!selectedPlayerId}
+            >
+              <Gavel className="w-4 h-4 mr-2" />
+              Start Auction
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Players Pool */}
       <Card className="border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Gavel className="w-5 h-5 text-primary" />
+            <Users className="w-5 h-5 text-primary" />
             Players Awaiting Auction ({players?.length || 0})
           </CardTitle>
         </CardHeader>
@@ -215,13 +547,23 @@ export default function AuctionAdmin() {
               {players.map((player) => (
                 <div
                   key={player.id}
-                  className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card transition-colors cursor-pointer"
-                  onClick={() => openDialog(player)}
+                  className={`p-4 rounded-lg border bg-card/50 hover:bg-card transition-colors cursor-pointer ${
+                    selectedPlayerId === player.id ? "border-primary" : "border-border"
+                  }`}
+                  onClick={() => setSelectedPlayerId(player.id)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                        <User className="w-6 h-6 text-muted-foreground" />
+                        {player.photo_url ? (
+                          <img
+                            src={player.photo_url}
+                            alt={player.full_name}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-6 h-6 text-muted-foreground" />
+                        )}
                       </div>
                       <div>
                         <h3 className="font-semibold">{player.full_name}</h3>
@@ -248,81 +590,6 @@ export default function AuctionAdmin() {
           )}
         </CardContent>
       </Card>
-
-      {/* Auction Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sell Player</DialogTitle>
-          </DialogHeader>
-          {selectedPlayer && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                  <User className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">{selectedPlayer.full_name}</h3>
-                  <Badge variant="secondary">{roleLabels[selectedPlayer.role]}</Badge>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Base Price: ${selectedPlayer.base_price.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Sold To</Label>
-                  <Select value={soldTeamId} onValueChange={setSoldTeamId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teams?.map((team) => (
-                        <SelectItem
-                          key={team.id}
-                          value={team.id}
-                          disabled={team.remaining_budget < parseInt(soldPrice || "0")}
-                        >
-                          {team.name} (${(team.remaining_budget / 1000).toFixed(0)}K left)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Sold Price ($)</Label>
-                  <Input
-                    type="number"
-                    value={soldPrice}
-                    onChange={(e) => setSoldPrice(e.target.value)}
-                    min={selectedPlayer.base_price}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={() => markUnsoldMutation.mutate(selectedPlayer.id)}
-                >
-                  Mark Unsold
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handleSell}
-                  disabled={!soldTeamId || !soldPrice}
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Sell Player
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
