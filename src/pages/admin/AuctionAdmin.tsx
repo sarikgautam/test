@@ -19,7 +19,7 @@ import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp, Cale
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
-import { formatAEST } from "@/lib/utils";
+import { formatAEST, aestToUTC, utcToAESTInput, formatAESTShort } from "@/lib/utils";
 
 type Player = Database["public"]["Tables"]["players"]["Row"];
 type Team = Database["public"]["Tables"]["teams"]["Row"];
@@ -45,12 +45,15 @@ export default function AuctionAdmin() {
   
   const selectedSeason = seasons.find((s) => s.id === selectedSeasonId);
   
-  // Initialize auction date/time from season
+  // Initialize auction date/time from season (convert from UTC to AEST for display)
   useEffect(() => {
     if (selectedSeason?.auction_date) {
-      const date = new Date(selectedSeason.auction_date);
-      setAuctionDate(format(date, "yyyy-MM-dd"));
-      setAuctionTime(format(date, "HH:mm"));
+      const aestInput = utcToAESTInput(selectedSeason.auction_date);
+      if (aestInput) {
+        const [datePart, timePart] = aestInput.split("T");
+        setAuctionDate(datePart || "");
+        setAuctionTime(timePart || "");
+      }
     } else {
       setAuctionDate("");
       setAuctionTime("");
@@ -350,12 +353,15 @@ export default function AuctionAdmin() {
       if (!selectedSeasonId || !auctionDate) return;
       
       const dateTime = auctionTime 
-        ? `${auctionDate}T${auctionTime}:00` 
-        : `${auctionDate}T00:00:00`;
+        ? `${auctionDate}T${auctionTime}` 
+        : `${auctionDate}T00:00`;
+      
+      // Convert AEST input to UTC for storage
+      const utcDateTime = aestToUTC(dateTime);
       
       const { error } = await supabase
         .from("seasons")
-        .update({ auction_date: dateTime })
+        .update({ auction_date: utcDateTime })
         .eq("id", selectedSeasonId);
       if (error) throw error;
     },

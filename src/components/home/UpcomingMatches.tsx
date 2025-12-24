@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, MapPin, Clock } from "lucide-react";
-import { formatAESTShort } from "@/lib/utils";
+import { formatLocalTime } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -79,7 +79,7 @@ export function UpcomingMatches() {
                     </span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {formatAESTShort(match.match_date, "MMM d, yyyy")}
+                      {formatLocalTime(match.match_date, "MMM d, yyyy")}
                     </span>
                   </div>
 
@@ -120,7 +120,7 @@ export function UpcomingMatches() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {formatAESTShort(match.match_date, "h:mm a")} AEST
+                      {formatLocalTime(match.match_date, "h:mm a")}
                     </span>
                   </div>
                 </div>
