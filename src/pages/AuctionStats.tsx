@@ -104,7 +104,7 @@ export default function AuctionStats() {
           role,
           sold_price,
           photo_url,
-          teams(id, name, short_name, primary_color, logo_url)
+          teams:teams!players_team_id_fkey(id, name, short_name, primary_color, logo_url)
         `)
         .eq("season_id", activeSeason.id)
         .eq("auction_status", "sold")

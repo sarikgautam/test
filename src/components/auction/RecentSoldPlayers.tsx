@@ -16,7 +16,7 @@ export function RecentSoldPlayers({ seasonId, limit = 3 }: RecentSoldPlayersProp
     queryFn: async () => {
       const { data, error } = await supabase
         .from("players")
-        .select("*, teams(*)")
+        .select("*, teams:teams!players_team_id_fkey(*)")
         .eq("auction_status", "sold")
         .eq("season_id", seasonId!)
         .order("updated_at", { ascending: false })
