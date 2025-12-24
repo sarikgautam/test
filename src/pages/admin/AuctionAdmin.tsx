@@ -412,11 +412,11 @@ export default function AuctionAdmin() {
       </div>
 
       {/* Team Budgets */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="flex flex-wrap justify-center gap-4">
         {teamsLoading
-          ? Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)
+          ? Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-24 w-32 rounded-lg" />)
           : teams?.map((team) => (
-              <Card key={team.id} className="border-border/50">
+              <Card key={team.id} className="border-border/50 w-32">
                 <CardContent className="p-4 text-center">
                   <div
                     className="w-10 h-10 mx-auto rounded-full flex items-center justify-center text-xs font-bold mb-2"
