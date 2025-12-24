@@ -15,7 +15,7 @@ export default {
   	extend: {
   		fontFamily: {
   			sans: [
-  				'Open Sans',
+  				'Inter',
   				'ui-sans-serif',
   				'system-ui',
   				'sans-serif',
@@ -31,7 +31,7 @@ export default {
   				'sans-serif'
   			],
   			mono: [
-  				'Roboto Mono',
+  				'Space Mono',
   				'ui-monospace',
   				'SFMono-Regular',
   				'Menlo',
@@ -42,7 +42,7 @@ export default {
   				'monospace'
   			],
   			serif: [
-  				'Libre Caslon Text',
+  				'Lora',
   				'ui-serif',
   				'Georgia',
   				'Cambria',
@@ -195,7 +195,7 @@ export default {
   			'0': 0,
   			'60': 60,
   			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-  			'cricket-pattern': 'url(\\\\\\\\"data:image/svg+xml,%3Csvg width=',
+  			'cricket-pattern': 'url(\\\\\\\\\\\\\\\\"data:image/svg+xml,%3Csvg width=',
   			' xmlns=': 'http'
   		},
   		boxShadow: {
