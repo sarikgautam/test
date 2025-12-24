@@ -12,8 +12,8 @@ interface Match {
   match_date: string;
   venue: string;
   status: string;
-  home_team: { id: string; name: string; short_name: string; primary_color: string };
-  away_team: { id: string; name: string; short_name: string; primary_color: string };
+  home_team: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
+  away_team: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
 }
 
 export function UpcomingMatches() {
@@ -28,8 +28,8 @@ export function UpcomingMatches() {
           match_date,
           venue,
           status,
-          home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color),
-          away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color)
+          home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, logo_url),
+          away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, logo_url)
         `)
         .eq("status", "upcoming")
         .order("match_date", { ascending: true })
@@ -86,12 +86,20 @@ export function UpcomingMatches() {
                   {/* Teams */}
                   <div className="flex items-center justify-between gap-4 mb-4">
                     <div className="flex-1 text-center">
-                      <div
-                        className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-lg font-bold mb-2"
-                        style={{ backgroundColor: match.home_team?.primary_color || "#1e3a8a" }}
-                      >
-                        {match.home_team?.short_name?.substring(0, 2) || "TBA"}
-                      </div>
+                      {match.home_team?.logo_url ? (
+                        <img 
+                          src={match.home_team.logo_url} 
+                          alt={match.home_team.name}
+                          className="w-14 h-14 mx-auto rounded-full object-cover mb-2"
+                        />
+                      ) : (
+                        <div
+                          className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-lg font-bold text-white mb-2"
+                          style={{ backgroundColor: match.home_team?.primary_color || "#1e3a8a" }}
+                        >
+                          {match.home_team?.short_name?.substring(0, 2) || "TBA"}
+                        </div>
+                      )}
                       <p className="text-sm font-medium text-foreground truncate">
                         {match.home_team?.name || "TBA"}
                       </p>
@@ -100,12 +108,20 @@ export function UpcomingMatches() {
                     <div className="text-2xl font-display text-muted-foreground">VS</div>
                     
                     <div className="flex-1 text-center">
-                      <div
-                        className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-lg font-bold mb-2"
-                        style={{ backgroundColor: match.away_team?.primary_color || "#dc2626" }}
-                      >
-                        {match.away_team?.short_name?.substring(0, 2) || "TBA"}
-                      </div>
+                      {match.away_team?.logo_url ? (
+                        <img 
+                          src={match.away_team.logo_url} 
+                          alt={match.away_team.name}
+                          className="w-14 h-14 mx-auto rounded-full object-cover mb-2"
+                        />
+                      ) : (
+                        <div
+                          className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-lg font-bold text-white mb-2"
+                          style={{ backgroundColor: match.away_team?.primary_color || "#dc2626" }}
+                        >
+                          {match.away_team?.short_name?.substring(0, 2) || "TBA"}
+                        </div>
+                      )}
                       <p className="text-sm font-medium text-foreground truncate">
                         {match.away_team?.name || "TBA"}
                       </p>

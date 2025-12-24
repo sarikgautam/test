@@ -53,12 +53,20 @@ export function TeamsShowcase() {
                   }}
                 />
                 <div className="relative p-6 text-center">
-                  <div
-                    className="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-xl font-bold mb-3 shadow-lg group-hover:scale-110 transition-transform"
-                    style={{ backgroundColor: team.primary_color }}
-                  >
-                    {team.short_name?.substring(0, 2)}
-                  </div>
+                  {team.logo_url ? (
+                    <img 
+                      src={team.logo_url} 
+                      alt={team.name}
+                      className="w-16 h-16 mx-auto rounded-full object-cover mb-3 shadow-lg group-hover:scale-110 transition-transform"
+                    />
+                  ) : (
+                    <div
+                      className="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-xl font-bold text-white mb-3 shadow-lg group-hover:scale-110 transition-transform"
+                      style={{ backgroundColor: team.primary_color }}
+                    >
+                      {team.short_name?.substring(0, 2)}
+                    </div>
+                  )}
                   <h3 className="font-semibold text-foreground text-sm">{team.name}</h3>
                   <p className="text-xs text-muted-foreground mt-1">{team.short_name}</p>
                 </div>

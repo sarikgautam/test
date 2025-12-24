@@ -359,10 +359,18 @@ export default function StandingsAdmin() {
                 <TableRow key={standing.team_id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
-                      <div
-                        className="w-6 h-6 rounded-full"
-                        style={{ backgroundColor: standing.team?.primary_color }}
-                      />
+                      {standing.team?.logo_url ? (
+                        <img 
+                          src={standing.team.logo_url} 
+                          alt={standing.team.name}
+                          className="w-6 h-6 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-6 h-6 rounded-full"
+                          style={{ backgroundColor: standing.team?.primary_color }}
+                        />
+                      )}
                       {standing.team?.short_name}
                     </div>
                   </TableCell>
