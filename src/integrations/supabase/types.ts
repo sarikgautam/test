@@ -28,6 +28,7 @@ export type Database = {
           match_date: string
           match_number: number
           match_summary: string | null
+          season_id: string | null
           status: Database["public"]["Enums"]["match_status"]
           toss_decision: string | null
           toss_winner_id: string | null
@@ -48,6 +49,7 @@ export type Database = {
           match_date: string
           match_number: number
           match_summary?: string | null
+          season_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           toss_decision?: string | null
           toss_winner_id?: string | null
@@ -68,6 +70,7 @@ export type Database = {
           match_date?: string
           match_number?: number
           match_summary?: string | null
+          season_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           toss_decision?: string | null
           toss_winner_id?: string | null
@@ -95,6 +98,13 @@ export type Database = {
             columns: ["man_of_match_id"]
             isOneToOne: false
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
             referencedColumns: ["id"]
           },
           {
@@ -127,6 +137,7 @@ export type Database = {
           run_outs: number
           runs_conceded: number
           runs_scored: number
+          season_id: string | null
           sixes: number
           stumpings: number
           wickets: number
@@ -144,6 +155,7 @@ export type Database = {
           run_outs?: number
           runs_conceded?: number
           runs_scored?: number
+          season_id?: string | null
           sixes?: number
           stumpings?: number
           wickets?: number
@@ -161,6 +173,7 @@ export type Database = {
           run_outs?: number
           runs_conceded?: number
           runs_scored?: number
+          season_id?: string | null
           sixes?: number
           stumpings?: number
           wickets?: number
@@ -178,6 +191,13 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_stats_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
             referencedColumns: ["id"]
           },
         ]
@@ -203,6 +223,7 @@ export type Database = {
           phone: string | null
           photo_url: string | null
           role: Database["public"]["Enums"]["player_role"]
+          season_id: string | null
           sold_price: number | null
           team_id: string | null
           updated_at: string
@@ -227,6 +248,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["player_role"]
+          season_id?: string | null
           sold_price?: number | null
           team_id?: string | null
           updated_at?: string
@@ -251,11 +273,19 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["player_role"]
+          season_id?: string | null
           sold_price?: number | null
           team_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "players_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "players_team_id_fkey"
             columns: ["team_id"]
@@ -264,6 +294,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      seasons: {
+        Row: {
+          auction_date: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          name: string
+          registration_open: boolean
+          start_date: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          auction_date?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          registration_open?: boolean
+          start_date?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          auction_date?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          registration_open?: boolean
+          start_date?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
       }
       standings: {
         Row: {
@@ -277,6 +346,7 @@ export type Database = {
           points: number
           runs_conceded: number
           runs_scored: number
+          season_id: string | null
           team_id: string
           ties: number
           updated_at: string
@@ -293,6 +363,7 @@ export type Database = {
           points?: number
           runs_conceded?: number
           runs_scored?: number
+          season_id?: string | null
           team_id: string
           ties?: number
           updated_at?: string
@@ -309,12 +380,20 @@ export type Database = {
           points?: number
           runs_conceded?: number
           runs_scored?: number
+          season_id?: string | null
           team_id?: string
           ties?: number
           updated_at?: string
           wins?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "standings_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "standings_team_id_fkey"
             columns: ["team_id"]

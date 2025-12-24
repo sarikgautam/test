@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, UserPlus, Loader2, Upload, AlertCircle, CreditCard, User, Phone } from "lucide-react";
+import { CheckCircle, UserPlus, Loader2, Upload, AlertCircle, CreditCard, User, Phone, XCircle } from "lucide-react";
+import { useActiveSeason } from "@/hooks/useSeason";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -42,6 +43,7 @@ const Register = () => {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [uploadErrors, setUploadErrors] = useState<{ photo?: string; receipt?: string }>({});
   const { toast } = useToast();
+  const activeSeason = useActiveSeason();
 
   const { data: settings } = useQuery({
     queryKey: ["tournament-settings"],
@@ -108,16 +110,21 @@ const Register = () => {
 
   const mutation = useMutation({
     mutationFn: async (data: RegisterFormData) => {
-      // Check for duplicate registration
+      if (!activeSeason) {
+        throw new Error("No active season found");
+      }
+
+      // Check for duplicate registration in the current season
       const { data: existingPlayer, error: checkError } = await supabase
         .from("players")
         .select("id")
+        .eq("season_id", activeSeason.id)
         .or(`email.eq.${data.email},phone.eq.${data.phone}`)
         .maybeSingle();
 
       if (checkError) throw checkError;
       if (existingPlayer) {
-        throw new Error("A player with this email or phone number is already registered");
+        throw new Error("A player with this email or phone number is already registered for this season");
       }
 
       let photoUrl: string | null = null;
@@ -174,6 +181,7 @@ const Register = () => {
           payment_receipt_url: receiptUrl,
           auction_status: "registered",
           base_price: 10000,
+          season_id: activeSeason.id,
         } as any,
       ]);
 
@@ -224,6 +232,31 @@ const Register = () => {
     );
   }
 
+  // Check if registration is open for the active season
+  const isRegistrationOpen = activeSeason?.registration_open ?? false;
+
+  if (!isRegistrationOpen) {
+    return (
+      <Layout>
+        <div className="min-h-[80vh] flex items-center justify-center px-4">
+          <div className="text-center max-w-md animate-fade-in">
+            <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-6">
+              <XCircle className="w-10 h-10 text-destructive" />
+            </div>
+            <h1 className="font-display text-4xl mb-4">Registration Closed</h1>
+            <p className="text-muted-foreground mb-8">
+              Player registration for {activeSeason?.name || "the current season"} is currently closed. 
+              Please check back later or contact the tournament organizers.
+            </p>
+            <Button variant="default" size="lg" onClick={() => window.location.href = "/"}>
+              Go Home
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   // Parse bank details safely
   let bankDetails = null;
   try {
@@ -244,9 +277,11 @@ const Register = () => {
               <span className="text-sm font-medium text-primary">Player Registration</span>
             </div>
             <h1 className="font-display text-4xl md:text-5xl tracking-wide mb-4">
-              Join <span className="text-primary">GCNPL 2025</span>
+              Join <span className="text-primary">GCNPL {activeSeason?.year || 2025}</span>
             </h1>
-            <p className="text-muted-foreground">Complete your registration to be part of the auction</p>
+            <p className="text-muted-foreground">
+              Complete your registration for {activeSeason?.name || "Season 2"} to be part of the auction
+            </p>
           </div>
 
           {/* Bank Details Card */}

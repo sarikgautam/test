@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 
 type Match = Database["public"]["Tables"]["matches"]["Row"];
@@ -56,17 +57,25 @@ export default function MatchesAdmin() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedSeasonId } = useSeason();
 
   const { data: matches, isLoading } = useQuery({
-    queryKey: ["admin-matches"],
+    queryKey: ["admin-matches", selectedSeasonId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("matches")
         .select("*")
         .order("match_number");
+      
+      if (selectedSeasonId) {
+        query = query.eq("season_id", selectedSeasonId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Match[];
     },
+    enabled: !!selectedSeasonId,
   });
 
   const { data: teams } = useQuery({
@@ -87,11 +96,12 @@ export default function MatchesAdmin() {
         match_date: data.match_date,
         venue: data.venue,
         status: data.status,
+        season_id: selectedSeasonId,
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-matches"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-matches", selectedSeasonId] });
       toast({ title: "Match created successfully" });
       resetForm();
     },
@@ -122,7 +132,7 @@ export default function MatchesAdmin() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-matches"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-matches", selectedSeasonId] });
       toast({ title: "Match updated successfully" });
       resetForm();
     },
@@ -137,7 +147,7 @@ export default function MatchesAdmin() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-matches"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-matches", selectedSeasonId] });
       toast({ title: "Match deleted successfully" });
     },
     onError: (error) => {

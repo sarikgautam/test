@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminSidebar } from "./AdminSidebar";
+import { SeasonSelector } from "./SeasonSelector";
+import { SeasonProvider } from "@/hooks/useSeason";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -51,11 +53,16 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AdminSidebar />
-      <main className="flex-1 p-8 overflow-auto">
-        <Outlet />
-      </main>
-    </div>
+    <SeasonProvider>
+      <div className="flex min-h-screen bg-background">
+        <AdminSidebar />
+        <main className="flex-1 p-8 overflow-auto">
+          <div className="flex justify-end mb-6">
+            <SeasonSelector />
+          </div>
+          <Outlet />
+        </main>
+      </div>
+    </SeasonProvider>
   );
 }
