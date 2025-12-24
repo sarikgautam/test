@@ -48,9 +48,12 @@ export default function MatchesAdmin() {
     venue: "Gold Coast Cricket Ground",
     status: "upcoming" as "upcoming" | "live" | "completed" | "cancelled",
     overs_per_side: 20,
-    home_team_score: "",
-    away_team_score: "",
+    match_stage: "group" as "group" | "eliminator" | "qualifier" | "final",
+    home_team_runs: 0,
+    home_team_wickets: 0,
     home_team_overs: "",
+    away_team_runs: 0,
+    away_team_wickets: 0,
     away_team_overs: "",
     winner_team_id: "",
     man_of_match_id: "",
@@ -127,6 +130,7 @@ export default function MatchesAdmin() {
         venue: data.venue,
         status: data.status,
         overs_per_side: data.overs_per_side,
+        match_stage: data.match_stage,
         season_id: selectedSeasonId,
       });
       if (error) throw error;
@@ -144,6 +148,10 @@ export default function MatchesAdmin() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data, awards }: { id: string; data: typeof formData; awards: Record<string, string> }) => {
       // Update match
+      // Generate display scores from runs/wickets
+      const homeScore = data.status === "completed" ? `${data.home_team_runs}/${data.home_team_wickets}` : null;
+      const awayScore = data.status === "completed" ? `${data.away_team_runs}/${data.away_team_wickets}` : null;
+      
       const { error } = await supabase
         .from("matches")
         .update({
@@ -154,9 +162,14 @@ export default function MatchesAdmin() {
           venue: data.venue,
           status: data.status,
           overs_per_side: data.overs_per_side,
-          home_team_score: data.home_team_score || null,
-          away_team_score: data.away_team_score || null,
+          match_stage: data.match_stage,
+          home_team_runs: data.home_team_runs,
+          home_team_wickets: data.home_team_wickets,
+          home_team_score: homeScore,
           home_team_overs: data.home_team_overs || null,
+          away_team_runs: data.away_team_runs,
+          away_team_wickets: data.away_team_wickets,
+          away_team_score: awayScore,
           away_team_overs: data.away_team_overs || null,
           winner_team_id: data.winner_team_id || null,
           man_of_match_id: data.man_of_match_id || null,
@@ -216,9 +229,12 @@ export default function MatchesAdmin() {
       venue: "Gold Coast Cricket Ground",
       status: "upcoming",
       overs_per_side: 20,
-      home_team_score: "",
-      away_team_score: "",
+      match_stage: "group",
+      home_team_runs: 0,
+      home_team_wickets: 0,
       home_team_overs: "",
+      away_team_runs: 0,
+      away_team_wickets: 0,
       away_team_overs: "",
       winner_team_id: "",
       man_of_match_id: "",
@@ -239,9 +255,12 @@ export default function MatchesAdmin() {
       venue: match.venue,
       status: match.status,
       overs_per_side: (match as any).overs_per_side || 20,
-      home_team_score: match.home_team_score || "",
-      away_team_score: match.away_team_score || "",
+      match_stage: ((match as any).match_stage || "group") as "group" | "eliminator" | "qualifier" | "final",
+      home_team_runs: (match as any).home_team_runs || 0,
+      home_team_wickets: (match as any).home_team_wickets || 0,
       home_team_overs: match.home_team_overs || "",
+      away_team_runs: (match as any).away_team_runs || 0,
+      away_team_wickets: (match as any).away_team_wickets || 0,
       away_team_overs: match.away_team_overs || "",
       winner_team_id: match.winner_team_id || "",
       man_of_match_id: match.man_of_match_id || "",
@@ -336,6 +355,25 @@ export default function MatchesAdmin() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="match_stage">Match Stage</Label>
+                  <Select
+                    value={formData.match_stage}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, match_stage: value as typeof formData.match_stage })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="group">Group Stage</SelectItem>
+                      <SelectItem value="eliminator">Eliminator</SelectItem>
+                      <SelectItem value="qualifier">Qualifier</SelectItem>
+                      <SelectItem value="final">Final</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -415,13 +453,26 @@ export default function MatchesAdmin() {
                 <>
                   <div className="border-t pt-4 mt-4">
                     <h3 className="font-medium mb-4">Match Results</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label>Home Score (e.g., 156/8)</Label>
+                        <Label>Home Runs</Label>
                         <Input
-                          value={formData.home_team_score}
+                          type="number"
+                          value={formData.home_team_runs}
                           onChange={(e) =>
-                            setFormData({ ...formData, home_team_score: e.target.value })
+                            setFormData({ ...formData, home_team_runs: parseInt(e.target.value) || 0 })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Home Wickets</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={10}
+                          value={formData.home_team_wickets}
+                          onChange={(e) =>
+                            setFormData({ ...formData, home_team_wickets: Math.min(10, parseInt(e.target.value) || 0) })
                           }
                         />
                       </div>
@@ -435,11 +486,24 @@ export default function MatchesAdmin() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Away Score (e.g., 152/10)</Label>
+                        <Label>Away Runs</Label>
                         <Input
-                          value={formData.away_team_score}
+                          type="number"
+                          value={formData.away_team_runs}
                           onChange={(e) =>
-                            setFormData({ ...formData, away_team_score: e.target.value })
+                            setFormData({ ...formData, away_team_runs: parseInt(e.target.value) || 0 })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Away Wickets</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={10}
+                          value={formData.away_team_wickets}
+                          onChange={(e) =>
+                            setFormData({ ...formData, away_team_wickets: Math.min(10, parseInt(e.target.value) || 0) })
                           }
                         />
                       </div>
@@ -453,6 +517,9 @@ export default function MatchesAdmin() {
                         />
                       </div>
                     </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Score display: {formData.home_team_runs}/{formData.home_team_wickets} vs {formData.away_team_runs}/{formData.away_team_wickets}
+                    </p>
                     <div className="space-y-2 mt-4">
                       <Label>Winner</Label>
                       <Select

@@ -161,15 +161,20 @@ export type Database = {
         Row: {
           away_team_id: string
           away_team_overs: string | null
+          away_team_runs: number | null
           away_team_score: string | null
+          away_team_wickets: number | null
           created_at: string
           home_team_id: string
           home_team_overs: string | null
+          home_team_runs: number | null
           home_team_score: string | null
+          home_team_wickets: number | null
           id: string
           man_of_match_id: string | null
           match_date: string
           match_number: number
+          match_stage: Database["public"]["Enums"]["match_type"] | null
           match_summary: string | null
           overs_per_side: number | null
           season_id: string | null
@@ -183,15 +188,20 @@ export type Database = {
         Insert: {
           away_team_id: string
           away_team_overs?: string | null
+          away_team_runs?: number | null
           away_team_score?: string | null
+          away_team_wickets?: number | null
           created_at?: string
           home_team_id: string
           home_team_overs?: string | null
+          home_team_runs?: number | null
           home_team_score?: string | null
+          home_team_wickets?: number | null
           id?: string
           man_of_match_id?: string | null
           match_date: string
           match_number: number
+          match_stage?: Database["public"]["Enums"]["match_type"] | null
           match_summary?: string | null
           overs_per_side?: number | null
           season_id?: string | null
@@ -205,15 +215,20 @@ export type Database = {
         Update: {
           away_team_id?: string
           away_team_overs?: string | null
+          away_team_runs?: number | null
           away_team_score?: string | null
+          away_team_wickets?: number | null
           created_at?: string
           home_team_id?: string
           home_team_overs?: string | null
+          home_team_runs?: number | null
           home_team_score?: string | null
+          home_team_wickets?: number | null
           id?: string
           man_of_match_id?: string | null
           match_date?: string
           match_number?: number
+          match_stage?: Database["public"]["Enums"]["match_type"] | null
           match_summary?: string | null
           overs_per_side?: number | null
           season_id?: string | null
@@ -693,6 +708,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       match_status: "upcoming" | "live" | "completed" | "cancelled"
+      match_type: "group" | "eliminator" | "qualifier" | "final"
       player_auction_status: "registered" | "sold" | "unsold"
       player_role: "batsman" | "bowler" | "all_rounder" | "wicket_keeper"
     }
@@ -824,6 +840,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "moderator", "user"],
       match_status: ["upcoming", "live", "completed", "cancelled"],
+      match_type: ["group", "eliminator", "qualifier", "final"],
       player_auction_status: ["registered", "sold", "unsold"],
       player_role: ["batsman", "bowler", "all_rounder", "wicket_keeper"],
     },
