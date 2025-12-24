@@ -145,12 +145,13 @@ export default function Auction() {
     if (prevPlayerId && prevTeamId && prevBid > 0 && !liveAuction?.current_player_id) {
       // Fetch the sold player and team to show celebration
       const fetchSoldData = async () => {
-        const [playerRes, teamRes] = await Promise.all([
+        const [playerRes, teamRes, regRes] = await Promise.all([
           supabase.from("players").select("*").eq("id", prevPlayerId).single(),
           supabase.from("teams").select("*").eq("id", prevTeamId).single(),
+          supabase.from("player_season_registrations").select("*").eq("player_id", prevPlayerId).eq("season_id", activeSeason?.id!).single(),
         ]);
 
-        if (playerRes.data && teamRes.data && playerRes.data.auction_status === "sold") {
+        if (playerRes.data && teamRes.data && regRes.data?.auction_status === "sold") {
           setShowCelebration({
             player: playerRes.data,
             team: teamRes.data,
@@ -170,7 +171,7 @@ export default function Auction() {
       teamId: liveAuction?.current_bidding_team_id || null,
       bid: liveAuction?.current_bid || 0,
     };
-  }, [liveAuction?.current_player_id, liveAuction?.current_bidding_team_id, liveAuction?.current_bid, queryClient]);
+  }, [liveAuction?.current_player_id, liveAuction?.current_bidding_team_id, liveAuction?.current_bid, queryClient, activeSeason?.id]);
 
   const roleLabels: Record<string, string> = {
     batsman: "Batsman",

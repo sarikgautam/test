@@ -15,8 +15,12 @@ export function RecentSoldPlayers({ seasonId, limit = 3 }: RecentSoldPlayersProp
     queryKey: ["recent-sold-players", seasonId, limit],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("players")
-        .select("*, teams:teams!players_team_id_fkey(*)")
+        .from("player_season_registrations")
+        .select(`
+          *,
+          players:player_id(*),
+          teams:team_id(*)
+        `)
         .eq("auction_status", "sold")
         .eq("season_id", seasonId!)
         .order("updated_at", { ascending: false })
@@ -65,53 +69,58 @@ export function RecentSoldPlayers({ seasonId, limit = 3 }: RecentSoldPlayersProp
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {soldPlayers.map((player, index) => (
-            <div
-              key={player.id}
-              className={`flex items-center gap-4 p-4 rounded-lg ${
-                index === 0
-                  ? "bg-yellow-500/10 border border-yellow-500/30"
-                  : "bg-muted/30 border border-border/50"
-              }`}
-            >
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                {player.photo_url ? (
-                  <img
-                    src={player.photo_url}
-                    alt={player.full_name}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <User className="w-6 h-6 text-muted-foreground" />
-                )}
-              </div>
-              <div className="flex-grow min-w-0">
-                <p className="font-medium truncate">{player.full_name}</p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="text-xs">
-                    {roleLabels[player.role]}
-                  </Badge>
-                  {player.teams && (
-                    <div className="flex items-center gap-1">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: player.teams.primary_color }}
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {player.teams.name}
-                      </span>
-                    </div>
+          {soldPlayers.map((registration, index) => {
+            const player = registration.players as any;
+            const team = registration.teams as any;
+            
+            return (
+              <div
+                key={registration.id}
+                className={`flex items-center gap-4 p-4 rounded-lg ${
+                  index === 0
+                    ? "bg-yellow-500/10 border border-yellow-500/30"
+                    : "bg-muted/30 border border-border/50"
+                }`}
+              >
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  {player?.photo_url ? (
+                    <img
+                      src={player.photo_url}
+                      alt={player.full_name}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-6 h-6 text-muted-foreground" />
                   )}
                 </div>
+                <div className="flex-grow min-w-0">
+                  <p className="font-medium truncate">{player?.full_name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-xs">
+                      {roleLabels[player?.role] || player?.role}
+                    </Badge>
+                    {team && (
+                      <div className="flex items-center gap-1">
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: team.primary_color }}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {team.name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-primary text-lg">
+                    ${registration.sold_price?.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Sold</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-primary text-lg">
-                  ${player.sold_price?.toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground">Sold</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

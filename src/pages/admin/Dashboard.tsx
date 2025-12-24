@@ -3,36 +3,42 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Shield, Calendar, Trophy, TrendingUp, DollarSign } from "lucide-react";
+import { useSeason } from "@/hooks/useSeason";
 
 export default function AdminDashboard() {
+  const { selectedSeasonId } = useSeason();
+  
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["admin-stats"],
+    queryKey: ["admin-stats", selectedSeasonId],
     queryFn: async () => {
-      const [teamsRes, playersRes, matchesRes, registeredRes] = await Promise.all([
+      const [teamsRes, playersRes, matchesRes, registrationsRes] = await Promise.all([
         supabase.from("teams").select("id, remaining_budget", { count: "exact" }),
-        supabase.from("players").select("id, auction_status, sold_price", { count: "exact" }),
-        supabase.from("matches").select("id, status", { count: "exact" }),
-        supabase.from("players").select("id").eq("auction_status", "registered"),
+        supabase.from("players").select("id", { count: "exact" }),
+        supabase.from("matches").select("id, status", { count: "exact" }).eq("season_id", selectedSeasonId!),
+        supabase.from("player_season_registrations").select("id, auction_status, sold_price").eq("season_id", selectedSeasonId!),
       ]);
 
-      const totalBudgetSpent = playersRes.data?.reduce(
-        (acc, p) => acc + (p.sold_price || 0),
+      const registrations = registrationsRes.data || [];
+      const totalBudgetSpent = registrations.reduce(
+        (acc, r) => acc + (r.sold_price || 0),
         0
-      ) || 0;
+      );
 
-      const soldPlayers = playersRes.data?.filter(p => p.auction_status === "sold").length || 0;
+      const soldPlayers = registrations.filter(r => r.auction_status === "sold").length;
+      const registeredPlayers = registrations.filter(r => r.auction_status === "registered").length;
       const completedMatches = matchesRes.data?.filter(m => m.status === "completed").length || 0;
 
       return {
         teams: teamsRes.count || 0,
         players: playersRes.count || 0,
         matches: matchesRes.count || 0,
-        registeredForAuction: registeredRes.data?.length || 0,
+        registeredForAuction: registeredPlayers,
         soldPlayers,
         completedMatches,
         totalBudgetSpent,
       };
     },
+    enabled: !!selectedSeasonId,
   });
 
   const statCards = [

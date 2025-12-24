@@ -114,17 +114,28 @@ const Register = () => {
         throw new Error("No active season found");
       }
 
-      // Check for duplicate registration in the current season
+      // Check for existing player with same email
       const { data: existingPlayer, error: checkError } = await supabase
         .from("players")
         .select("id")
-        .eq("season_id", activeSeason.id)
-        .or(`email.eq.${data.email},phone.eq.${data.phone}`)
+        .eq("email", data.email)
         .maybeSingle();
 
       if (checkError) throw checkError;
+
+      // If player exists, check if already registered for this season
       if (existingPlayer) {
-        throw new Error("A player with this email or phone number is already registered for this season");
+        const { data: existingReg, error: regCheckError } = await supabase
+          .from("player_season_registrations")
+          .select("id")
+          .eq("player_id", existingPlayer.id)
+          .eq("season_id", activeSeason.id)
+          .maybeSingle();
+
+        if (regCheckError) throw regCheckError;
+        if (existingReg) {
+          throw new Error("You are already registered for this season");
+        }
       }
 
       let photoUrl: string | null = null;
@@ -162,30 +173,70 @@ const Register = () => {
         receiptUrl = receiptPath;
       }
 
-      // Insert player record
-      const { error } = await supabase.from("players").insert([
-        {
-          full_name: data.full_name,
-          email: data.email,
-          phone: data.phone,
-          date_of_birth: data.date_of_birth,
-          address: data.address,
-          current_team: data.current_team || null,
-          emergency_contact_name: data.emergency_contact_name,
-          emergency_contact_phone: data.emergency_contact_phone,
-          emergency_contact_email: data.emergency_contact_email || null,
-          role: data.role,
-          batting_style: data.batting_style || null,
-          bowling_style: data.bowling_style || null,
-          photo_url: photoUrl,
-          payment_receipt_url: receiptUrl,
+      let playerId: string;
+
+      if (existingPlayer) {
+        // Update existing player info
+        const { error: updateError } = await supabase
+          .from("players")
+          .update({
+            full_name: data.full_name,
+            phone: data.phone,
+            date_of_birth: data.date_of_birth,
+            address: data.address,
+            current_team: data.current_team || null,
+            emergency_contact_name: data.emergency_contact_name,
+            emergency_contact_phone: data.emergency_contact_phone,
+            emergency_contact_email: data.emergency_contact_email || null,
+            role: data.role,
+            batting_style: data.batting_style || null,
+            bowling_style: data.bowling_style || null,
+            photo_url: photoUrl || undefined,
+            payment_receipt_url: receiptUrl || undefined,
+          })
+          .eq("id", existingPlayer.id);
+
+        if (updateError) throw updateError;
+        playerId = existingPlayer.id;
+      } else {
+        // Insert new player record
+        const { data: newPlayer, error: playerError } = await supabase
+          .from("players")
+          .insert({
+            full_name: data.full_name,
+            email: data.email,
+            phone: data.phone,
+            date_of_birth: data.date_of_birth,
+            address: data.address,
+            current_team: data.current_team || null,
+            emergency_contact_name: data.emergency_contact_name,
+            emergency_contact_phone: data.emergency_contact_phone,
+            emergency_contact_email: data.emergency_contact_email || null,
+            role: data.role,
+            batting_style: data.batting_style || null,
+            bowling_style: data.bowling_style || null,
+            photo_url: photoUrl,
+            payment_receipt_url: receiptUrl,
+            original_season_id: activeSeason.id,
+          })
+          .select("id")
+          .single();
+
+        if (playerError) throw playerError;
+        playerId = newPlayer.id;
+      }
+
+      // Create season registration
+      const { error: regError } = await supabase
+        .from("player_season_registrations")
+        .insert({
+          player_id: playerId,
+          season_id: activeSeason.id,
           auction_status: "registered",
           base_price: 10000,
-          season_id: activeSeason.id,
-        } as any,
-      ]);
+        });
 
-      if (error) throw error;
+      if (regError) throw regError;
     },
     onSuccess: () => {
       setIsSuccess(true);
@@ -424,16 +475,16 @@ const Register = () => {
               </CardContent>
             </Card>
 
-            {/* Playing Information */}
+            {/* Cricket Details */}
             <Card className="border-border/50">
               <CardHeader>
-                <CardTitle>Playing Information</CardTitle>
+                <CardTitle>Cricket Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Playing Role *</Label>
-                    <Select defaultValue="batsman" onValueChange={(val) => setValue("role", val as any)}>
+                    <Label>Primary Role *</Label>
+                    <Select defaultValue="batsman" onValueChange={(v) => setValue("role", v as any)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
@@ -446,31 +497,32 @@ const Register = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Batting Style</Label>
-                    <Select onValueChange={(val) => setValue("batting_style", val)}>
+                    <Label htmlFor="batting_style">Batting Style</Label>
+                    <Select onValueChange={(v) => setValue("batting_style", v)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select batting style" />
+                        <SelectValue placeholder="Select style" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Right-hand bat">Right-hand Bat</SelectItem>
-                        <SelectItem value="Left-hand bat">Left-hand Bat</SelectItem>
+                        <SelectItem value="Right-handed">Right-handed</SelectItem>
+                        <SelectItem value="Left-handed">Left-handed</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Bowling Style</Label>
-                    <Select onValueChange={(val) => setValue("bowling_style", val)}>
+                    <Label htmlFor="bowling_style">Bowling Style</Label>
+                    <Select onValueChange={(v) => setValue("bowling_style", v)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select bowling style" />
+                        <SelectValue placeholder="Select style" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Right-arm fast">Right-arm Fast</SelectItem>
-                        <SelectItem value="Left-arm fast">Left-arm Fast</SelectItem>
-                        <SelectItem value="Right-arm medium">Right-arm Medium</SelectItem>
-                        <SelectItem value="Right-arm off-spin">Right-arm Off-spin</SelectItem>
-                        <SelectItem value="Right-arm leg-spin">Right-arm Leg-spin</SelectItem>
-                        <SelectItem value="Left-arm orthodox">Left-arm Orthodox</SelectItem>
-                        <SelectItem value="Left-arm chinaman">Left-arm Chinaman</SelectItem>
+                        <SelectItem value="Right-arm Fast">Right-arm Fast</SelectItem>
+                        <SelectItem value="Right-arm Medium">Right-arm Medium</SelectItem>
+                        <SelectItem value="Right-arm Off-spin">Right-arm Off-spin</SelectItem>
+                        <SelectItem value="Right-arm Leg-spin">Right-arm Leg-spin</SelectItem>
+                        <SelectItem value="Left-arm Fast">Left-arm Fast</SelectItem>
+                        <SelectItem value="Left-arm Medium">Left-arm Medium</SelectItem>
+                        <SelectItem value="Left-arm Orthodox">Left-arm Orthodox</SelectItem>
+                        <SelectItem value="Left-arm Chinaman">Left-arm Chinaman</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -478,88 +530,76 @@ const Register = () => {
               </CardContent>
             </Card>
 
-            {/* File Uploads */}
+            {/* Photo Upload */}
             <Card className="border-border/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="w-5 h-5" />
-                  Upload Documents
+                  Profile Photo
                 </CardTitle>
+                <CardDescription>Upload a recent photo (optional but recommended)</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Profile Photo */}
-                <div className="space-y-2">
-                  <Label htmlFor="profile_photo">Profile Photo</Label>
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1">
-                      <Input
-                        id="profile_photo"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                        onChange={handlePhotoChange}
-                        className="cursor-pointer"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        JPG, PNG or WEBP (max 5MB)
-                      </p>
-                      {uploadErrors.photo && (
-                        <p className="text-sm text-destructive flex items-center gap-1 mt-1">
-                          <AlertCircle className="w-4 h-4" />
-                          {uploadErrors.photo}
-                        </p>
-                      )}
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  {photoPreview ? (
+                    <img src={photoPreview} alt="Preview" className="w-24 h-24 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
+                      <User className="w-10 h-10 text-muted-foreground" />
                     </div>
-                    {photoPreview && (
-                      <img
-                        src={photoPreview}
-                        alt="Preview"
-                        className="w-20 h-20 object-cover rounded-lg border"
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* Payment Receipt */}
-                <div className="space-y-2">
-                  <Label htmlFor="payment_receipt">Payment Receipt *</Label>
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1">
-                      <Input
-                        id="payment_receipt"
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={handleReceiptChange}
-                        className="cursor-pointer"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Upload screenshot or PDF of your payment receipt (max 5MB)
+                  )}
+                  <div className="flex-1">
+                    <Input type="file" accept="image/*" onChange={handlePhotoChange} className="cursor-pointer" />
+                    {uploadErrors.photo && (
+                      <p className="text-sm text-destructive mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {uploadErrors.photo}
                       </p>
-                      {uploadErrors.receipt && (
-                        <p className="text-sm text-destructive flex items-center gap-1 mt-1">
-                          <AlertCircle className="w-4 h-4" />
-                          {uploadErrors.receipt}
-                        </p>
-                      )}
-                    </div>
-                    {receiptPreview && (
-                      <img
-                        src={receiptPreview}
-                        alt="Receipt Preview"
-                        className="w-20 h-20 object-cover rounded-lg border"
-                      />
                     )}
+                    <p className="text-xs text-muted-foreground mt-1">Max 5MB. JPG, PNG, or WEBP.</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Payment Receipt */}
+            <Card className="border-border/50 border-primary/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  Payment Receipt *
+                </CardTitle>
+                <CardDescription>Upload your payment receipt (required)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {receiptPreview && (
+                    <img src={receiptPreview} alt="Receipt Preview" className="max-h-40 rounded-lg object-contain" />
+                  )}
+                  <Input type="file" accept="image/*,.pdf" onChange={handleReceiptChange} className="cursor-pointer" />
+                  {uploadErrors.receipt && (
+                    <p className="text-sm text-destructive flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {uploadErrors.receipt}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">Max 5MB. Image or PDF.</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Submit Button */}
             <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending}>
               {mutation.isPending ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" /> Registering...
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Registering...
                 </>
               ) : (
-                "Complete Registration"
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Complete Registration
+                </>
               )}
             </Button>
           </form>

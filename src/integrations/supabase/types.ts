@@ -284,6 +284,67 @@ export type Database = {
           },
         ]
       }
+      player_season_registrations: {
+        Row: {
+          auction_status: string
+          base_price: number
+          created_at: string
+          id: string
+          jersey_number: number | null
+          player_id: string
+          season_id: string
+          sold_price: number | null
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          auction_status?: string
+          base_price?: number
+          created_at?: string
+          id?: string
+          jersey_number?: number | null
+          player_id: string
+          season_id: string
+          sold_price?: number | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auction_status?: string
+          base_price?: number
+          created_at?: string
+          id?: string
+          jersey_number?: number | null
+          player_id?: string
+          season_id?: string
+          sold_price?: number | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_season_registrations_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_season_registrations_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_season_registrations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_stats: {
         Row: {
           balls_faced: number
@@ -366,7 +427,6 @@ export type Database = {
       players: {
         Row: {
           address: string | null
-          auction_status: Database["public"]["Enums"]["player_auction_status"]
           base_price: number
           batting_style: string | null
           bowling_style: string | null
@@ -379,19 +439,16 @@ export type Database = {
           emergency_contact_phone: string | null
           full_name: string
           id: string
-          jersey_number: number | null
+          original_season_id: string | null
           payment_receipt_url: string | null
           phone: string | null
           photo_url: string | null
           role: Database["public"]["Enums"]["player_role"]
-          season_id: string | null
-          sold_price: number | null
           team_id: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
-          auction_status?: Database["public"]["Enums"]["player_auction_status"]
           base_price?: number
           batting_style?: string | null
           bowling_style?: string | null
@@ -404,19 +461,16 @@ export type Database = {
           emergency_contact_phone?: string | null
           full_name: string
           id?: string
-          jersey_number?: number | null
+          original_season_id?: string | null
           payment_receipt_url?: string | null
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["player_role"]
-          season_id?: string | null
-          sold_price?: number | null
           team_id?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
-          auction_status?: Database["public"]["Enums"]["player_auction_status"]
           base_price?: number
           batting_style?: string | null
           bowling_style?: string | null
@@ -429,20 +483,18 @@ export type Database = {
           emergency_contact_phone?: string | null
           full_name?: string
           id?: string
-          jersey_number?: number | null
+          original_season_id?: string | null
           payment_receipt_url?: string | null
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["player_role"]
-          season_id?: string | null
-          sold_price?: number | null
           team_id?: string | null
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "players_season_id_fkey"
-            columns: ["season_id"]
+            columns: ["original_season_id"]
             isOneToOne: false
             referencedRelation: "seasons"
             referencedColumns: ["id"]
