@@ -520,16 +520,16 @@ export default function MatchesAdmin() {
                             <div key={award.id} className="space-y-2">
                               <Label>{award.name}</Label>
                               <Select
-                                value={matchAwards[award.id] || ""}
+                                value={matchAwards[award.id] || "none"}
                                 onValueChange={(value) =>
-                                  setMatchAwards({ ...matchAwards, [award.id]: value })
+                                  setMatchAwards({ ...matchAwards, [award.id]: value === "none" ? "" : value })
                                 }
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select player (optional)" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="">None</SelectItem>
+                                  <SelectItem value="none">None</SelectItem>
                                   {players?.map((player) => (
                                     <SelectItem key={player.id} value={player.id}>
                                       {player.full_name} ({getTeamName(player.team_id || "")})
