@@ -4,13 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, User, Search, DollarSign, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -20,8 +14,7 @@ interface SoldPlayersListProps {
 
 export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [teamFilter, setTeamFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"price" | "name" | "recent">("recent");
+  const [activeTab, setActiveTab] = useState("all");
 
   const { data: soldPlayers, isLoading: playersLoading } = useQuery({
     queryKey: ["sold-players", seasonId],
@@ -57,24 +50,26 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
     wicket_keeper: "Wicket Keeper",
   };
 
-  const filteredPlayers = soldPlayers
-    ?.filter((player) => {
-      const matchesSearch = player.full_name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const matchesTeam =
-        teamFilter === "all" || player.team_id === teamFilter;
-      return matchesSearch && matchesTeam;
-    })
-    .sort((a, b) => {
-      if (sortBy === "price") {
-        return (b.sold_price || 0) - (a.sold_price || 0);
-      }
-      if (sortBy === "name") {
-        return a.full_name.localeCompare(b.full_name);
-      }
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-    });
+  const getFilteredPlayers = (filter: string) => {
+    let filtered = soldPlayers?.filter((player) =>
+      player.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (filter === "all") {
+      return filtered?.sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+    }
+
+    if (filter === "top-price") {
+      return filtered?.sort((a, b) => (b.sold_price || 0) - (a.sold_price || 0));
+    }
+
+    // Filter by team
+    return filtered
+      ?.filter((player) => player.team_id === filter)
+      .sort((a, b) => (b.sold_price || 0) - (a.sold_price || 0));
+  };
 
   const topExpensivePlayers = [...(soldPlayers || [])]
     .sort((a, b) => (b.sold_price || 0) - (a.sold_price || 0))
@@ -94,6 +89,13 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
   if (!soldPlayers || soldPlayers.length === 0) {
     return null;
   }
+
+  const filteredPlayers = getFilteredPlayers(activeTab);
+
+  // Get teams that have bought players
+  const teamsWithPlayers = teams?.filter((team) =>
+    soldPlayers.some((player) => player.team_id === team.id)
+  );
 
   return (
     <div className="space-y-8">
@@ -191,102 +193,106 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
         </Card>
       </div>
 
-      {/* Filters & Player List */}
+      {/* Tab Navigation */}
       <Card className="border-border/50">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Trophy className="w-5 h-5 text-primary" />
-            Recently Sold Players
+            Sold Players
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search players..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Filter by team" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Teams</SelectItem>
-                {teams?.map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    {team.short_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Most Recent</SelectItem>
-                <SelectItem value="price">Highest Price</SelectItem>
-                <SelectItem value="name">Name A-Z</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search players..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
 
-          {/* Player Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-            {filteredPlayers?.map((player) => (
-              <div
-                key={player.id}
-                className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50"
-              >
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  {player.photo_url ? (
-                    <img
-                      src={player.photo_url}
-                      alt={player.full_name}
-                      className="w-full h-full rounded-full object-cover"
+          {/* Tab Navigation */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="overflow-x-auto pb-2">
+              <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+                <TabsTrigger value="all" className="flex-shrink-0">
+                  All ({soldPlayers.length})
+                </TabsTrigger>
+                <TabsTrigger value="top-price" className="flex-shrink-0">
+                  By Price
+                </TabsTrigger>
+                {teamsWithPlayers?.map((team) => (
+                  <TabsTrigger
+                    key={team.id}
+                    value={team.id}
+                    className="flex-shrink-0 flex items-center gap-1.5"
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: team.primary_color }}
                     />
-                  ) : (
-                    <User className="w-5 h-5 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex-grow min-w-0">
-                  <p className="font-medium text-sm truncate">{player.full_name}</p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      {roleLabels[player.role]}
-                    </Badge>
-                    {player.team && (
-                      <div className="flex items-center gap-1">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: player.team.primary_color }}
-                        />
-                        <span className="text-[10px] text-muted-foreground">
-                          {player.team.short_name}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-primary text-sm">
-                    ${player.sold_price?.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+                    {team.short_name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
-          {filteredPlayers?.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">
-              No players match your filters.
-            </p>
-          )}
+            {/* Player Grid - shared across all tabs */}
+            <div className="mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                {filteredPlayers?.map((player) => (
+                  <div
+                    key={player.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                      {player.photo_url ? (
+                        <img
+                          src={player.photo_url}
+                          alt={player.full_name}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <p className="font-medium text-sm truncate">{player.full_name}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          {roleLabels[player.role]}
+                        </Badge>
+                        {player.team && (
+                          <div className="flex items-center gap-1">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: player.team.primary_color }}
+                            />
+                            <span className="text-[10px] text-muted-foreground">
+                              {player.team.short_name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary text-sm">
+                        ${player.sold_price?.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {filteredPlayers?.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  No players match your search.
+                </p>
+              )}
+            </div>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
