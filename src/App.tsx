@@ -25,6 +25,7 @@ import MatchesAdmin from "./pages/admin/MatchesAdmin";
 import StandingsAdmin from "./pages/admin/StandingsAdmin";
 import StatsAdmin from "./pages/admin/StatsAdmin";
 import MatchResultsAdmin from "./pages/admin/MatchResultsAdmin";
+import AwardsAdmin from "./pages/admin/AwardsAdmin";
 import AuctionAdmin from "./pages/admin/AuctionAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
 
@@ -56,6 +57,7 @@ const App = () => (
                 <Route path="players" element={<PlayersAdmin />} />
                 <Route path="matches" element={<MatchesAdmin />} />
                 <Route path="results" element={<MatchResultsAdmin />} />
+                <Route path="awards" element={<AwardsAdmin />} />
                 <Route path="standings" element={<StandingsAdmin />} />
                 <Route path="stats" element={<StatsAdmin />} />
                 <Route path="auction" element={<AuctionAdmin />} />

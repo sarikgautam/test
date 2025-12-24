@@ -58,8 +58,13 @@ const Fixtures = () => {
                 >
                   <div className="p-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">Match {match.match_number}</span>
+                        {(match as any).overs_per_side && (
+                          <span className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                            {(match as any).overs_per_side} Overs
+                          </span>
+                        )}
                         {getStatusBadge(match.status)}
                         {match.status === "completed" && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -75,20 +80,48 @@ const Fixtures = () => {
                       </div>
                     </div>
                     <div className="flex items-center justify-center gap-6 mt-6">
+                      {/* Home Team */}
                       <div className="flex-1 text-center">
-                        <div className="w-14 h-14 mx-auto rounded-full flex items-center justify-center font-bold mb-2" style={{ backgroundColor: match.home_team?.primary_color || "#1e3a8a" }}>
-                          {match.home_team?.short_name?.substring(0, 2)}
+                        <div 
+                          className="w-16 h-16 mx-auto rounded-full flex items-center justify-center font-bold mb-2 shadow-lg overflow-hidden" 
+                          style={{ backgroundColor: match.home_team?.primary_color || "#1e3a8a" }}
+                        >
+                          {match.home_team?.logo_url ? (
+                            <img src={match.home_team.logo_url} alt={match.home_team.name} className="w-12 h-12 object-contain" />
+                          ) : (
+                            <span className="text-lg">{match.home_team?.short_name?.substring(0, 2)}</span>
+                          )}
                         </div>
                         <p className="font-medium">{match.home_team?.name}</p>
-                        {match.home_team_score && <p className="text-xl font-bold text-primary mt-1">{match.home_team_score}</p>}
+                        {match.home_team_score && (
+                          <div className="mt-1">
+                            <span className="text-xl font-bold text-primary">{match.home_team_score}</span>
+                            {match.home_team_overs && <span className="text-sm text-muted-foreground ml-1">({match.home_team_overs} ov)</span>}
+                          </div>
+                        )}
                       </div>
+
                       <div className="text-3xl font-display text-muted-foreground">VS</div>
+
+                      {/* Away Team */}
                       <div className="flex-1 text-center">
-                        <div className="w-14 h-14 mx-auto rounded-full flex items-center justify-center font-bold mb-2" style={{ backgroundColor: match.away_team?.primary_color || "#dc2626" }}>
-                          {match.away_team?.short_name?.substring(0, 2)}
+                        <div 
+                          className="w-16 h-16 mx-auto rounded-full flex items-center justify-center font-bold mb-2 shadow-lg overflow-hidden" 
+                          style={{ backgroundColor: match.away_team?.primary_color || "#dc2626" }}
+                        >
+                          {match.away_team?.logo_url ? (
+                            <img src={match.away_team.logo_url} alt={match.away_team.name} className="w-12 h-12 object-contain" />
+                          ) : (
+                            <span className="text-lg">{match.away_team?.short_name?.substring(0, 2)}</span>
+                          )}
                         </div>
                         <p className="font-medium">{match.away_team?.name}</p>
-                        {match.away_team_score && <p className="text-xl font-bold text-primary mt-1">{match.away_team_score}</p>}
+                        {match.away_team_score && (
+                          <div className="mt-1">
+                            <span className="text-xl font-bold text-primary">{match.away_team_score}</span>
+                            {match.away_team_overs && <span className="text-sm text-muted-foreground ml-1">({match.away_team_overs} ov)</span>}
+                          </div>
+                        )}
                       </div>
                     </div>
                     {match.winner && (

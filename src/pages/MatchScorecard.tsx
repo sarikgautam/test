@@ -73,6 +73,24 @@ const MatchScorecard = () => {
     enabled: !!matchId,
   });
 
+  // Fetch match awards
+  const { data: matchAwards } = useQuery({
+    queryKey: ["match-awards", matchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("match_awards")
+        .select(`
+          *,
+          award_type:award_types(*),
+          player:players(id, full_name)
+        `)
+        .eq("match_id", matchId!);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!matchId,
+  });
+
   const isLoading = matchLoading || statsLoading;
 
   if (isLoading) {
@@ -235,6 +253,23 @@ const MatchScorecard = () => {
                     <p className="font-display text-lg text-yellow-500">{match.man_of_match.full_name}</p>
                   </div>
                   <Star className="w-6 h-6 text-yellow-500" />
+                </div>
+              </div>
+            )}
+
+            {/* Other Awards */}
+            {matchAwards && matchAwards.length > 0 && (
+              <div className="px-6 py-4 border-t border-border">
+                <div className="flex flex-wrap justify-center gap-4">
+                  {matchAwards.map((award: any) => (
+                    <div key={award.id} className="flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full">
+                      <Trophy className="w-4 h-4 text-primary" />
+                      <div>
+                        <span className="text-xs text-muted-foreground">{award.award_type?.name}: </span>
+                        <span className="font-medium">{award.player?.full_name}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

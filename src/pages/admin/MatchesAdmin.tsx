@@ -47,13 +47,16 @@ export default function MatchesAdmin() {
     match_date: "",
     venue: "Gold Coast Cricket Ground",
     status: "upcoming" as "upcoming" | "live" | "completed" | "cancelled",
+    overs_per_side: 20,
     home_team_score: "",
     away_team_score: "",
     home_team_overs: "",
     away_team_overs: "",
     winner_team_id: "",
+    man_of_match_id: "",
     match_summary: "",
   });
+  const [matchAwards, setMatchAwards] = useState<Record<string, string>>({});
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -87,6 +90,33 @@ export default function MatchesAdmin() {
     },
   });
 
+  // Fetch players for man of match selection
+  const { data: players } = useQuery({
+    queryKey: ["players-for-match", formData.home_team_id, formData.away_team_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("players")
+        .select("id, full_name, team_id")
+        .in("team_id", [formData.home_team_id, formData.away_team_id].filter(Boolean));
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!(formData.home_team_id || formData.away_team_id),
+  });
+
+  // Fetch award types
+  const { data: awardTypes } = useQuery({
+    queryKey: ["award-types"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("award_types")
+        .select("*")
+        .eq("is_active", true);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase.from("matches").insert({
@@ -96,6 +126,7 @@ export default function MatchesAdmin() {
         match_date: aestToUTC(data.match_date),
         venue: data.venue,
         status: data.status,
+        overs_per_side: data.overs_per_side,
         season_id: selectedSeasonId,
       });
       if (error) throw error;
@@ -111,7 +142,8 @@ export default function MatchesAdmin() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
+    mutationFn: async ({ id, data, awards }: { id: string; data: typeof formData; awards: Record<string, string> }) => {
+      // Update match
       const { error } = await supabase
         .from("matches")
         .update({
@@ -121,15 +153,35 @@ export default function MatchesAdmin() {
           match_date: aestToUTC(data.match_date),
           venue: data.venue,
           status: data.status,
+          overs_per_side: data.overs_per_side,
           home_team_score: data.home_team_score || null,
           away_team_score: data.away_team_score || null,
           home_team_overs: data.home_team_overs || null,
           away_team_overs: data.away_team_overs || null,
           winner_team_id: data.winner_team_id || null,
+          man_of_match_id: data.man_of_match_id || null,
           match_summary: data.match_summary || null,
         })
         .eq("id", id);
       if (error) throw error;
+      
+      // Handle awards - delete existing and insert new
+      if (data.status === "completed" && Object.keys(awards).length > 0) {
+        await supabase.from("match_awards").delete().eq("match_id", id);
+        
+        const awardInserts = Object.entries(awards)
+          .filter(([_, playerId]) => playerId)
+          .map(([awardTypeId, playerId]) => ({
+            match_id: id,
+            award_type_id: awardTypeId,
+            player_id: playerId,
+          }));
+        
+        if (awardInserts.length > 0) {
+          const { error: awardError } = await supabase.from("match_awards").insert(awardInserts);
+          if (awardError) throw awardError;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-matches", selectedSeasonId] });
@@ -163,18 +215,21 @@ export default function MatchesAdmin() {
       match_date: "",
       venue: "Gold Coast Cricket Ground",
       status: "upcoming",
+      overs_per_side: 20,
       home_team_score: "",
       away_team_score: "",
       home_team_overs: "",
       away_team_overs: "",
       winner_team_id: "",
+      man_of_match_id: "",
       match_summary: "",
     });
+    setMatchAwards({});
     setEditingMatch(null);
     setIsOpen(false);
   };
 
-  const handleEdit = (match: Match) => {
+  const handleEdit = async (match: Match) => {
     setEditingMatch(match);
     setFormData({
       match_number: match.match_number,
@@ -183,20 +238,37 @@ export default function MatchesAdmin() {
       match_date: utcToAESTInput(match.match_date),
       venue: match.venue,
       status: match.status,
+      overs_per_side: (match as any).overs_per_side || 20,
       home_team_score: match.home_team_score || "",
       away_team_score: match.away_team_score || "",
       home_team_overs: match.home_team_overs || "",
       away_team_overs: match.away_team_overs || "",
       winner_team_id: match.winner_team_id || "",
+      man_of_match_id: match.man_of_match_id || "",
       match_summary: match.match_summary || "",
     });
+    
+    // Fetch existing awards for this match
+    const { data: existingAwards } = await supabase
+      .from("match_awards")
+      .select("award_type_id, player_id")
+      .eq("match_id", match.id);
+    
+    if (existingAwards) {
+      const awardsMap: Record<string, string> = {};
+      existingAwards.forEach((a) => {
+        awardsMap[a.award_type_id] = a.player_id;
+      });
+      setMatchAwards(awardsMap);
+    }
+    
     setIsOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingMatch) {
-      updateMutation.mutate({ id: editingMatch.id, data: formData });
+      updateMutation.mutate({ id: editingMatch.id, data: formData, awards: matchAwards });
     } else {
       createMutation.mutate(formData);
     }
@@ -305,7 +377,7 @@ export default function MatchesAdmin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="match_date">Match Date & Time (AEST)</Label>
                   <Input
@@ -315,7 +387,7 @@ export default function MatchesAdmin() {
                     onChange={(e) => setFormData({ ...formData, match_date: e.target.value })}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">Enter time in AEST (Australian Eastern Standard Time)</p>
+                  <p className="text-xs text-muted-foreground">AEST timezone</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="venue">Venue</Label>
@@ -324,6 +396,17 @@ export default function MatchesAdmin() {
                     value={formData.venue}
                     onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
                     required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="overs_per_side">Overs Per Side</Label>
+                  <Input
+                    id="overs_per_side"
+                    type="number"
+                    value={formData.overs_per_side}
+                    onChange={(e) => setFormData({ ...formData, overs_per_side: parseInt(e.target.value) || 20 })}
+                    min={1}
+                    max={50}
                   />
                 </div>
               </div>
@@ -401,6 +484,60 @@ export default function MatchesAdmin() {
                         placeholder="e.g., KTM won by 4 runs"
                       />
                     </div>
+
+                    {/* Man of the Match */}
+                    <div className="space-y-2 mt-4">
+                      <Label>Man of the Match</Label>
+                      <Select
+                        value={formData.man_of_match_id}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, man_of_match_id: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select player" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {players?.map((player) => (
+                            <SelectItem key={player.id} value={player.id}>
+                              {player.full_name} ({getTeamName(player.team_id || "")})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Match Awards */}
+                    {awardTypes && awardTypes.length > 0 && (
+                      <div className="mt-6 pt-4 border-t border-border">
+                        <h4 className="font-medium mb-4">Match Awards</h4>
+                        <div className="grid grid-cols-1 gap-4">
+                          {awardTypes.map((award) => (
+                            <div key={award.id} className="space-y-2">
+                              <Label>{award.name}</Label>
+                              <Select
+                                value={matchAwards[award.id] || ""}
+                                onValueChange={(value) =>
+                                  setMatchAwards({ ...matchAwards, [award.id]: value })
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select player (optional)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  {players?.map((player) => (
+                                    <SelectItem key={player.id} value={player.id}>
+                                      {player.full_name} ({getTeamName(player.team_id || "")})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

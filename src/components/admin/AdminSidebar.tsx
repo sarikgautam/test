@@ -3,25 +3,28 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Users,
-  Shield,
-  Calendar,
-  ClipboardList,
   Trophy,
+  Calendar,
   BarChart3,
-  Gavel,
   Settings,
+  Gavel,
+  Table,
+  FileSpreadsheet,
+  Award,
   LogOut,
+  Shield,
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/teams", label: "Teams", icon: Shield },
   { href: "/admin/players", label: "Players", icon: Users },
   { href: "/admin/matches", label: "Matches", icon: Calendar },
-  { href: "/admin/results", label: "Match Results", icon: ClipboardList },
-  { href: "/admin/standings", label: "Standings", icon: Trophy },
+  { href: "/admin/results", label: "Match Results", icon: FileSpreadsheet },
+  { href: "/admin/awards", label: "Awards", icon: Award },
+  { href: "/admin/standings", label: "Standings", icon: Table },
   { href: "/admin/stats", label: "Player Stats", icon: BarChart3 },
   { href: "/admin/auction", label: "Auction", icon: Gavel },
   { href: "/admin/settings", label: "Settings", icon: Settings },

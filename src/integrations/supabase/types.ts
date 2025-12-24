@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      award_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       live_auction: {
         Row: {
           base_price: number
@@ -78,6 +108,55 @@ export type Database = {
           },
         ]
       }
+      match_awards: {
+        Row: {
+          award_type_id: string
+          created_at: string
+          id: string
+          match_id: string
+          notes: string | null
+          player_id: string
+        }
+        Insert: {
+          award_type_id: string
+          created_at?: string
+          id?: string
+          match_id: string
+          notes?: string | null
+          player_id: string
+        }
+        Update: {
+          award_type_id?: string
+          created_at?: string
+          id?: string
+          match_id?: string
+          notes?: string | null
+          player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_awards_award_type_id_fkey"
+            columns: ["award_type_id"]
+            isOneToOne: false
+            referencedRelation: "award_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_awards_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_awards_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matches: {
         Row: {
           away_team_id: string
@@ -92,6 +171,7 @@ export type Database = {
           match_date: string
           match_number: number
           match_summary: string | null
+          overs_per_side: number | null
           season_id: string | null
           status: Database["public"]["Enums"]["match_status"]
           toss_decision: string | null
@@ -113,6 +193,7 @@ export type Database = {
           match_date: string
           match_number: number
           match_summary?: string | null
+          overs_per_side?: number | null
           season_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           toss_decision?: string | null
@@ -134,6 +215,7 @@ export type Database = {
           match_date?: string
           match_number?: number
           match_summary?: string | null
+          overs_per_side?: number | null
           season_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           toss_decision?: string | null
