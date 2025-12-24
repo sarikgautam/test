@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,11 @@ import { useActiveSeason } from "@/hooks/useSeason";
 import { AuctionCountdown } from "@/components/auction/AuctionCountdown";
 import { SoldPlayersList } from "@/components/auction/SoldPlayersList";
 import { RecentSoldPlayers } from "@/components/auction/RecentSoldPlayers";
+import { SoldPlayerCelebration } from "@/components/auction/SoldPlayerCelebration";
+import type { Database } from "@/integrations/supabase/types";
+
+type Player = Database["public"]["Tables"]["players"]["Row"];
+type Team = Database["public"]["Tables"]["teams"]["Row"];
 
 interface BidEntry {
   team_id: string;
@@ -18,9 +23,23 @@ interface BidEntry {
   timestamp: string;
 }
 
+interface SoldCelebrationData {
+  player: Player;
+  team: Team;
+  soldPrice: number;
+}
+
 export default function Auction() {
   const activeSeason = useActiveSeason();
+  const queryClient = useQueryClient();
   const [bidHistory, setBidHistory] = useState<BidEntry[]>([]);
+  const [showCelebration, setShowCelebration] = useState<SoldCelebrationData | null>(null);
+  const previousPlayerIdRef = useRef<string | null>(null);
+  const previousBidRef = useRef<{ playerId: string | null; teamId: string | null; bid: number }>({
+    playerId: null,
+    teamId: null,
+    bid: 0,
+  });
 
   const { data: liveAuction, refetch } = useQuery({
     queryKey: ["live-auction", activeSeason?.id],
@@ -113,6 +132,43 @@ export default function Auction() {
     }
   }, [liveAuction?.bid_history]);
 
+  // Detect when a player is sold (player goes from active to null with a team)
+  useEffect(() => {
+    const prevPlayerId = previousBidRef.current.playerId;
+    const prevTeamId = previousBidRef.current.teamId;
+    const prevBid = previousBidRef.current.bid;
+
+    // If we had a player and team, but now player is null - they were sold!
+    if (prevPlayerId && prevTeamId && prevBid > 0 && !liveAuction?.current_player_id) {
+      // Fetch the sold player and team to show celebration
+      const fetchSoldData = async () => {
+        const [playerRes, teamRes] = await Promise.all([
+          supabase.from("players").select("*").eq("id", prevPlayerId).single(),
+          supabase.from("teams").select("*").eq("id", prevTeamId).single(),
+        ]);
+
+        if (playerRes.data && teamRes.data && playerRes.data.auction_status === "sold") {
+          setShowCelebration({
+            player: playerRes.data,
+            team: teamRes.data,
+            soldPrice: prevBid,
+          });
+          // Invalidate sold players list
+          queryClient.invalidateQueries({ queryKey: ["sold-players"] });
+          queryClient.invalidateQueries({ queryKey: ["auction-teams"] });
+        }
+      };
+      fetchSoldData();
+    }
+
+    // Update the ref with current values
+    previousBidRef.current = {
+      playerId: liveAuction?.current_player_id || null,
+      teamId: liveAuction?.current_bidding_team_id || null,
+      bid: liveAuction?.current_bid || 0,
+    };
+  }, [liveAuction?.current_player_id, liveAuction?.current_bidding_team_id, liveAuction?.current_bid, queryClient]);
+
   const roleLabels: Record<string, string> = {
     batsman: "Batsman",
     bowler: "Bowler",
@@ -128,6 +184,16 @@ export default function Auction() {
 
   return (
     <Layout>
+      {/* Sold Player Celebration Modal */}
+      {showCelebration && (
+        <SoldPlayerCelebration
+          player={showCelebration.player}
+          team={showCelebration.team}
+          soldPrice={showCelebration.soldPrice}
+          onClose={() => setShowCelebration(null)}
+        />
+      )}
+
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="font-display text-4xl md:text-5xl text-gradient-gold mb-2">

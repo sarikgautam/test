@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp, Calendar, Save } from "lucide-react";
+import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp, Calendar, Save, Undo2 } from "lucide-react";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
@@ -116,6 +116,25 @@ export default function AuctionAdmin() {
       return data;
     },
     enabled: !!liveAuction?.current_player_id,
+  });
+
+  // Get last sold player for undo functionality
+  const { data: lastSoldPlayer } = useQuery({
+    queryKey: ["last-sold-player", selectedSeasonId],
+    queryFn: async () => {
+      if (!selectedSeasonId) return null;
+      const { data, error } = await supabase
+        .from("players")
+        .select("*, teams:team_id(*)")
+        .eq("season_id", selectedSeasonId)
+        .eq("auction_status", "sold")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedSeasonId,
   });
 
   // Set base price when player is selected
@@ -348,6 +367,47 @@ export default function AuctionAdmin() {
     },
   });
 
+  const undoLastSaleMutation = useMutation({
+    mutationFn: async () => {
+      if (!lastSoldPlayer) throw new Error("No sold player to undo");
+
+      const soldPrice = lastSoldPlayer.sold_price || 0;
+      const teamId = lastSoldPlayer.team_id;
+
+      // Reset player to registered status
+      const { error: playerError } = await supabase
+        .from("players")
+        .update({
+          auction_status: "registered",
+          team_id: null,
+          sold_price: null,
+        })
+        .eq("id", lastSoldPlayer.id);
+      if (playerError) throw playerError;
+
+      // Refund team budget
+      if (teamId) {
+        const team = teams?.find((t) => t.id === teamId);
+        if (team) {
+          const { error: teamError } = await supabase
+            .from("teams")
+            .update({ remaining_budget: team.remaining_budget + soldPrice })
+            .eq("id", teamId);
+          if (teamError) throw teamError;
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
+      queryClient.invalidateQueries({ queryKey: ["auction-teams"] });
+      queryClient.invalidateQueries({ queryKey: ["last-sold-player", selectedSeasonId] });
+      toast({ title: "Sale undone successfully!", description: "Player returned to auction pool and budget refunded." });
+    },
+    onError: (error) => {
+      toast({ title: "Error undoing sale", description: error.message, variant: "destructive" });
+    },
+  });
+
   const roleLabels: Record<string, string> = {
     batsman: "Batsman",
     bowler: "Bowler",
@@ -404,11 +464,23 @@ export default function AuctionAdmin() {
           )}
         </CardContent>
       </Card>
-      <div>
-        <h1 className="font-display text-3xl text-gradient-gold">Live Auction Control</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage the live auction and place bids
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-3xl text-gradient-gold">Live Auction Control</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage the live auction and place bids
+          </p>
+        </div>
+        {lastSoldPlayer && !isAuctionActive && (
+          <Button
+            variant="outline"
+            onClick={() => undoLastSaleMutation.mutate()}
+            disabled={undoLastSaleMutation.isPending}
+          >
+            <Undo2 className="w-4 h-4 mr-2" />
+            Undo Last Sale ({lastSoldPlayer.full_name})
+          </Button>
+        )}
       </div>
 
       {/* Team Budgets */}
