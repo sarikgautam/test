@@ -18,11 +18,14 @@ export default {
   				'Inter',
   				'ui-sans-serif',
   				'system-ui',
-  				'sans-serif',
-  				'Apple Color Emoji',
-  				'Segoe UI Emoji',
-  				'Segoe UI Symbol',
-  				'Noto Color Emoji'
+  				'-apple-system',
+  				'BlinkMacSystemFont',
+  				'Segoe UI',
+  				'Roboto',
+  				'Helvetica Neue',
+  				'Arial',
+  				'Noto Sans',
+  				'sans-serif'
   			],
   			display: [
   				'Poppins',
@@ -195,7 +198,7 @@ export default {
   			'0': 0,
   			'60': 60,
   			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-  			'cricket-pattern': 'url(\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"data:image/svg+xml,%3Csvg width=',
+  			'cricket-pattern': 'url(\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"data:image/svg+xml,%3Csvg width=',
   			' xmlns=': 'http'
   		},
   		boxShadow: {
