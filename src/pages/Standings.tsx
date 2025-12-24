@@ -5,15 +5,34 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp } from "lucide-react";
 
 const Standings = () => {
-  const { data: standings, isLoading } = useQuery({
-    queryKey: ["standings"],
+  // Get active season
+  const { data: activeSeason } = useQuery({
+    queryKey: ["active-season"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("standings").select(`*, team:teams(*)`).order("points", { ascending: false }).order("net_run_rate", { ascending: false });
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("id")
+        .eq("is_active", true)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
 
+  const { data: standings, isLoading } = useQuery({
+    queryKey: ["standings", activeSeason?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("standings")
+        .select(`*, team:teams(*)`)
+        .eq("season_id", activeSeason!.id)
+        .order("points", { ascending: false })
+        .order("net_run_rate", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeSeason?.id,
+  });
   return (
     <Layout>
       <div className="min-h-screen py-12 px-4">

@@ -6,8 +6,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, TrendingUp } from "lucide-react";
 
 export function StandingsPreview() {
+  // Get active season
+  const { data: activeSeason } = useQuery({
+    queryKey: ["active-season"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("id")
+        .eq("is_active", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: standings, isLoading } = useQuery({
-    queryKey: ["standings-preview"],
+    queryKey: ["standings-preview", activeSeason?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("standings")
@@ -15,6 +29,7 @@ export function StandingsPreview() {
           *,
           team:teams(id, name, short_name, primary_color)
         `)
+        .eq("season_id", activeSeason!.id)
         .order("points", { ascending: false })
         .order("net_run_rate", { ascending: false })
         .limit(4);
@@ -22,8 +37,8 @@ export function StandingsPreview() {
       if (error) throw error;
       return data;
     },
+    enabled: !!activeSeason?.id,
   });
-
   return (
     <section className="py-16 md:py-24">
       <div className="container mx-auto px-4">
