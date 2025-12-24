@@ -89,14 +89,17 @@ export default function TeamsAdmin() {
   const { data: players } = useQuery({
     queryKey: ["admin-players-for-captain", activeSeason?.id],
     queryFn: async () => {
+      if (!activeSeason?.id) return [];
       const { data, error } = await supabase
-        .from("players")
-        .select("id, full_name, team_id")
+        .from("player_season_registrations")
+        .select("team_id, player:players!inner(id, full_name)")
+        .eq("season_id", activeSeason.id)
         .eq("auction_status", "sold")
-        .order("full_name");
+        .order("created_at");
       if (error) throw error;
-      return data as Player[];
+      return (data || []).map(d => ({ id: d.player.id, full_name: d.player.full_name, team_id: d.team_id }));
     },
+    enabled: !!activeSeason?.id,
   });
 
   const uploadLogo = async (teamId: string, file: File): Promise<string | null> => {

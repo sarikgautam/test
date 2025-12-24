@@ -63,19 +63,24 @@ export default function AuctionAdmin() {
   const { data: players, isLoading: playersLoading } = useQuery({
     queryKey: ["auction-players", selectedSeasonId],
     queryFn: async () => {
-      let query = supabase
-        .from("players")
-        .select("*")
+      if (!selectedSeasonId) return [];
+      const { data, error } = await supabase
+        .from("player_season_registrations")
+        .select(`
+          id,
+          base_price,
+          player:players!inner(id, full_name, role, photo_url)
+        `)
+        .eq("season_id", selectedSeasonId)
         .eq("auction_status", "registered")
         .order("base_price", { ascending: false });
 
-      if (selectedSeasonId) {
-        query = query.eq("season_id", selectedSeasonId);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      return data as Player[];
+      return data as unknown as Array<{
+        id: string;
+        base_price: number;
+        player: { id: string; full_name: string; role: string; photo_url: string | null };
+      }>;
     },
     enabled: !!selectedSeasonId,
   });
@@ -128,15 +133,21 @@ export default function AuctionAdmin() {
     queryFn: async () => {
       if (!selectedSeasonId) return null;
       const { data, error } = await supabase
-        .from("players")
-        .select("*, teams:team_id(*)")
+        .from("player_season_registrations")
+        .select(`
+          id,
+          sold_price,
+          team_id,
+          updated_at,
+          player:players!inner(id, full_name)
+        `)
         .eq("season_id", selectedSeasonId)
         .eq("auction_status", "sold")
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      return data as unknown as { id: string; sold_price: number | null; team_id: string | null; player: { id: string; full_name: string } } | null;
     },
     enabled: !!selectedSeasonId,
   });
@@ -144,9 +155,9 @@ export default function AuctionAdmin() {
   // Set base price when player is selected
   useEffect(() => {
     if (selectedPlayerId) {
-      const player = players?.find((p) => p.id === selectedPlayerId);
-      if (player) {
-        setBasePrice(player.base_price.toString());
+      const reg = players?.find((p) => p.player.id === selectedPlayerId);
+      if (reg) {
+        setBasePrice(reg.base_price.toString());
       }
     }
   }, [selectedPlayerId, players]);
@@ -155,8 +166,8 @@ export default function AuctionAdmin() {
     mutationFn: async () => {
       if (!selectedSeasonId || !selectedPlayerId) return;
       
-      const player = players?.find((p) => p.id === selectedPlayerId);
-      if (!player) return;
+      const reg = players?.find((p) => p.player.id === selectedPlayerId);
+      if (!reg) return;
 
       const auctionData = {
         season_id: selectedSeasonId,
@@ -235,20 +246,21 @@ export default function AuctionAdmin() {
 
   const sellPlayerMutation = useMutation({
     mutationFn: async () => {
-      if (!liveAuction || !liveAuction.current_player_id || !liveAuction.current_bidding_team_id) {
+      if (!liveAuction || !liveAuction.current_player_id || !liveAuction.current_bidding_team_id || !selectedSeasonId) {
         throw new Error("No active bid to finalize");
       }
 
-      // Update player
-      const { error: playerError } = await supabase
-        .from("players")
+      // Update player_season_registrations
+      const { error: regError } = await supabase
+        .from("player_season_registrations")
         .update({
           auction_status: "sold",
           team_id: liveAuction.current_bidding_team_id,
           sold_price: liveAuction.current_bid,
         })
-        .eq("id", liveAuction.current_player_id);
-      if (playerError) throw playerError;
+        .eq("player_id", liveAuction.current_player_id)
+        .eq("season_id", selectedSeasonId);
+      if (regError) throw regError;
 
       // Update team budget
       const team = teams?.find((t) => t.id === liveAuction.current_bidding_team_id);
@@ -287,13 +299,14 @@ export default function AuctionAdmin() {
 
   const markUnsoldMutation = useMutation({
     mutationFn: async () => {
-      if (!liveAuction || !liveAuction.current_player_id) return;
+      if (!liveAuction || !liveAuction.current_player_id || !selectedSeasonId) return;
 
-      const { error: playerError } = await supabase
-        .from("players")
+      const { error: regError } = await supabase
+        .from("player_season_registrations")
         .update({ auction_status: "unsold" })
-        .eq("id", liveAuction.current_player_id);
-      if (playerError) throw playerError;
+        .eq("player_id", liveAuction.current_player_id)
+        .eq("season_id", selectedSeasonId);
+      if (regError) throw regError;
 
       const { error: auctionError } = await supabase
         .from("live_auction")
@@ -376,21 +389,22 @@ export default function AuctionAdmin() {
 
   const undoLastSaleMutation = useMutation({
     mutationFn: async () => {
-      if (!lastSoldPlayer) throw new Error("No sold player to undo");
+      if (!lastSoldPlayer || !selectedSeasonId) throw new Error("No sold player to undo");
 
       const soldPrice = lastSoldPlayer.sold_price || 0;
       const teamId = lastSoldPlayer.team_id;
 
-      // Reset player to registered status
-      const { error: playerError } = await supabase
-        .from("players")
+      // Reset registration to registered status
+      const { error: regError } = await supabase
+        .from("player_season_registrations")
         .update({
           auction_status: "registered",
           team_id: null,
           sold_price: null,
         })
-        .eq("id", lastSoldPlayer.id);
-      if (playerError) throw playerError;
+        .eq("player_id", lastSoldPlayer.player.id)
+        .eq("season_id", selectedSeasonId);
+      if (regError) throw regError;
 
       // Refund team budget
       if (teamId) {
@@ -485,7 +499,7 @@ export default function AuctionAdmin() {
             disabled={undoLastSaleMutation.isPending}
           >
             <Undo2 className="w-4 h-4 mr-2" />
-            Undo Last Sale ({lastSoldPlayer.full_name})
+            Undo Last Sale ({lastSoldPlayer.player.full_name})
           </Button>
         )}
       </div>
@@ -653,9 +667,9 @@ export default function AuctionAdmin() {
                     <SelectValue placeholder="Choose a player" />
                   </SelectTrigger>
                   <SelectContent>
-                    {players?.map((player) => (
-                      <SelectItem key={player.id} value={player.id}>
-                        {player.full_name} - {roleLabels[player.role]} (${player.base_price.toLocaleString()})
+                    {players?.map((reg) => (
+                      <SelectItem key={reg.player.id} value={reg.player.id}>
+                        {reg.player.full_name} - {roleLabels[reg.player.role]} (${reg.base_price.toLocaleString()})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -706,21 +720,21 @@ export default function AuctionAdmin() {
             </div>
           ) : players && players.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {players.map((player) => (
+              {players.map((reg) => (
                 <div
-                  key={player.id}
+                  key={reg.player.id}
                   className={`p-4 rounded-lg border bg-card/50 hover:bg-card transition-colors cursor-pointer ${
-                    selectedPlayerId === player.id ? "border-primary" : "border-border"
+                    selectedPlayerId === reg.player.id ? "border-primary" : "border-border"
                   }`}
-                  onClick={() => setSelectedPlayerId(player.id)}
+                  onClick={() => setSelectedPlayerId(reg.player.id)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                        {player.photo_url ? (
+                        {reg.player.photo_url ? (
                           <img
-                            src={player.photo_url}
-                            alt={player.full_name}
+                            src={reg.player.photo_url}
+                            alt={reg.player.full_name}
                             className="w-full h-full rounded-full object-cover"
                           />
                         ) : (
@@ -728,9 +742,9 @@ export default function AuctionAdmin() {
                         )}
                       </div>
                       <div>
-                        <h3 className="font-semibold">{player.full_name}</h3>
+                        <h3 className="font-semibold">{reg.player.full_name}</h3>
                         <Badge variant="secondary" className="text-xs">
-                          {roleLabels[player.role]}
+                          {roleLabels[reg.player.role]}
                         </Badge>
                       </div>
                     </div>
@@ -738,7 +752,7 @@ export default function AuctionAdmin() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Base Price</span>
                     <span className="font-bold text-primary">
-                      ${player.base_price.toLocaleString()}
+                      ${reg.base_price.toLocaleString()}
                     </span>
                   </div>
                 </div>

@@ -24,11 +24,14 @@ import { useActiveSeason } from "@/hooks/useSeason";
 
 interface SoldPlayer {
   id: string;
-  full_name: string;
-  role: string;
   sold_price: number;
-  photo_url: string | null;
-  teams: {
+  player: {
+    id: string;
+    full_name: string;
+    role: string;
+    photo_url: string | null;
+  };
+  team: {
     id: string;
     name: string;
     short_name: string;
@@ -39,10 +42,13 @@ interface SoldPlayer {
 
 interface UnsoldPlayer {
   id: string;
-  full_name: string;
-  role: string;
   base_price: number;
-  photo_url: string | null;
+  player: {
+    id: string;
+    full_name: string;
+    role: string;
+    photo_url: string | null;
+  };
 }
 
 interface TeamStats {
@@ -97,21 +103,19 @@ export default function AuctionStats() {
       if (!activeSeason?.id) return [];
       
       const { data, error } = await supabase
-        .from("players")
+        .from("player_season_registrations")
         .select(`
           id,
-          full_name,
-          role,
           sold_price,
-          photo_url,
-          teams:teams!players_team_id_fkey(id, name, short_name, primary_color, logo_url)
+          player:players!inner(id, full_name, role, photo_url),
+          team:teams(id, name, short_name, primary_color, logo_url)
         `)
         .eq("season_id", activeSeason.id)
         .eq("auction_status", "sold")
         .order("sold_price", { ascending: false });
 
       if (error) throw error;
-      return data as SoldPlayer[];
+      return data as unknown as SoldPlayer[];
     },
     enabled: !!activeSeason?.id,
   });
@@ -122,14 +126,18 @@ export default function AuctionStats() {
       if (!activeSeason?.id) return [];
       
       const { data, error } = await supabase
-        .from("players")
-        .select("id, full_name, role, base_price, photo_url")
+        .from("player_season_registrations")
+        .select(`
+          id,
+          base_price,
+          player:players!inner(id, full_name, role, photo_url)
+        `)
         .eq("season_id", activeSeason.id)
         .eq("auction_status", "unsold")
-        .order("full_name");
+        .order("created_at");
 
       if (error) throw error;
-      return data as UnsoldPlayer[];
+      return data as unknown as UnsoldPlayer[];
     },
     enabled: !!activeSeason?.id,
   });
@@ -150,7 +158,7 @@ export default function AuctionStats() {
   // Calculate team stats
   const teamStats: TeamStats[] = useMemo(() => {
     return teams?.map(team => {
-      const teamPlayers = soldPlayers?.filter(p => p.teams?.id === team.id) || [];
+      const teamPlayers = soldPlayers?.filter(p => p.team?.id === team.id) || [];
       const totalSpent = teamPlayers.reduce((sum, p) => sum + (p.sold_price || 0), 0);
       
       return {
@@ -191,17 +199,17 @@ export default function AuctionStats() {
     
     // Filter by search
     if (searchQuery) {
-      players = players.filter(player =>
-        player.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        player.teams?.name.toLowerCase().includes(searchQuery.toLowerCase())
+      players = players.filter(p =>
+        p.player.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.team?.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
     // Filter by tab
     if (viewMode === "roles" && activeTab !== "all") {
-      players = players.filter(player => player.role === activeTab);
+      players = players.filter(p => p.player.role === activeTab);
     } else if (viewMode === "teams" && activeTab !== "all") {
-      players = players.filter(player => player.teams?.id === activeTab);
+      players = players.filter(p => p.team?.id === activeTab);
     }
     
     return players;
@@ -317,10 +325,10 @@ export default function AuctionStats() {
                   <Trophy className="w-6 h-6 text-yellow-500" />
                 </div>
                 <div className="flex items-center gap-4 flex-1">
-                  {stats.topBidPlayer.photo_url ? (
+                  {stats.topBidPlayer.player.photo_url ? (
                     <img
-                      src={stats.topBidPlayer.photo_url}
-                      alt={stats.topBidPlayer.full_name}
+                      src={stats.topBidPlayer.player.photo_url}
+                      alt={stats.topBidPlayer.player.full_name}
                       className="w-12 h-12 rounded-full object-cover"
                     />
                   ) : (
@@ -330,14 +338,14 @@ export default function AuctionStats() {
                   )}
                   <div>
                     <p className="text-sm text-yellow-500 font-medium">Highest Paid Player</p>
-                    <p className="text-lg font-bold">{stats.topBidPlayer.full_name}</p>
+                    <p className="text-lg font-bold">{stats.topBidPlayer.player.full_name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className={getRoleBadgeColor(stats.topBidPlayer.role)}>
-                        {formatRole(stats.topBidPlayer.role)}
+                      <Badge variant="outline" className={getRoleBadgeColor(stats.topBidPlayer.player.role)}>
+                        {formatRole(stats.topBidPlayer.player.role)}
                       </Badge>
-                      {stats.topBidPlayer.teams && (
+                      {stats.topBidPlayer.team && (
                         <span className="text-sm text-muted-foreground">
-                          → {stats.topBidPlayer.teams.name}
+                          → {stats.topBidPlayer.team.name}
                         </span>
                       )}
                     </div>
@@ -408,15 +416,15 @@ export default function AuctionStats() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {unsoldPlayers.map(player => (
+                {unsoldPlayers.map(p => (
                   <div
-                    key={player.id}
+                    key={p.id}
                     className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card/50"
                   >
-                    {player.photo_url ? (
+                    {p.player.photo_url ? (
                       <img
-                        src={player.photo_url}
-                        alt={player.full_name}
+                        src={p.player.photo_url}
+                        alt={p.player.full_name}
                         className="w-10 h-10 rounded-full object-cover grayscale opacity-70"
                       />
                     ) : (
@@ -425,13 +433,13 @@ export default function AuctionStats() {
                       </div>
                     )}
                     <div className="flex-1">
-                      <p className="font-medium text-muted-foreground">{player.full_name}</p>
-                      <Badge variant="outline" className={`text-xs ${getRoleBadgeColor(player.role)}`}>
-                        {formatRole(player.role)}
+                      <p className="font-medium text-muted-foreground">{p.player.full_name}</p>
+                      <Badge variant="outline" className={`text-xs ${getRoleBadgeColor(p.player.role)}`}>
+                        {formatRole(p.player.role)}
                       </Badge>
                     </div>
                     <span className="text-sm text-muted-foreground">
-                      Base: {formatPrice(player.base_price)}
+                      Base: {formatPrice(p.base_price)}
                     </span>
                   </div>
                 ))}
@@ -508,16 +516,16 @@ export default function AuctionStats() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {filteredPlayers.map((player) => (
+                    {filteredPlayers.map((p) => (
                       <div
-                        key={player.id}
+                        key={p.id}
                         className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-card/80 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          {player.photo_url ? (
+                          {p.player.photo_url ? (
                             <img
-                              src={player.photo_url}
-                              alt={player.full_name}
+                              src={p.player.photo_url}
+                              alt={p.player.full_name}
                               className="w-10 h-10 rounded-full object-cover"
                             />
                           ) : (
@@ -526,42 +534,42 @@ export default function AuctionStats() {
                             </div>
                           )}
                           <div>
-                            <p className="font-medium">{player.full_name}</p>
+                            <p className="font-medium">{p.player.full_name}</p>
                             <div className="flex items-center gap-2 mt-0.5">
                               <Badge 
                                 variant="outline" 
-                                className={`text-xs ${getRoleBadgeColor(player.role)}`}
+                                className={`text-xs ${getRoleBadgeColor(p.player.role)}`}
                               >
-                                {formatRole(player.role)}
+                                {formatRole(p.player.role)}
                               </Badge>
                             </div>
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-4">
-                          {player.teams && (
+                          {p.team && (
                             <div className="flex items-center gap-2">
-                              {player.teams.logo_url ? (
+                              {p.team.logo_url ? (
                                 <img
-                                  src={player.teams.logo_url}
-                                  alt={player.teams.name}
+                                  src={p.team.logo_url}
+                                  alt={p.team.name}
                                   className="w-6 h-6 rounded-full object-cover"
                                 />
                               ) : (
                                 <div
                                   className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                                  style={{ backgroundColor: player.teams.primary_color }}
+                                  style={{ backgroundColor: p.team.primary_color }}
                                 >
-                                  {player.teams.short_name.charAt(0)}
+                                  {p.team.short_name.charAt(0)}
                                 </div>
                               )}
                               <span className="text-sm text-muted-foreground hidden md:inline">
-                                {player.teams.short_name}
+                                {p.team.short_name}
                               </span>
                             </div>
                           )}
                           <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                            {formatPrice(player.sold_price || 0)}
+                            {formatPrice(p.sold_price || 0)}
                           </Badge>
                         </div>
                       </div>
