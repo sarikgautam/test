@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gavel, User, TrendingUp, Trophy } from "lucide-react";
+import { Gavel, User, TrendingUp, Trophy, BarChart3 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useActiveSeason } from "@/hooks/useSeason";
 import { AuctionCountdown } from "@/components/auction/AuctionCountdown";
 import { SoldPlayersList } from "@/components/auction/SoldPlayersList";
@@ -203,6 +205,12 @@ export default function Auction() {
           <p className="text-muted-foreground">
             Watch the bidding action in real-time
           </p>
+          <Link to="/auction/stats" className="inline-block mt-4">
+            <Button variant="outline" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              View Auction Stats
+            </Button>
+          </Link>
         </div>
 
         {seasonLoading ? (
