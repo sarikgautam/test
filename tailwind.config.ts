@@ -13,37 +13,44 @@ export default {
   		}
   	},
   	extend: {
-		fontFamily: {
-			sans: [
-				'Nunito',
-				'ui-sans-serif',
-				'system-ui',
-				'-apple-system',
-				'BlinkMacSystemFont',
-				'Segoe UI',
-				'Helvetica Neue',
-				'Arial',
-				'Noto Sans',
-				'sans-serif'
-			],
-			display: [
-				'Poppins',
-				'ui-sans-serif',
-				'system-ui',
-				'sans-serif'
-			],
-			mono: [
-				'JetBrains Mono',
-				'ui-monospace',
-				'SFMono-Regular',
-				'Menlo',
-				'Monaco',
-				'Consolas',
-				'Liberation Mono',
-				'Courier New',
-				'monospace'
-			]
-		},
+  		fontFamily: {
+  			sans: [
+  				'Open Sans',
+  				'ui-sans-serif',
+  				'system-ui',
+  				'sans-serif',
+  				'Apple Color Emoji',
+  				'Segoe UI Emoji',
+  				'Segoe UI Symbol',
+  				'Noto Color Emoji'
+  			],
+  			display: [
+  				'Poppins',
+  				'ui-sans-serif',
+  				'system-ui',
+  				'sans-serif'
+  			],
+  			mono: [
+  				'Roboto Mono',
+  				'ui-monospace',
+  				'SFMono-Regular',
+  				'Menlo',
+  				'Monaco',
+  				'Consolas',
+  				'Liberation Mono',
+  				'Courier New',
+  				'monospace'
+  			],
+  			serif: [
+  				'Libre Caslon Text',
+  				'ui-serif',
+  				'Georgia',
+  				'Cambria',
+  				'Times New Roman',
+  				'Times',
+  				'serif'
+  			]
+  		},
   		colors: {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
@@ -188,7 +195,7 @@ export default {
   			'0': 0,
   			'60': 60,
   			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-  			'cricket-pattern': 'url(\\\\"data:image/svg+xml,%3Csvg width=',
+  			'cricket-pattern': 'url(\\\\\\\\"data:image/svg+xml,%3Csvg width=',
   			' xmlns=': 'http'
   		},
   		boxShadow: {
