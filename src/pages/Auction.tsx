@@ -386,6 +386,9 @@ export default function Auction() {
               </Card>
             )}
 
+            {/* Recent Sold Players */}
+            <RecentSoldPlayers seasonId={activeSeason?.id} limit={5} />
+
             {/* Sold Players Section during live auction */}
             <SoldPlayersList seasonId={activeSeason?.id} />
           </div>
