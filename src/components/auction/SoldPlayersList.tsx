@@ -21,7 +21,7 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("players")
-        .select("*, team:team_id(*)")
+        .select("*, teams(*)")
         .eq("auction_status", "sold")
         .eq("season_id", seasonId!)
         .order("updated_at", { ascending: false });
@@ -140,14 +140,14 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
                 <p className="text-primary font-bold">
                   ${player.sold_price?.toLocaleString()}
                 </p>
-                {player.team && (
+                {player.teams && (
                   <div className="flex items-center gap-1 mt-1">
                     <div
                       className="w-4 h-4 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: player.team.primary_color }}
+                      style={{ backgroundColor: player.teams.primary_color }}
                     />
                     <span className="text-xs text-muted-foreground truncate">
-                      {player.team.short_name}
+                      {player.teams.short_name}
                     </span>
                   </div>
                 )}
@@ -264,14 +264,14 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                           {roleLabels[player.role]}
                         </Badge>
-                        {player.team && (
+                        {player.teams && (
                           <div className="flex items-center gap-1">
                             <div
                               className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: player.team.primary_color }}
+                              style={{ backgroundColor: player.teams.primary_color }}
                             />
                             <span className="text-[10px] text-muted-foreground">
-                              {player.team.short_name}
+                              {player.teams.short_name}
                             </span>
                           </div>
                         )}
