@@ -8,6 +8,7 @@ import { Gavel, User, TrendingUp, Trophy } from "lucide-react";
 import { useActiveSeason } from "@/hooks/useSeason";
 import { AuctionCountdown } from "@/components/auction/AuctionCountdown";
 import { SoldPlayersList } from "@/components/auction/SoldPlayersList";
+import { RecentSoldPlayers } from "@/components/auction/RecentSoldPlayers";
 
 interface BidEntry {
   team_id: string;
@@ -139,10 +140,15 @@ export default function Auction() {
 
         {!liveAuction?.is_live ? (
           <div className="space-y-8">
-            {/* Countdown when auction is not live */}
-            <AuctionCountdown auctionDate={activeSeason?.auction_date || null} />
+            {/* Show countdown only if auction date is set and in the future */}
+            {activeSeason?.auction_date && new Date(activeSeason.auction_date) > new Date() ? (
+              <AuctionCountdown auctionDate={activeSeason.auction_date} />
+            ) : (
+              /* Show recent 3 sold players when no auction scheduled */
+              <RecentSoldPlayers seasonId={activeSeason?.id} limit={3} />
+            )}
 
-            {/* Show sold players when auction is not live */}
+            {/* Show all sold players */}
             <SoldPlayersList seasonId={activeSeason?.id} />
           </div>
         ) : (
