@@ -12,13 +12,14 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Save, RefreshCw, Trophy } from "lucide-react";
+import { Save, RefreshCw, Trophy, Calculator } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 
 type Standing = Database["public"]["Tables"]["standings"]["Row"];
 type Team = Database["public"]["Tables"]["teams"]["Row"];
+type Match = Database["public"]["Tables"]["matches"]["Row"];
 
 interface StandingWithTeam {
   id: string;
@@ -39,16 +40,51 @@ interface StandingWithTeam {
   team?: Team;
 }
 
+// Helper to convert overs string (e.g., "19.3") to decimal overs for NRR calculation
+const parseOvers = (overs: string | null): number => {
+  if (!overs) return 0;
+  const parts = overs.split(".");
+  const fullOvers = parseInt(parts[0]) || 0;
+  const balls = parseInt(parts[1]) || 0;
+  return fullOvers + balls / 6;
+};
+
 export default function StandingsAdmin() {
   const [editableStandings, setEditableStandings] = useState<StandingWithTeam[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedSeasonId } = useSeason();
 
+  // Fetch teams
+  const { data: teams } = useQuery({
+    queryKey: ["teams"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("teams").select("*").order("name");
+      if (error) throw error;
+      return data as Team[];
+    },
+  });
+
+  // Fetch completed group stage matches for recalculation
+  const { data: groupMatches } = useQuery({
+    queryKey: ["group-matches", selectedSeasonId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("matches")
+        .select("*")
+        .eq("season_id", selectedSeasonId!)
+        .eq("status", "completed")
+        .eq("match_stage", "group");
+      if (error) throw error;
+      return data as Match[];
+    },
+    enabled: !!selectedSeasonId,
+  });
+
   const { data: standings, isLoading } = useQuery({
     queryKey: ["admin-standings", selectedSeasonId],
     queryFn: async () => {
-      const { data: teams, error: teamsError } = await supabase
+      const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
         .select("*")
         .order("name");
@@ -62,7 +98,7 @@ export default function StandingsAdmin() {
       if (standingsError) throw standingsError;
 
       // Map teams to standings, creating entries for teams without standings
-      const result: StandingWithTeam[] = teams.map((team) => {
+      const result: StandingWithTeam[] = teamsData.map((team) => {
         const standing = standingsData.find((s) => s.team_id === team.id);
         if (standing) {
           return { ...standing, team };
@@ -163,6 +199,111 @@ export default function StandingsAdmin() {
     setEditableStandings(updated);
   };
 
+  const recalculateFromResults = () => {
+    if (!teams || !groupMatches) {
+      toast({ title: "Unable to recalculate", description: "Missing teams or matches data", variant: "destructive" });
+      return;
+    }
+
+    // Initialize standings for all teams
+    const calculatedStandings: Map<string, {
+      wins: number;
+      losses: number;
+      ties: number;
+      no_results: number;
+      runs_scored: number;
+      runs_conceded: number;
+      overs_faced: number;
+      overs_bowled: number;
+    }> = new Map();
+
+    teams.forEach((team) => {
+      calculatedStandings.set(team.id, {
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        no_results: 0,
+        runs_scored: 0,
+        runs_conceded: 0,
+        overs_faced: 0,
+        overs_bowled: 0,
+      });
+    });
+
+    // Process each group stage match
+    groupMatches.forEach((match) => {
+      const homeStats = calculatedStandings.get(match.home_team_id);
+      const awayStats = calculatedStandings.get(match.away_team_id);
+
+      if (!homeStats || !awayStats) return;
+
+      const homeRuns = match.home_team_runs || 0;
+      const awayRuns = match.away_team_runs || 0;
+      const homeOvers = parseOvers(match.home_team_overs);
+      const awayOvers = parseOvers(match.away_team_overs);
+
+      // Update runs and overs
+      homeStats.runs_scored += homeRuns;
+      homeStats.runs_conceded += awayRuns;
+      homeStats.overs_faced += homeOvers;
+      homeStats.overs_bowled += awayOvers;
+
+      awayStats.runs_scored += awayRuns;
+      awayStats.runs_conceded += homeRuns;
+      awayStats.overs_faced += awayOvers;
+      awayStats.overs_bowled += homeOvers;
+
+      // Determine winner
+      if (match.winner_team_id === match.home_team_id) {
+        homeStats.wins += 1;
+        awayStats.losses += 1;
+      } else if (match.winner_team_id === match.away_team_id) {
+        awayStats.wins += 1;
+        homeStats.losses += 1;
+      } else if (homeRuns === awayRuns && homeRuns > 0) {
+        // Tie
+        homeStats.ties += 1;
+        awayStats.ties += 1;
+      } else {
+        // No result (if match has no winner and no runs - though this is rare for completed matches)
+        homeStats.no_results += 1;
+        awayStats.no_results += 1;
+      }
+    });
+
+    // Update editable standings with calculated values
+    const updated = editableStandings.map((standing) => {
+      const stats = calculatedStandings.get(standing.team_id);
+      if (!stats) return standing;
+
+      const matchesPlayed = stats.wins + stats.losses + stats.ties + stats.no_results;
+      const points = stats.wins * 2 + stats.ties + stats.no_results;
+
+      // Calculate NRR
+      const oversF = stats.overs_faced || 1;
+      const oversB = stats.overs_bowled || 1;
+      const nrr = stats.runs_scored / oversF - stats.runs_conceded / oversB;
+
+      return {
+        ...standing,
+        wins: stats.wins,
+        losses: stats.losses,
+        ties: stats.ties,
+        no_results: stats.no_results,
+        matches_played: matchesPlayed,
+        points,
+        runs_scored: stats.runs_scored,
+        runs_conceded: stats.runs_conceded,
+        overs_faced: Math.round(stats.overs_faced * 100) / 100,
+        overs_bowled: Math.round(stats.overs_bowled * 100) / 100,
+        net_run_rate: Math.round(nrr * 1000) / 1000,
+      };
+    });
+
+    setEditableStandings(updated);
+    toast({ title: "Standings recalculated", description: `Processed ${groupMatches.length} group stage matches. Click 'Save All' to persist.` });
+  };
+
   const handleSave = () => {
     saveMutation.mutate(editableStandings);
   };
@@ -181,6 +322,10 @@ export default function StandingsAdmin() {
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
+          </Button>
+          <Button variant="secondary" onClick={recalculateFromResults}>
+            <Calculator className="w-4 h-4 mr-2" />
+            Recalculate from Results
           </Button>
           <Button onClick={handleSave} disabled={saveMutation.isPending}>
             <Save className="w-4 h-4 mr-2" />
