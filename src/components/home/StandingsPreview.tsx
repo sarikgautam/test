@@ -27,7 +27,7 @@ export function StandingsPreview() {
         .from("standings")
         .select(`
           *,
-          team:teams(id, name, short_name, primary_color)
+          team:teams(id, name, short_name, primary_color, logo_url)
         `)
         .eq("season_id", activeSeason!.id)
         .order("points", { ascending: false })
@@ -87,15 +87,23 @@ export function StandingsPreview() {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                            style={{ backgroundColor: standing.team?.primary_color || "#1e3a8a" }}
-                          >
-                            {standing.team?.short_name?.substring(0, 2)}
-                          </div>
-                          <span className="font-medium text-foreground">{standing.team?.name}</span>
-                        </div>
+                        <Link to={`/teams/${standing.team?.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                          {standing.team?.logo_url ? (
+                            <img 
+                              src={standing.team.logo_url} 
+                              alt={standing.team.name} 
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div
+                              className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                              style={{ backgroundColor: standing.team?.primary_color || "#1e3a8a" }}
+                            >
+                              {standing.team?.short_name?.substring(0, 2)}
+                            </div>
+                          )}
+                          <span className="font-medium text-foreground hover:text-primary transition-colors">{standing.team?.name}</span>
+                        </Link>
                       </td>
                       <td className="text-center py-4 px-4 text-foreground">{standing.matches_played}</td>
                       <td className="text-center py-4 px-4 text-primary font-medium">{standing.wins}</td>
