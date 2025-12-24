@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Gavel, User, TrendingUp, Trophy, Clock } from "lucide-react";
+import { Gavel, User, TrendingUp, Trophy } from "lucide-react";
 import { useActiveSeason } from "@/hooks/useSeason";
+import { AuctionCountdown } from "@/components/auction/AuctionCountdown";
+import { SoldPlayersList } from "@/components/auction/SoldPlayersList";
 
 interface BidEntry {
   team_id: string;
@@ -136,15 +138,13 @@ export default function Auction() {
         </div>
 
         {!liveAuction?.is_live ? (
-          <Card className="border-border/50 max-w-2xl mx-auto">
-            <CardContent className="py-16 text-center">
-              <Clock className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h2 className="text-2xl font-display mb-2">Auction Not Live</h2>
-              <p className="text-muted-foreground">
-                The auction hasn't started yet. Check back soon!
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-8">
+            {/* Countdown when auction is not live */}
+            <AuctionCountdown auctionDate={activeSeason?.auction_date || null} />
+
+            {/* Show sold players when auction is not live */}
+            <SoldPlayersList seasonId={activeSeason?.id} />
+          </div>
         ) : (
           <div className="space-y-8">
             {/* Current Player Card */}
@@ -313,6 +313,9 @@ export default function Auction() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Sold Players Section during live auction */}
+            <SoldPlayersList seasonId={activeSeason?.id} />
           </div>
         )}
       </div>

@@ -15,9 +15,10 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp } from "lucide-react";
+import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp, Calendar, Save } from "lucide-react";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
+import { format } from "date-fns";
 
 type Player = Database["public"]["Tables"]["players"]["Row"];
 type Team = Database["public"]["Tables"]["teams"]["Row"];
@@ -34,10 +35,26 @@ export default function AuctionAdmin() {
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [incrementAmount, setIncrementAmount] = useState("5000");
   const [basePrice, setBasePrice] = useState("10000");
+  const [auctionDate, setAuctionDate] = useState("");
+  const [auctionTime, setAuctionTime] = useState("");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { selectedSeasonId } = useSeason();
+  const { selectedSeasonId, seasons } = useSeason();
+  
+  const selectedSeason = seasons.find((s) => s.id === selectedSeasonId);
+  
+  // Initialize auction date/time from season
+  useEffect(() => {
+    if (selectedSeason?.auction_date) {
+      const date = new Date(selectedSeason.auction_date);
+      setAuctionDate(format(date, "yyyy-MM-dd"));
+      setAuctionTime(format(date, "HH:mm"));
+    } else {
+      setAuctionDate("");
+      setAuctionTime("");
+    }
+  }, [selectedSeason]);
 
   const { data: players, isLoading: playersLoading } = useQuery({
     queryKey: ["auction-players", selectedSeasonId],
@@ -308,6 +325,29 @@ export default function AuctionAdmin() {
     },
   });
 
+  const updateAuctionDateMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedSeasonId || !auctionDate) return;
+      
+      const dateTime = auctionTime 
+        ? `${auctionDate}T${auctionTime}:00` 
+        : `${auctionDate}T00:00:00`;
+      
+      const { error } = await supabase
+        .from("seasons")
+        .update({ auction_date: dateTime })
+        .eq("id", selectedSeasonId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seasons"] });
+      toast({ title: "Auction date updated!" });
+    },
+    onError: (error) => {
+      toast({ title: "Error updating auction date", description: error.message, variant: "destructive" });
+    },
+  });
+
   const roleLabels: Record<string, string> = {
     batsman: "Batsman",
     bowler: "Bowler",
@@ -321,6 +361,49 @@ export default function AuctionAdmin() {
 
   return (
     <div className="space-y-6">
+      {/* Auction Date Setting */}
+      <Card className="border-border/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Calendar className="w-5 h-5 text-primary" />
+            Auction Schedule
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <Label>Auction Date</Label>
+              <Input
+                type="date"
+                value={auctionDate}
+                onChange={(e) => setAuctionDate(e.target.value)}
+              />
+            </div>
+            <div className="flex-1">
+              <Label>Auction Time</Label>
+              <Input
+                type="time"
+                value={auctionTime}
+                onChange={(e) => setAuctionTime(e.target.value)}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button 
+                onClick={() => updateAuctionDateMutation.mutate()}
+                disabled={!auctionDate}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Date
+              </Button>
+            </div>
+          </div>
+          {selectedSeason?.auction_date && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Currently set to: {format(new Date(selectedSeason.auction_date), "PPP 'at' h:mm a")}
+            </p>
+          )}
+        </CardContent>
+      </Card>
       <div>
         <h1 className="font-display text-3xl text-gradient-gold">Live Auction Control</h1>
         <p className="text-muted-foreground mt-1">
