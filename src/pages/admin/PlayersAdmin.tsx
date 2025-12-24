@@ -28,6 +28,16 @@ import type { Database } from "@/integrations/supabase/types";
 type Player = Database["public"]["Tables"]["players"]["Row"];
 type Team = Database["public"]["Tables"]["teams"]["Row"];
 
+interface PlayerWithRegistration extends Player {
+  registration?: {
+    id: string;
+    auction_status: string;
+    sold_price: number | null;
+    team_id: string | null;
+    base_price: number;
+  } | null;
+}
+
 export default function PlayersAdmin() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -39,18 +49,34 @@ export default function PlayersAdmin() {
   const { data: players, isLoading } = useQuery({
     queryKey: ["admin-players", selectedSeasonId],
     queryFn: async () => {
-      let query = supabase
-        .from("players")
-        .select("*")
+      // Get all players that have registrations for this season
+      const { data: registrations, error: regError } = await supabase
+        .from("player_season_registrations")
+        .select(`
+          id,
+          auction_status,
+          sold_price,
+          team_id,
+          base_price,
+          player_id,
+          players:player_id(*)
+        `)
+        .eq("season_id", selectedSeasonId!)
         .order("created_at", { ascending: false });
       
-      if (selectedSeasonId) {
-        query = query.eq("season_id", selectedSeasonId);
-      }
+      if (regError) throw regError;
       
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Player[];
+      // Transform the data
+      return registrations?.map((reg) => ({
+        ...(reg.players as any),
+        registration: {
+          id: reg.id,
+          auction_status: reg.auction_status,
+          sold_price: reg.sold_price,
+          team_id: reg.team_id,
+          base_price: reg.base_price,
+        },
+      })) as PlayerWithRegistration[];
     },
     enabled: !!selectedSeasonId,
   });
@@ -65,47 +91,21 @@ export default function PlayersAdmin() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("players").delete().eq("id", id);
+    mutationFn: async (playerId: string) => {
+      // Delete the registration for this season
+      const { error } = await supabase
+        .from("player_season_registrations")
+        .delete()
+        .eq("player_id", playerId)
+        .eq("season_id", selectedSeasonId!);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
-      toast({ title: "Player deleted successfully" });
+      toast({ title: "Player registration deleted successfully" });
     },
     onError: (error) => {
       toast({ title: "Error deleting player", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({
-      id,
-      status,
-      teamId,
-      soldPrice,
-    }: {
-      id: string;
-      status: string;
-      teamId?: string | null;
-      soldPrice?: number | null;
-    }) => {
-      const { error } = await supabase
-        .from("players")
-        .update({
-          auction_status: status as "registered" | "sold" | "unsold",
-          team_id: teamId || null,
-          sold_price: soldPrice || null,
-        })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
-      toast({ title: "Player updated successfully" });
-    },
-    onError: (error) => {
-      toast({ title: "Error updating player", description: error.message, variant: "destructive" });
     },
   });
 
@@ -114,11 +114,11 @@ export default function PlayersAdmin() {
       player.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       player.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
-      statusFilter === "all" || player.auction_status === statusFilter;
+      statusFilter === "all" || player.registration?.auction_status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getTeamName = (teamId: string | null) => {
+  const getTeamName = (teamId: string | null | undefined) => {
     if (!teamId) return "-";
     return teams?.find((t) => t.id === teamId)?.name || "-";
   };
@@ -195,15 +195,15 @@ export default function PlayersAdmin() {
                   <TableCell className="font-medium">{player.full_name}</TableCell>
                   <TableCell className="text-muted-foreground">{player.email}</TableCell>
                   <TableCell>{roleLabels[player.role]}</TableCell>
-                  <TableCell>${player.base_price.toLocaleString()}</TableCell>
+                  <TableCell>${player.registration?.base_price?.toLocaleString() || player.base_price?.toLocaleString()}</TableCell>
                   <TableCell>
-                    <Badge variant={statusVariants[player.auction_status]}>
-                      {player.auction_status}
+                    <Badge variant={statusVariants[player.registration?.auction_status || "registered"]}>
+                      {player.registration?.auction_status || "registered"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{getTeamName(player.team_id)}</TableCell>
+                  <TableCell>{getTeamName(player.registration?.team_id)}</TableCell>
                   <TableCell>
-                    {player.sold_price ? `$${player.sold_price.toLocaleString()}` : "-"}
+                    {player.registration?.sold_price ? `$${player.registration.sold_price.toLocaleString()}` : "-"}
                   </TableCell>
                   <TableCell>
                     <Button

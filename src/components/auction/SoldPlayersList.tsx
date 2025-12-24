@@ -20,8 +20,12 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
     queryKey: ["sold-players", seasonId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("players")
-        .select("*, teams:teams!players_team_id_fkey(*)")
+        .from("player_season_registrations")
+        .select(`
+          *,
+          players:player_id(*),
+          teams:team_id(*)
+        `)
         .eq("auction_status", "sold")
         .eq("season_id", seasonId!)
         .order("updated_at", { ascending: false });
@@ -51,9 +55,10 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
   };
 
   const getFilteredPlayers = (filter: string) => {
-    let filtered = soldPlayers?.filter((player) =>
-      player.full_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    let filtered = soldPlayers?.filter((reg) => {
+      const player = reg.players as any;
+      return player?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    });
 
     if (filter === "all") {
       return filtered?.sort(
@@ -67,7 +72,7 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
 
     // Filter by team
     return filtered
-      ?.filter((player) => player.team_id === filter)
+      ?.filter((reg) => reg.team_id === filter)
       .sort((a, b) => (b.sold_price || 0) - (a.sold_price || 0));
   };
 
@@ -101,7 +106,7 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
 
   // Get teams that have bought players
   const teamsWithPlayers = teams?.filter((team) =>
-    soldPlayers.some((player) => player.team_id === team.id)
+    soldPlayers.some((reg) => reg.team_id === team.id)
   );
 
   return (
@@ -116,50 +121,55 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-            {topExpensivePlayers.map((player, index) => (
-              <div
-                key={player.id}
-                className={`p-3 rounded-lg border ${
-                  index === 0
-                    ? "bg-yellow-500/10 border-yellow-500/30"
-                    : index === 1
-                    ? "bg-gray-300/10 border-gray-300/30"
-                    : index === 2
-                    ? "bg-amber-700/10 border-amber-700/30"
-                    : "bg-muted/30 border-border/50"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    {player.photo_url ? (
-                      <img
-                        src={player.photo_url}
-                        alt={player.full_name}
-                        className="w-full h-full rounded-full object-cover"
+            {topExpensivePlayers.map((reg, index) => {
+              const player = reg.players as any;
+              const team = reg.teams as any;
+              
+              return (
+                <div
+                  key={reg.id}
+                  className={`p-3 rounded-lg border ${
+                    index === 0
+                      ? "bg-yellow-500/10 border-yellow-500/30"
+                      : index === 1
+                      ? "bg-gray-300/10 border-gray-300/30"
+                      : index === 2
+                      ? "bg-amber-700/10 border-amber-700/30"
+                      : "bg-muted/30 border-border/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                      {player?.photo_url ? (
+                        <img
+                          src={player.photo_url}
+                          alt={player.full_name}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span className="font-bold text-lg text-primary">#{index + 1}</span>
+                  </div>
+                  <p className="font-medium text-sm truncate">{player?.full_name}</p>
+                  <p className="text-primary font-bold">
+                    ${reg.sold_price?.toLocaleString()}
+                  </p>
+                  {team && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <div
+                        className="w-4 h-4 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: team.primary_color }}
                       />
-                    ) : (
-                      <User className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <span className="font-bold text-lg text-primary">#{index + 1}</span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {team.short_name}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <p className="font-medium text-sm truncate">{player.full_name}</p>
-                <p className="text-primary font-bold">
-                  ${player.sold_price?.toLocaleString()}
-                </p>
-                {player.teams && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <div
-                      className="w-4 h-4 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: player.teams.primary_color }}
-                    />
-                    <span className="text-xs text-muted-foreground truncate">
-                      {player.teams.short_name}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -249,48 +259,53 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
             {/* Player Grid - shared across all tabs */}
             <div className="mt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-                {filteredPlayers?.map((player) => (
-                  <div
-                    key={player.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                      {player.photo_url ? (
-                        <img
-                          src={player.photo_url}
-                          alt={player.full_name}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <User className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <p className="font-medium text-sm truncate">{player.full_name}</p>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {roleLabels[player.role]}
-                        </Badge>
-                        {player.teams && (
-                          <div className="flex items-center gap-1">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: player.teams.primary_color }}
-                            />
-                            <span className="text-[10px] text-muted-foreground">
-                              {player.teams.short_name}
-                            </span>
-                          </div>
+                {filteredPlayers?.map((reg) => {
+                  const player = reg.players as any;
+                  const team = reg.teams as any;
+                  
+                  return (
+                    <div
+                      key={reg.id}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        {player?.photo_url ? (
+                          <img
+                            src={player.photo_url}
+                            alt={player.full_name}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-5 h-5 text-muted-foreground" />
                         )}
                       </div>
+                      <div className="flex-grow min-w-0">
+                        <p className="font-medium text-sm truncate">{player?.full_name}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {roleLabels[player?.role] || player?.role}
+                          </Badge>
+                          {team && (
+                            <div className="flex items-center gap-1">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: team.primary_color }}
+                              />
+                              <span className="text-[10px] text-muted-foreground">
+                                {team.short_name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-primary text-sm">
+                          ${reg.sold_price?.toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-primary text-sm">
-                        ${player.sold_price?.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {filteredPlayers?.length === 0 && (

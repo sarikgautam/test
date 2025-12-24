@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Trophy, ChevronRight, Crown, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useActiveSeason } from "@/hooks/useSeason";
 
 interface Team {
   id: string;
@@ -21,6 +22,8 @@ interface Team {
 }
 
 const Teams = () => {
+  const { activeSeason } = useActiveSeason();
+  
   const { data: teams, isLoading } = useQuery({
     queryKey: ["teams"],
     queryFn: async () => {
@@ -30,13 +33,19 @@ const Teams = () => {
     },
   });
 
-  const { data: players } = useQuery({
-    queryKey: ["players-by-team"],
+  const { data: registrations } = useQuery({
+    queryKey: ["registrations-by-team", activeSeason?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("players").select("*").eq("auction_status", "sold");
+      if (!activeSeason?.id) return [];
+      const { data, error } = await supabase
+        .from("player_season_registrations")
+        .select("*")
+        .eq("season_id", activeSeason.id)
+        .eq("auction_status", "sold");
       if (error) throw error;
       return data;
     },
+    enabled: !!activeSeason?.id,
   });
 
   return (
@@ -75,7 +84,7 @@ const Teams = () => {
           ) : teams && teams.length > 0 ? (
             <div className="space-y-16 md:space-y-24">
               {teams.map((team, index) => {
-                const teamPlayers = players?.filter((p) => p.team_id === team.id) || [];
+                const teamPlayers = registrations?.filter((r) => r.team_id === team.id) || [];
                 const isEven = index % 2 === 0;
                 
                 return (
