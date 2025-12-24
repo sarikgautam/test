@@ -16,6 +16,9 @@ import Register from "./pages/Register";
 import Auth from "./pages/Auth";
 import Auction from "./pages/Auction";
 import AuctionStats from "./pages/AuctionStats";
+import Sponsors from "./pages/Sponsors";
+import Gallery from "./pages/Gallery";
+import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
@@ -51,6 +54,9 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/auction" element={<Auction />} />
               <Route path="/auction/stats" element={<AuctionStats />} />
+              <Route path="/sponsors" element={<Sponsors />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="teams" element={<TeamsAdmin />} />

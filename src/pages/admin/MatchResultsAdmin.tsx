@@ -121,8 +121,7 @@ export default function MatchResultsAdmin() {
       const { data, error } = await supabase
         .from("players")
         .select("*")
-        .in("team_id", [selectedMatch.home_team_id, selectedMatch.away_team_id])
-        .eq("auction_status", "sold");
+        .in("team_id", [selectedMatch.home_team_id, selectedMatch.away_team_id]);
       if (error) throw error;
       return data as Player[];
     },
