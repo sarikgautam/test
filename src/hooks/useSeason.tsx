@@ -73,7 +73,7 @@ export function useSeason() {
 }
 
 export function useActiveSeason() {
-  const { data: activeSeason } = useQuery({
+  const { data: activeSeason, isLoading } = useQuery({
     queryKey: ["active-season"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -85,5 +85,5 @@ export function useActiveSeason() {
       return data as Season | null;
     },
   });
-  return activeSeason;
+  return { activeSeason, isLoading };
 }
