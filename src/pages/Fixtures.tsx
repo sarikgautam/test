@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, MapPin, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { formatAESTShort } from "@/lib/utils";
 
 const Fixtures = () => {
   const { data: matches, isLoading } = useQuery({
@@ -50,8 +50,8 @@ const Fixtures = () => {
                         {getStatusBadge(match.status)}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{format(new Date(match.match_date), "MMM d, yyyy")}</span>
-                        <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{format(new Date(match.match_date), "h:mm a")}</span>
+                        <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{formatAESTShort(match.match_date, "MMM d, yyyy")}</span>
+                        <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{formatAESTShort(match.match_date, "h:mm a")} AEST</span>
                         <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{match.venue}</span>
                       </div>
                     </div>

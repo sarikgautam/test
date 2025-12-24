@@ -30,7 +30,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Calendar } from "lucide-react";
-import { format } from "date-fns";
+import { formatAEST } from "@/lib/utils";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -443,7 +443,7 @@ export default function MatchesAdmin() {
                     {getTeamName(match.home_team_id)} vs {getTeamName(match.away_team_id)}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(match.match_date), "MMM d, yyyy h:mm a")}
+                    {formatAEST(match.match_date, "MMM d, yyyy h:mm a")}
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate">{match.venue}</TableCell>
                   <TableCell>
