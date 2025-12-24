@@ -16,7 +16,7 @@ export function RecentSoldPlayers({ seasonId, limit = 3 }: RecentSoldPlayersProp
     queryFn: async () => {
       const { data, error } = await supabase
         .from("players")
-        .select("*, team:team_id(*)")
+        .select("*, teams(*)")
         .eq("auction_status", "sold")
         .eq("season_id", seasonId!)
         .order("updated_at", { ascending: false })
@@ -84,14 +84,14 @@ export function RecentSoldPlayers({ seasonId, limit = 3 }: RecentSoldPlayersProp
                   <Badge variant="outline" className="text-xs">
                     {roleLabels[player.role]}
                   </Badge>
-                  {player.team && (
+                  {player.teams && (
                     <div className="flex items-center gap-1">
                       <div
                         className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: player.team.primary_color }}
+                        style={{ backgroundColor: player.teams.primary_color }}
                       />
                       <span className="text-xs text-muted-foreground">
-                        {player.team.name}
+                        {player.teams.name}
                       </span>
                     </div>
                   )}
