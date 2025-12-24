@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      live_auction: {
+        Row: {
+          base_price: number
+          bid_history: Json | null
+          created_at: string
+          current_bid: number
+          current_bidding_team_id: string | null
+          current_player_id: string | null
+          id: string
+          increment_amount: number
+          is_live: boolean
+          season_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_price?: number
+          bid_history?: Json | null
+          created_at?: string
+          current_bid?: number
+          current_bidding_team_id?: string | null
+          current_player_id?: string | null
+          id?: string
+          increment_amount?: number
+          is_live?: boolean
+          season_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number
+          bid_history?: Json | null
+          created_at?: string
+          current_bid?: number
+          current_bidding_team_id?: string | null
+          current_player_id?: string | null
+          id?: string
+          increment_amount?: number
+          is_live?: boolean
+          season_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_auction_current_bidding_team_id_fkey"
+            columns: ["current_bidding_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_auction_current_player_id_fkey"
+            columns: ["current_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_auction_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: true
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matches: {
         Row: {
           away_team_id: string
