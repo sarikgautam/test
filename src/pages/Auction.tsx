@@ -235,11 +235,11 @@ export default function Auction() {
             {/* Team Budgets */}
             <div>
               <h3 className="text-lg font-display mb-4 text-center">Team Purses</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              <div className="flex flex-wrap justify-center gap-3">
                 {teams?.map((team) => (
                   <Card
                     key={team.id}
-                    className={`border-border/50 transition-all ${
+                    className={`border-border/50 transition-all w-28 ${
                       currentBiddingTeam?.id === team.id
                         ? "ring-2 ring-primary scale-105"
                         : ""
