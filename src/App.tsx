@@ -30,6 +30,9 @@ import StatsAdmin from "./pages/admin/StatsAdmin";
 import MatchResultsAdmin from "./pages/admin/MatchResultsAdmin";
 import AwardsAdmin from "./pages/admin/AwardsAdmin";
 import AuctionAdmin from "./pages/admin/AuctionAdmin";
+import SponsorsAdmin from "./pages/admin/SponsorsAdmin";
+import GalleryAdmin from "./pages/admin/GalleryAdmin";
+import ContactAdmin from "./pages/admin/ContactAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
 
 const queryClient = new QueryClient();
@@ -67,6 +70,9 @@ const App = () => (
                 <Route path="standings" element={<StandingsAdmin />} />
                 <Route path="stats" element={<StatsAdmin />} />
                 <Route path="auction" element={<AuctionAdmin />} />
+                <Route path="sponsors" element={<SponsorsAdmin />} />
+                <Route path="gallery" element={<GalleryAdmin />} />
+                <Route path="contact" element={<ContactAdmin />} />
                 <Route path="settings" element={<SettingsAdmin />} />
               </Route>
               <Route path="*" element={<NotFound />} />
