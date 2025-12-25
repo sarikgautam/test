@@ -216,9 +216,23 @@ export default function SponsorsAdmin() {
 
                 <div className="space-y-2">
                   <Label>Logo</Label>
-                  <Input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Upload from computer:</p>
+                      <Input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Or paste URL:</p>
+                      <Input
+                        type="url"
+                        value={formData.logo_url}
+                        onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                        placeholder="https://example.com/logo.png"
+                      />
+                    </div>
+                  </div>
                   {formData.logo_url && (
-                    <img src={formData.logo_url} alt="Logo preview" className="h-16 w-auto object-contain mt-2" />
+                    <img src={formData.logo_url} alt="Logo preview" className="h-20 w-auto object-contain mt-2 border rounded p-2" />
                   )}
                 </div>
 

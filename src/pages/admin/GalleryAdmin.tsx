@@ -204,9 +204,23 @@ export default function GalleryAdmin() {
 
                 <div className="space-y-2">
                   <Label>Image *</Label>
-                  <Input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Upload from computer:</p>
+                      <Input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Or paste URL:</p>
+                      <Input
+                        type="url"
+                        value={formData.image_url}
+                        onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                        placeholder="https://example.com/image.jpg"
+                      />
+                    </div>
+                  </div>
                   {formData.image_url && (
-                    <img src={formData.image_url} alt="Preview" className="h-32 w-auto object-cover mt-2 rounded" />
+                    <img src={formData.image_url} alt="Preview" className="h-32 w-auto object-cover mt-2 rounded border" />
                   )}
                 </div>
 
