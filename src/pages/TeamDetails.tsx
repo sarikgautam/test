@@ -15,8 +15,21 @@ import {
   User,
   CheckCircle2,
   XCircle,
-  Minus
+  Minus,
+  Building2,
+  ExternalLink
 } from "lucide-react";
+
+interface Owner {
+  id: string;
+  name: string;
+  description: string | null;
+  photo_url: string | null;
+  business_name: string | null;
+  business_description: string | null;
+  business_logo_url: string | null;
+  business_website: string | null;
+}
 
 interface Team {
   id: string;
@@ -26,6 +39,7 @@ interface Team {
   primary_color: string;
   secondary_color: string;
   owner_name: string | null;
+  owner_id: string | null;
   remaining_budget: number;
   budget: number;
   description: string | null;
@@ -81,6 +95,21 @@ const TeamDetails = () => {
       return data as Team;
     },
     enabled: !!teamId,
+  });
+
+  const { data: owner } = useQuery({
+    queryKey: ["team-owner", team?.owner_id],
+    queryFn: async () => {
+      if (!team?.owner_id) return null;
+      const { data, error } = await supabase
+        .from("owners")
+        .select("*")
+        .eq("id", team.owner_id)
+        .single();
+      if (error) throw error;
+      return data as Owner;
+    },
+    enabled: !!team?.owner_id,
   });
 
   const { data: allTeams } = useQuery({
@@ -295,15 +324,6 @@ const TeamDetails = () => {
 
                 {/* Team Leadership */}
                 <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-                  {team.owner_name && (
-                    <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-card border border-border">
-                      <Crown className="w-5 h-5" style={{ color: team.primary_color }} />
-                      <div className="text-left">
-                        <p className="text-xs text-muted-foreground">Owner</p>
-                        <p className="font-medium">{team.owner_name}</p>
-                      </div>
-                    </div>
-                  )}
                   {captain && (
                     <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-card border border-border">
                       <Trophy className="w-5 h-5" style={{ color: team.primary_color }} />
@@ -325,6 +345,80 @@ const TeamDetails = () => {
                 </div>
               </div>
             </div>
+
+            {/* Owner Section */}
+            {owner && (
+              <div className="mt-12 bg-card rounded-2xl border border-border p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <Crown className="w-6 h-6" style={{ color: team.primary_color }} />
+                  <h3 className="font-display text-xl">Team Owner</h3>
+                </div>
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* Owner Photo & Info */}
+                  <div className="flex items-center gap-4">
+                    {owner.photo_url ? (
+                      <img 
+                        src={owner.photo_url} 
+                        alt={owner.name}
+                        className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-2"
+                        style={{ borderColor: team.primary_color }}
+                      />
+                    ) : (
+                      <div 
+                        className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: `${team.primary_color}20` }}
+                      >
+                        <User className="w-10 h-10" style={{ color: team.primary_color }} />
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-semibold text-lg">{owner.name}</h4>
+                      {owner.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{owner.description}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Business Info */}
+                  {owner.business_name && (
+                    <div className="flex-1 md:border-l md:border-border md:pl-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        {owner.business_logo_url ? (
+                          <img 
+                            src={owner.business_logo_url} 
+                            alt={owner.business_name}
+                            className="w-12 h-12 object-contain rounded-lg bg-background p-1"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-xs text-muted-foreground">Business</p>
+                          <p className="font-medium">{owner.business_name}</p>
+                        </div>
+                      </div>
+                      {owner.business_description && (
+                        <p className="text-sm text-muted-foreground mb-3">{owner.business_description}</p>
+                      )}
+                      {owner.business_website && (
+                        <a 
+                          href={owner.business_website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                          style={{ color: team.primary_color }}
+                        >
+                          Visit Website
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
