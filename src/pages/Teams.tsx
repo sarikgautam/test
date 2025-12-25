@@ -7,6 +7,16 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useActiveSeason } from "@/hooks/useSeason";
 
+interface Owner {
+  id: string;
+  name: string;
+  description: string | null;
+  business_name: string | null;
+  business_description: string | null;
+  business_logo_url: string | null;
+  business_website: string | null;
+}
+
 interface Team {
   id: string;
   name: string;
@@ -15,6 +25,7 @@ interface Team {
   primary_color: string;
   secondary_color: string;
   owner_name: string | null;
+  owner_id: string | null;
   remaining_budget: number;
   description: string | null;
   captain_id: string | null;
@@ -33,6 +44,15 @@ const Teams = () => {
     },
   });
 
+  const { data: owners } = useQuery({
+    queryKey: ["owners"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("owners").select("*");
+      if (error) throw error;
+      return data as Owner[];
+    },
+  });
+
   const { data: registrations } = useQuery({
     queryKey: ["registrations-by-team", activeSeason?.id],
     queryFn: async () => {
@@ -47,6 +67,11 @@ const Teams = () => {
     },
     enabled: !!activeSeason?.id,
   });
+
+  const getOwner = (ownerId: string | null) => {
+    if (!ownerId) return null;
+    return owners?.find(o => o.id === ownerId);
+  };
 
   return (
     <Layout>
@@ -85,6 +110,7 @@ const Teams = () => {
             <div className="space-y-16 md:space-y-24">
               {teams.map((team, index) => {
                 const teamPlayers = registrations?.filter((r) => r.team_id === team.id) || [];
+                const owner = getOwner(team.owner_id);
                 const isEven = index % 2 === 0;
                 
                 return (
@@ -177,45 +203,46 @@ const Teams = () => {
                           </p>
 
                           {/* Quick Stats */}
-                          <div className="grid grid-cols-2 gap-4">
-                            {team.owner_name && (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              {owner && (
+                                <div className="col-span-2 flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
+                                  {owner.business_logo_url && (
+                                    <img src={owner.business_logo_url} alt={owner.business_name || ''} className="w-12 h-12 rounded-lg object-contain" />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <Crown className="w-4 h-4 flex-shrink-0" style={{ color: team.primary_color }} />
+                                      <p className="font-medium truncate">{owner.name}</p>
+                                    </div>
+                                    {owner.description && (
+                                      <p className="text-sm text-muted-foreground line-clamp-1">{owner.description}</p>
+                                    )}
+                                    {owner.business_website && (
+                                      <a 
+                                        href={owner.business_website} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-primary hover:underline"
+                                      >
+                                        {owner.business_name || 'Visit Business'}
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              
                               <div className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border">
                                 <div 
                                   className="w-10 h-10 rounded-lg flex items-center justify-center"
                                   style={{ backgroundColor: `${team.primary_color}20` }}
                                 >
-                                  <Crown className="w-5 h-5" style={{ color: team.primary_color }} />
+                                  <Users className="w-5 h-5" style={{ color: team.primary_color }} />
                                 </div>
                                 <div>
-                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Owner</p>
-                                  <p className="font-medium truncate">{team.owner_name}</p>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Squad</p>
+                                  <p className="font-medium">{teamPlayers.length} Players</p>
                                 </div>
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border">
-                              <div 
-                                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                                style={{ backgroundColor: `${team.primary_color}20` }}
-                              >
-                                <Users className="w-5 h-5" style={{ color: team.primary_color }} />
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Squad</p>
-                                <p className="font-medium">{teamPlayers.length} Players</p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border">
-                              <div 
-                                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                                style={{ backgroundColor: `${team.primary_color}20` }}
-                              >
-                                <Star className="w-5 h-5" style={{ color: team.primary_color }} />
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Budget</p>
-                                <p className="font-medium">${Number(team.remaining_budget).toLocaleString()}</p>
                               </div>
                             </div>
                           </div>

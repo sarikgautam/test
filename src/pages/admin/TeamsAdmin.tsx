@@ -32,11 +32,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Users, Upload } from "lucide-react";
 import { useActiveSeason } from "@/hooks/useSeason";
 
+interface Owner {
+  id: string;
+  name: string;
+  business_name: string | null;
+}
+
 interface Team {
   id: string;
   name: string;
   short_name: string;
   owner_name: string | null;
+  owner_id: string | null;
   manager_name: string | null;
   description: string | null;
   captain_id: string | null;
@@ -59,6 +66,7 @@ export default function TeamsAdmin() {
   const [formData, setFormData] = useState({
     name: "",
     short_name: "",
+    owner_id: "",
     owner_name: "",
     manager_name: "",
     description: "",
@@ -102,6 +110,19 @@ export default function TeamsAdmin() {
     enabled: !!activeSeason?.id,
   });
 
+  // Fetch owners for selection
+  const { data: owners } = useQuery({
+    queryKey: ["admin-owners-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("owners")
+        .select("id, name, business_name")
+        .order("name");
+      if (error) throw error;
+      return data as Owner[];
+    },
+  });
+
   const uploadLogo = async (teamId: string, file: File): Promise<string | null> => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${teamId}.${fileExt}`;
@@ -125,6 +146,7 @@ export default function TeamsAdmin() {
       const { data: newTeam, error } = await supabase.from("teams").insert({
         name: data.name,
         short_name: data.short_name,
+        owner_id: data.owner_id || null,
         owner_name: data.owner_name || null,
         manager_name: data.manager_name || null,
         description: data.description || null,
@@ -173,6 +195,7 @@ export default function TeamsAdmin() {
         .update({
           name: data.name,
           short_name: data.short_name,
+          owner_id: data.owner_id || null,
           owner_name: data.owner_name || null,
           manager_name: data.manager_name || null,
           description: data.description || null,
@@ -212,6 +235,7 @@ export default function TeamsAdmin() {
     setFormData({
       name: "",
       short_name: "",
+      owner_id: "",
       owner_name: "",
       manager_name: "",
       description: "",
@@ -229,6 +253,7 @@ export default function TeamsAdmin() {
     setFormData({
       name: team.name,
       short_name: team.short_name,
+      owner_id: team.owner_id || "",
       owner_name: team.owner_name || "",
       manager_name: team.manager_name || "",
       description: team.description || "",
@@ -298,13 +323,23 @@ export default function TeamsAdmin() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="owner_name">Owner Name</Label>
-                  <Input
-                    id="owner_name"
-                    value={formData.owner_name}
-                    onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
-                    placeholder="Team owner"
-                  />
+                  <Label htmlFor="owner_id">Select Owner</Label>
+                  <Select
+                    value={formData.owner_id || "none"}
+                    onValueChange={(value) => setFormData({ ...formData, owner_id: value === "none" ? "" : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select owner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No owner selected</SelectItem>
+                      {owners?.map((owner) => (
+                        <SelectItem key={owner.id} value={owner.id}>
+                          {owner.name} {owner.business_name ? `(${owner.business_name})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="manager_name">Manager Name</Label>
