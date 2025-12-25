@@ -215,6 +215,43 @@ const TeamDetails = () => {
     return "draw";
   };
 
+  const getMatchResultDescription = (match: Match, isHome: boolean) => {
+    const teamScore = isHome ? match.home_team_score : match.away_team_score;
+    const opponentScore = isHome ? match.away_team_score : match.home_team_score;
+    
+    if (!teamScore || !opponentScore) return "";
+    
+    const teamRuns = parseInt(teamScore.split("/")[0]);
+    const opponentRuns = parseInt(opponentScore.split("/")[0]);
+    const teamWickets = parseInt(teamScore.split("/")[1]) || 0;
+    const opponentWickets = parseInt(opponentScore.split("/")[1]) || 0;
+    
+    if (match.winner_team_id === teamId) {
+      // Team won
+      const runsDiff = teamRuns - opponentRuns;
+      if (opponentWickets === 10) {
+        // Won by runs (opponent all out)
+        return `Won by ${runsDiff} run${runsDiff !== 1 ? 's' : ''}`;
+      } else {
+        // Won by wickets
+        const wicketsRemaining = 10 - opponentWickets;
+        return `Won by ${wicketsRemaining} wicket${wicketsRemaining !== 1 ? 's' : ''}`;
+      }
+    } else if (match.winner_team_id && match.winner_team_id !== teamId) {
+      // Team lost
+      const runsDiff = opponentRuns - teamRuns;
+      if (teamWickets === 10) {
+        // Lost by runs (team all out)
+        return `Lost by ${runsDiff} run${runsDiff !== 1 ? 's' : ''}`;
+      } else {
+        // Lost by wickets
+        const wicketsRemaining = 10 - teamWickets;
+        return `Lost by ${wicketsRemaining} wicket${wicketsRemaining !== 1 ? 's' : ''}`;
+      }
+    }
+    return "Draw";
+  };
+
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "batsman": return "Batsman";
@@ -631,44 +668,66 @@ const TeamDetails = () => {
                   <Calendar className="w-5 h-5" style={{ color: team.primary_color }} />
                 </div>
                 <h3 className="font-display text-xl">Upcoming Matches</h3>
+
               </div>
               
               {upcomingMatches.length ? (
-                <div className="space-y-3">
-                  {upcomingMatches.map((match) => {
+                <div className="space-y-4">
+                  {upcomingMatches.map((match, index) => {
                     const opponent = getOpponentTeam(match);
                     const isHome = match.home_team_id === teamId;
+                    const matchDate = new Date(match.match_date);
                     
                     return (
                       <Link 
                         key={match.id}
                         to={`/fixtures`}
-                        className="block p-4 bg-card rounded-xl border border-border hover:border-primary/30 transition-all"
+                        className="group relative block overflow-hidden rounded-2xl border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            {opponent?.logo_url ? (
-                              <img src={opponent.logo_url} alt={opponent.name} className="w-10 h-10 object-contain" />
-                            ) : (
-                              <div 
-                                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                                style={{ backgroundColor: opponent?.primary_color || '#666', color: 'white' }}
-                              >
-                                {opponent?.short_name?.substring(0, 2)}
+                        {/* Top accent */}
+                        <div 
+                          className="absolute top-0 left-0 right-0 h-1.5 transition-all"
+                          style={{ background: `linear-gradient(90deg, ${team.primary_color}, ${team.secondary_color})` }}
+                        />
+                        
+                        <div className="bg-card p-5 md:p-6">
+                          <div className="flex items-start justify-between gap-4">
+                            {/* Match Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: `${team.primary_color}20`, color: team.primary_color }}>
+                                  Match #{match.match_number}
+                                </span>
+                                <span className="text-xs text-muted-foreground">{isHome ? '🏠 Home' : '🏃 Away'}</span>
                               </div>
-                            )}
-                            <div>
-                              <p className="font-medium">{isHome ? 'vs' : '@'} {opponent?.name}</p>
-                              <p className="text-sm text-muted-foreground">Match #{match.match_number}</p>
+                              
+                              <div className="flex items-center gap-3">
+                                {opponent?.logo_url ? (
+                                  <img src={opponent.logo_url} alt={opponent.name} className="w-12 h-12 object-contain flex-shrink-0" />
+                                ) : (
+                                  <div 
+                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
+                                    style={{ backgroundColor: opponent?.primary_color || '#666', color: 'white' }}
+                                  >
+                                    {opponent?.short_name?.substring(0, 2)}
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-base md:text-lg">{isHome ? 'vs' : '@'} {opponent?.name}</p>
+                                  <p className="text-xs md:text-sm text-muted-foreground">{match.venue}</p>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium">
-                              {new Date(match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(match.match_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                            </p>
+                            
+                            {/* Date & Time */}
+                            <div className="text-right flex-shrink-0">
+                              <p className="font-semibold text-sm md:text-base">
+                                {matchDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </p>
+                              <p className="text-xs md:text-sm" style={{ color: team.primary_color }}>
+                                {matchDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </Link>
@@ -676,87 +735,117 @@ const TeamDetails = () => {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 bg-card rounded-xl border border-border">
-                  <p className="text-muted-foreground">No upcoming matches</p>
+                <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                  <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground">No upcoming matches scheduled</p>
                 </div>
               )}
             </div>
 
             {/* Recent Results */}
             <div>
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-8">
                 <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="w-12 h-12 rounded-lg flex items-center justify-center"
                   style={{ backgroundColor: `${team.primary_color}20` }}
                 >
-                  <Trophy className="w-5 h-5" style={{ color: team.primary_color }} />
+                  <Trophy className="w-6 h-6" style={{ color: team.primary_color }} />
                 </div>
-                <h3 className="font-display text-xl">Last 5 Results</h3>
+                <div>
+                  <h3 className="font-display text-2xl">Last 5 Results</h3>
+                  <p className="text-sm text-muted-foreground">{completedMatches.length} completed matches</p>
+                </div>
               </div>
               
               {completedMatches.length ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {completedMatches.map((match) => {
                     const opponent = getOpponentTeam(match);
                     const result = getMatchResult(match);
+                    const resultDescription = getMatchResultDescription(match, match.home_team_id === teamId);
                     const isHome = match.home_team_id === teamId;
                     const teamScore = isHome ? match.home_team_score : match.away_team_score;
                     const opponentScore = isHome ? match.away_team_score : match.home_team_score;
+                    
+                    const resultColor = result === 'win' ? team.primary_color : result === 'loss' ? '#ef4444' : '#8b5cf6';
+                    const resultBgColor = result === 'win' ? `${team.primary_color}15` : result === 'loss' ? '#ef444415' : '#8b5cf615';
                     
                     return (
                       <Link 
                         key={match.id}
                         to={`/fixtures`}
-                        className="block p-4 bg-card rounded-xl border border-border hover:border-primary/30 transition-all"
+                        className="group relative block overflow-hidden rounded-2xl border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
                       >
-                        <div className="flex items-center gap-4">
-                          <div 
-                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              result === 'win' ? 'bg-green-500/20' : 
-                              result === 'loss' ? 'bg-red-500/20' : 'bg-muted/20'
-                            }`}
-                          >
-                            {result === 'win' ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-500" />
-                            ) : result === 'loss' ? (
-                              <XCircle className="w-5 h-5 text-red-500" />
-                            ) : (
-                              <Minus className="w-5 h-5 text-muted-foreground" />
-                            )}
-                          </div>
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              {opponent?.logo_url ? (
-                                <img src={opponent.logo_url} alt={opponent.name} className="w-6 h-6 object-contain" />
+                        {/* Result accent line */}
+                        <div 
+                          className="absolute top-0 left-0 right-0 h-1.5"
+                          style={{ backgroundColor: resultColor }}
+                        />
+                        
+                        <div className="bg-card p-5 md:p-6">
+                          <div className="flex items-start gap-4">
+                            {/* Result Icon */}
+                            <div 
+                              className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
+                              style={{ backgroundColor: resultBgColor }}
+                            >
+                              {result === 'win' ? (
+                                <CheckCircle2 className="w-6 h-6" style={{ color: resultColor }} />
+                              ) : result === 'loss' ? (
+                                <XCircle className="w-6 h-6" style={{ color: resultColor }} />
                               ) : (
-                                <div 
-                                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                                  style={{ backgroundColor: opponent?.primary_color || '#666', color: 'white' }}
-                                >
-                                  {opponent?.short_name?.substring(0, 2)}
-                                </div>
+                                <Minus className="w-6 h-6" style={{ color: resultColor }} />
                               )}
-                              <p className="font-medium">{isHome ? 'vs' : '@'} {opponent?.short_name}</p>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {teamScore} - {opponentScore}
-                            </p>
+                            
+                            {/* Match Details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                {opponent?.logo_url ? (
+                                  <img src={opponent.logo_url} alt={opponent.name} className="w-6 h-6 object-contain" />
+                                ) : (
+                                  <div 
+                                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                                    style={{ backgroundColor: opponent?.primary_color || '#666', color: 'white' }}
+                                  >
+                                    {opponent?.short_name?.substring(0, 2)}
+                                  </div>
+                                )}
+                                <p className="font-semibold text-sm md:text-base">{isHome ? 'vs' : '@'} {opponent?.short_name}</p>
+                              </div>
+                              
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-2">
+                                <p className="text-sm md:text-base font-bold">
+                                  {teamScore} <span className="text-muted-foreground font-normal">vs</span> {opponentScore}
+                                </p>
+                              </div>
+                              
+                              <p className="text-sm md:text-base font-semibold" style={{ color: resultColor }}>
+                                {resultDescription}
+                              </p>
+                            </div>
+                            
+                            {/* Badge */}
+                            <div className="flex-shrink-0">
+                              <Badge 
+                                className={`uppercase font-semibold text-xs md:text-sm px-3 py-1 ${
+                                  result === 'win' ? 'bg-green-500/20 text-green-700 dark:text-green-400' :
+                                  result === 'loss' ? 'bg-red-500/20 text-red-700 dark:text-red-400' :
+                                  'bg-purple-500/20 text-purple-700 dark:text-purple-400'
+                                }`}
+                              >
+                                {result}
+                              </Badge>
+                            </div>
                           </div>
-                          
-                          <Badge 
-                            variant={result === 'win' ? 'default' : result === 'loss' ? 'destructive' : 'secondary'}
-                            className="uppercase"
-                          >
-                            {result}
-                          </Badge>
                         </div>
                       </Link>
                     );
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 bg-card rounded-xl border border-border">
+                <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                  <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-muted-foreground">No completed matches yet</p>
                 </div>
               )}
