@@ -13,6 +13,9 @@ import {
   Award,
   LogOut,
   Shield,
+  Handshake,
+  Image,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +30,9 @@ const navItems = [
   { href: "/admin/standings", label: "Standings", icon: Table },
   { href: "/admin/stats", label: "Player Stats", icon: BarChart3 },
   { href: "/admin/auction", label: "Auction", icon: Gavel },
+  { href: "/admin/sponsors", label: "Sponsors", icon: Handshake },
+  { href: "/admin/gallery", label: "Gallery", icon: Image },
+  { href: "/admin/contact", label: "Contact Info", icon: Phone },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
