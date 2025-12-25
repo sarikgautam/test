@@ -67,6 +67,20 @@ export default function SettingsAdmin() {
     }
   }, [settings]);
 
+  // Fetch active season's registration status
+  const { data: activeSeason } = useQuery({
+    queryKey: ["active-season"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("*")
+        .eq("is_active", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<TournamentSettings>) => {
       const updateData = {
@@ -115,17 +129,25 @@ export default function SettingsAdmin() {
 
   const toggleRegistrationMutation = useMutation({
     mutationFn: async (registrationOpen: boolean) => {
-      if (!settings?.id) {
-        throw new Error("Settings not found");
-      }
+      // Update the active season's registration status
+      const { data: activeSeason, error: fetchError } = await supabase
+        .from("seasons")
+        .select("id")
+        .eq("is_active", true)
+        .maybeSingle();
+      
+      if (fetchError) throw fetchError;
+      if (!activeSeason) throw new Error("No active season found");
+
       const { error } = await supabase
-        .from("tournament_settings")
+        .from("seasons")
         .update({ registration_open: registrationOpen })
-        .eq("id", settings.id);
+        .eq("id", activeSeason.id);
       if (error) throw error;
     },
     onSuccess: (_, registrationOpen) => {
-      queryClient.invalidateQueries({ queryKey: ["tournament-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["seasons"] });
+      queryClient.invalidateQueries({ queryKey: ["active-season"] });
       toast({ title: registrationOpen ? "Registration opened" : "Registration closed" });
     },
     onError: (error) => {
@@ -307,7 +329,7 @@ export default function SettingsAdmin() {
               </div>
               <Switch
                 id="registration_open"
-                checked={formData.registration_open ?? true}
+                checked={activeSeason?.registration_open ?? true}
                 onCheckedChange={handleToggleRegistration}
                 disabled={toggleRegistrationMutation.isPending}
               />
