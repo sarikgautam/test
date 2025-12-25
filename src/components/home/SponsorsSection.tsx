@@ -59,37 +59,37 @@ export function SponsorsSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-10">
+        <div className="flex flex-wrap justify-center items-center gap-8 mb-10">
           {sponsors.map((sponsor) => (
             <div
               key={sponsor.id}
-              className="group relative bg-card rounded-xl p-6 flex items-center justify-center aspect-square border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg"
+              className="group flex flex-col items-center text-center"
             >
-              <div className="absolute top-2 right-2">
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                  sponsor.tier === 'platinum' 
-                    ? 'bg-accent text-accent-foreground' 
-                    : sponsor.tier === 'gold' 
-                    ? 'bg-primary/20 text-primary' 
-                    : 'bg-muted/30 text-muted-foreground'
-                }`}>
-                  {sponsor.tier}
-                </span>
+              <div className="w-32 h-32 md:w-40 md:h-40 bg-card rounded-xl border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg flex items-center justify-center p-4 group-hover:scale-105">
+                {sponsor.logo_url ? (
+                  <img 
+                    src={sponsor.logo_url} 
+                    alt={sponsor.name} 
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <Handshake className="w-12 h-12 text-muted-foreground" />
+                )}
               </div>
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto bg-muted/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 overflow-hidden">
-                  {sponsor.logo_url ? (
-                    <img 
-                      src={sponsor.logo_url} 
-                      alt={sponsor.name} 
-                      className="w-full h-full object-contain p-1"
-                    />
-                  ) : (
-                    <Handshake className="w-8 h-8 text-muted-foreground" />
-                  )}
-                </div>
-                <p className="text-sm font-medium text-foreground">{sponsor.name}</p>
-              </div>
+              <p className="text-sm font-medium text-foreground mt-3">{sponsor.name}</p>
+              <span className={`text-xs font-medium px-2 py-1 rounded-full mt-1 ${
+                sponsor.tier === 'title'
+                  ? 'bg-purple-500/20 text-purple-400'
+                  : sponsor.tier === 'platinum' 
+                  ? 'bg-accent text-accent-foreground' 
+                  : sponsor.tier === 'gold' 
+                  ? 'bg-primary/20 text-primary' 
+                  : sponsor.tier === 'silver'
+                  ? 'bg-gray-400/20 text-gray-400'
+                  : 'bg-orange-700/20 text-orange-400'
+              }`}>
+                {sponsor.tier}
+              </span>
             </div>
           ))}
         </div>

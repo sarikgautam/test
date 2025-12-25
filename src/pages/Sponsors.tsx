@@ -20,44 +20,49 @@ const Sponsors = () => {
     },
   });
 
+  const titleSponsors = sponsors?.filter(s => s.tier === 'title') || [];
   const platinumSponsors = sponsors?.filter(s => s.tier === 'platinum') || [];
   const goldSponsors = sponsors?.filter(s => s.tier === 'gold') || [];
   const silverSponsors = sponsors?.filter(s => s.tier === 'silver') || [];
   const bronzeSponsors = sponsors?.filter(s => s.tier === 'bronze') || [];
 
-  const SponsorCard = ({ sponsor, size = 'md' }: { sponsor: any; size?: 'lg' | 'md' | 'sm' }) => (
+  const SponsorCard = ({ sponsor, size = 'md' }: { sponsor: any; size?: 'xl' | 'lg' | 'md' | 'sm' }) => (
     <div
-      className={`group relative bg-card rounded-xl border ${
-        size === 'lg' ? 'border-2 border-accent/30 p-8 hover:border-accent' :
-        size === 'md' ? 'border-primary/20 p-6 hover:border-primary/40' :
-        'border-border/50 p-4 hover:border-muted'
-      } text-center transition-all duration-300`}
+      className={`group flex flex-col items-center text-center transition-all duration-300`}
     >
-      <div className={`mx-auto ${
-        size === 'lg' ? 'w-24 h-24' : size === 'md' ? 'w-20 h-20' : 'w-14 h-14'
-      } bg-muted/20 rounded-xl flex items-center justify-center mb-4 overflow-hidden`}>
+      <div className={`${
+        size === 'xl' ? 'w-48 h-48 md:w-56 md:h-56' :
+        size === 'lg' ? 'w-40 h-40 md:w-48 md:h-48' : 
+        size === 'md' ? 'w-32 h-32 md:w-40 md:h-40' : 
+        'w-24 h-24 md:w-28 md:h-28'
+      } bg-card rounded-xl border ${
+        size === 'xl' ? 'border-2 border-purple-500/30 hover:border-purple-500' :
+        size === 'lg' ? 'border-2 border-accent/30 hover:border-accent' :
+        size === 'md' ? 'border-primary/20 hover:border-primary/40' :
+        'border-border/50 hover:border-muted'
+      } flex items-center justify-center p-4 group-hover:scale-105 hover:shadow-lg`}>
         {sponsor.logo_url ? (
           <img 
             src={sponsor.logo_url} 
             alt={sponsor.name} 
-            className="w-full h-full object-contain p-2"
+            className="w-full h-full object-contain"
           />
         ) : (
-          <Handshake className={`${size === 'lg' ? 'w-12 h-12' : size === 'md' ? 'w-10 h-10' : 'w-7 h-7'} text-muted-foreground`} />
+          <Handshake className={`${size === 'xl' ? 'w-16 h-16' : size === 'lg' ? 'w-14 h-14' : size === 'md' ? 'w-10 h-10' : 'w-8 h-8'} text-muted-foreground`} />
         )}
       </div>
-      <h3 className={`font-bold text-foreground mb-2 ${size === 'sm' ? 'text-sm' : size === 'md' ? 'text-lg' : 'text-xl'}`}>
+      <h3 className={`font-bold text-foreground mt-3 ${size === 'sm' ? 'text-sm' : size === 'md' ? 'text-base' : 'text-lg'}`}>
         {sponsor.name}
       </h3>
-      {sponsor.description && size !== 'sm' && (
-        <p className="text-muted-foreground text-sm mb-3">{sponsor.description}</p>
+      {sponsor.description && (size === 'xl' || size === 'lg') && (
+        <p className="text-muted-foreground text-sm mt-1 max-w-[200px]">{sponsor.description}</p>
       )}
       {sponsor.website && (
         <a 
           href={sponsor.website} 
           target="_blank" 
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-primary text-sm hover:underline"
+          className="inline-flex items-center gap-1 text-primary text-sm hover:underline mt-2"
         >
           Visit Website <ExternalLink className="w-3 h-3" />
         </a>
@@ -95,6 +100,21 @@ const Sponsors = () => {
             </div>
           ) : (
             <>
+              {/* Title Sponsors */}
+              {titleSponsors.length > 0 && (
+                <div className="mb-16">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-display font-bold text-foreground mb-2">Title Sponsor</h2>
+                    <div className="w-24 h-1 bg-purple-500 mx-auto rounded-full" />
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-12">
+                    {titleSponsors.map((sponsor) => (
+                      <SponsorCard key={sponsor.id} sponsor={sponsor} size="xl" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Platinum Sponsors */}
               {platinumSponsors.length > 0 && (
                 <div className="mb-16">
@@ -102,7 +122,7 @@ const Sponsors = () => {
                     <h2 className="text-2xl font-display font-bold text-foreground mb-2">Platinum Sponsors</h2>
                     <div className="w-24 h-1 bg-accent mx-auto rounded-full" />
                   </div>
-                  <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                  <div className="flex flex-wrap justify-center gap-10">
                     {platinumSponsors.map((sponsor) => (
                       <SponsorCard key={sponsor.id} sponsor={sponsor} size="lg" />
                     ))}
@@ -117,7 +137,7 @@ const Sponsors = () => {
                     <h2 className="text-2xl font-display font-bold text-foreground mb-2">Gold Sponsors</h2>
                     <div className="w-24 h-1 bg-primary mx-auto rounded-full" />
                   </div>
-                  <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                  <div className="flex flex-wrap justify-center gap-8">
                     {goldSponsors.map((sponsor) => (
                       <SponsorCard key={sponsor.id} sponsor={sponsor} size="md" />
                     ))}
@@ -132,7 +152,7 @@ const Sponsors = () => {
                     <h2 className="text-2xl font-display font-bold text-foreground mb-2">Silver Sponsors</h2>
                     <div className="w-24 h-1 bg-muted mx-auto rounded-full" />
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                  <div className="flex flex-wrap justify-center gap-6">
                     {silverSponsors.map((sponsor) => (
                       <SponsorCard key={sponsor.id} sponsor={sponsor} size="sm" />
                     ))}
@@ -145,9 +165,9 @@ const Sponsors = () => {
                 <div className="mb-16">
                   <div className="text-center mb-8">
                     <h2 className="text-2xl font-display font-bold text-foreground mb-2">Bronze Sponsors</h2>
-                    <div className="w-24 h-1 bg-muted/50 mx-auto rounded-full" />
+                    <div className="w-24 h-1 bg-orange-700/50 mx-auto rounded-full" />
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                  <div className="flex flex-wrap justify-center gap-6">
                     {bronzeSponsors.map((sponsor) => (
                       <SponsorCard key={sponsor.id} sponsor={sponsor} size="sm" />
                     ))}
