@@ -1,13 +1,35 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar, MapPin, Clock, ChevronRight, Trophy } from "lucide-react";
 import { formatLocalTime } from "@/lib/utils";
 
 const Fixtures = () => {
   const navigate = useNavigate();
+  const [teamFilter, setTeamFilter] = useState<string>("all");
+  
+  const { data: teams, isLoading: teamsLoading } = useQuery({
+    queryKey: ["teams-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teams")
+        .select("id, name, short_name, logo_url, primary_color")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
   
   const { data: matches, isLoading } = useQuery({
     queryKey: ["matches"],
@@ -20,6 +42,14 @@ const Fixtures = () => {
       return data;
     },
   });
+
+  const filteredMatches = useMemo(() => {
+    if (!matches) return [];
+    if (teamFilter === "all") return matches;
+    return matches.filter(
+      (m) => m.home_team_id === teamFilter || m.away_team_id === teamFilter
+    );
+  }, [matches, teamFilter]);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -46,11 +76,45 @@ const Fixtures = () => {
             <p className="text-muted-foreground">Complete schedule for GCNPL Season 2025</p>
           </div>
 
+          {/* Filters */}
+          <div className="flex flex-col md:flex-row md:items-center gap-4 mb-10">
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-muted-foreground">Filter by team</p>
+              <Select
+                value={teamFilter}
+                onValueChange={(val) => setTeamFilter(val)}
+              >
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All teams</SelectItem>
+                  {teams?.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.short_name || team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted">
+                Showing {filteredMatches.length} match{filteredMatches.length === 1 ? "" : "es"}
+              </span>
+              {teamFilter !== "all" && (
+                <Button variant="ghost" size="sm" onClick={() => setTeamFilter("all")}>
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+
           {isLoading ? (
             <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-xl" />)}</div>
-          ) : matches && matches.length > 0 ? (
+          ) : filteredMatches && filteredMatches.length > 0 ? (
             <div className="space-y-4">
-              {matches.map((match) => (
+              {filteredMatches.map((match) => (
                 <div 
                   key={match.id} 
                   className={`bg-card rounded-xl border border-border overflow-hidden card-hover ${match.status === "completed" ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
@@ -139,7 +203,7 @@ const Fixtures = () => {
           ) : (
             <div className="text-center py-12 bg-card rounded-xl border border-border">
               <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Fixtures will be announced soon</p>
+              <p className="text-muted-foreground">{teamFilter === "all" ? "Fixtures will be announced soon" : "No fixtures for this team"}</p>
             </div>
           )}
         </div>
