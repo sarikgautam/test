@@ -1,20 +1,36 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Mail, MapPin, Phone, Send, Facebook, Instagram, Youtube } from "lucide-react";
+import { Mail, MapPin, Phone, Send, Facebook, Instagram, Youtube, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: contactInfo, isLoading } = useQuery({
+    queryKey: ['contact-info'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contact_info')
+        .select('*')
+        .limit(1)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
+    // Simulate form submission - in production, you'd send this to an edge function
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     toast.success("Message sent successfully! We'll get back to you soon.");
@@ -90,91 +106,134 @@ const Contact = () => {
 
             {/* Contact Info */}
             <div className="space-y-8">
-              <div className="bg-card rounded-2xl border border-border/50 p-8">
-                <h2 className="text-2xl font-display font-bold text-foreground mb-6">Contact Information</h2>
-                
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-1">Address</h4>
-                      <p className="text-muted-foreground">
-                        Gold Coast, Queensland<br />
-                        Australia
-                      </p>
-                    </div>
-                  </div>
+              {isLoading ? (
+                <Skeleton className="h-64 rounded-2xl" />
+              ) : (
+                <div className="bg-card rounded-2xl border border-border/50 p-8">
+                  <h2 className="text-2xl font-display font-bold text-foreground mb-6">Contact Information</h2>
+                  
+                  <div className="space-y-6">
+                    {contactInfo?.address && (
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <MapPin className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Address</h4>
+                          <p className="text-muted-foreground whitespace-pre-line">{contactInfo.address}</p>
+                        </div>
+                      </div>
+                    )}
 
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-1">Email</h4>
-                      <a href="mailto:info@gcnpl.com.au" className="text-primary hover:underline">
-                        info@gcnpl.com.au
-                      </a>
-                    </div>
-                  </div>
+                    {contactInfo?.email && (
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Mail className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Email</h4>
+                          <a href={`mailto:${contactInfo.email}`} className="text-primary hover:underline">
+                            {contactInfo.email}
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-1">Phone</h4>
-                      <a href="tel:+61XXXXXXXXX" className="text-primary hover:underline">
-                        +61 XXX XXX XXX
-                      </a>
-                    </div>
+                    {contactInfo?.phone && (
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Phone className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Phone</h4>
+                          <a href={`tel:${contactInfo.phone}`} className="text-primary hover:underline">
+                            {contactInfo.phone}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {contactInfo?.office_hours && (
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Clock className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Office Hours</h4>
+                          <p className="text-muted-foreground whitespace-pre-line">{contactInfo.office_hours}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {!contactInfo && (
+                      <p className="text-muted-foreground">Contact information will be available soon.</p>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Social Links */}
-              <div className="bg-card rounded-2xl border border-border/50 p-8">
-                <h2 className="text-2xl font-display font-bold text-foreground mb-6">Follow Us</h2>
-                <p className="text-muted-foreground mb-6">
-                  Stay connected with us on social media for the latest updates, highlights, and announcements.
-                </p>
-                <div className="flex gap-4">
-                  <a 
-                    href="#" 
-                    className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Facebook className="w-6 h-6 text-primary" />
-                  </a>
-                  <a 
-                    href="#" 
-                    className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Instagram className="w-6 h-6 text-primary" />
-                  </a>
-                  <a 
-                    href="#" 
-                    className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Youtube className="w-6 h-6 text-primary" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Map placeholder */}
-              <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
-                <div className="aspect-video bg-muted/20 flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
-                    <p className="text-muted-foreground text-sm">Map will be displayed here</p>
+              {(contactInfo?.facebook_url || contactInfo?.instagram_url || contactInfo?.youtube_url || contactInfo?.tiktok_url) && (
+                <div className="bg-card rounded-2xl border border-border/50 p-8">
+                  <h2 className="text-2xl font-display font-bold text-foreground mb-6">Follow Us</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Stay connected with us on social media for the latest updates, highlights, and announcements.
+                  </p>
+                  <div className="flex gap-4">
+                    {contactInfo?.facebook_url && (
+                      <a 
+                        href={contactInfo.facebook_url} 
+                        className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Facebook className="w-6 h-6 text-primary" />
+                      </a>
+                    )}
+                    {contactInfo?.instagram_url && (
+                      <a 
+                        href={contactInfo.instagram_url} 
+                        className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Instagram className="w-6 h-6 text-primary" />
+                      </a>
+                    )}
+                    {contactInfo?.youtube_url && (
+                      <a 
+                        href={contactInfo.youtube_url} 
+                        className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Youtube className="w-6 h-6 text-primary" />
+                      </a>
+                    )}
                   </div>
                 </div>
+              )}
+
+              {/* Map */}
+              <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+                {contactInfo?.map_embed_url ? (
+                  <iframe
+                    src={contactInfo.map_embed_url}
+                    width="100%"
+                    height="300"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                ) : (
+                  <div className="aspect-video bg-muted/20 flex items-center justify-center">
+                    <div className="text-center">
+                      <MapPin className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
+                      <p className="text-muted-foreground text-sm">Map will be displayed here</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
