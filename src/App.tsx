@@ -36,6 +36,7 @@ import SponsorsAdmin from "./pages/admin/SponsorsAdmin";
 import GalleryAdmin from "./pages/admin/GalleryAdmin";
 import ContactAdmin from "./pages/admin/ContactAdmin";
 import NewsAdmin from "./pages/admin/NewsAdmin";
+import OwnersAdmin from "./pages/admin/OwnersAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="teams" element={<TeamsAdmin />} />
+                <Route path="owners" element={<OwnersAdmin />} />
                 <Route path="players" element={<PlayersAdmin />} />
                 <Route path="matches" element={<MatchesAdmin />} />
                 <Route path="results" element={<MatchResultsAdmin />} />

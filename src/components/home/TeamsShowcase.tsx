@@ -48,12 +48,12 @@ export function TeamsShowcase() {
             ))}
           </div>
         ) : teams && teams.length > 0 ? (
-          <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6 max-w-6xl mx-auto">
             {teams.map((team, index) => (
               <Link
                 key={team.id}
-                to={`/teams`}
-                className="group relative w-[calc(50%-8px)] sm:w-44 md:w-48 lg:w-52 animate-fade-in"
+                to={`/teams/${team.id}`}
+                className="group relative animate-fade-in"
                 style={{ animationDelay: `${index * 100 + 300}ms` }}
               >
                 {/* Card container */}

@@ -432,6 +432,51 @@ export type Database = {
           },
         ]
       }
+      owners: {
+        Row: {
+          business_description: string | null
+          business_logo_url: string | null
+          business_name: string | null
+          business_website: string | null
+          created_at: string
+          description: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          photo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_description?: string | null
+          business_logo_url?: string | null
+          business_name?: string | null
+          business_website?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_description?: string | null
+          business_logo_url?: string | null
+          business_name?: string | null
+          business_website?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       player_season_registrations: {
         Row: {
           auction_status: string
@@ -824,6 +869,7 @@ export type Database = {
           logo_url: string | null
           manager_name: string | null
           name: string
+          owner_id: string | null
           owner_name: string | null
           primary_color: string
           remaining_budget: number
@@ -840,6 +886,7 @@ export type Database = {
           logo_url?: string | null
           manager_name?: string | null
           name: string
+          owner_id?: string | null
           owner_name?: string | null
           primary_color?: string
           remaining_budget?: number
@@ -856,6 +903,7 @@ export type Database = {
           logo_url?: string | null
           manager_name?: string | null
           name?: string
+          owner_id?: string | null
           owner_name?: string | null
           primary_color?: string
           remaining_budget?: number
@@ -869,6 +917,13 @@ export type Database = {
             columns: ["captain_id"]
             isOneToOne: false
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "owners"
             referencedColumns: ["id"]
           },
         ]

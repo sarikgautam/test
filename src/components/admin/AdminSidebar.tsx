@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/teams", label: "Teams", icon: Shield },
+  { href: "/admin/owners", label: "Owners", icon: Handshake },
   { href: "/admin/players", label: "Players", icon: Users },
   { href: "/admin/matches", label: "Matches", icon: Calendar },
   { href: "/admin/results", label: "Match Results", icon: FileSpreadsheet },
@@ -31,7 +32,7 @@ const navItems = [
   { href: "/admin/standings", label: "Standings", icon: Table },
   { href: "/admin/stats", label: "Player Stats", icon: BarChart3 },
   { href: "/admin/auction", label: "Auction", icon: Gavel },
-  { href: "/admin/sponsors", label: "Sponsors", icon: Handshake },
+  { href: "/admin/sponsors", label: "Sponsors", icon: Trophy },
   { href: "/admin/gallery", label: "Gallery", icon: Image },
   { href: "/admin/news", label: "News", icon: Newspaper },
   { href: "/admin/contact", label: "Contact Info", icon: Phone },
