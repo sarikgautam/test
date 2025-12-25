@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Trash2, Users } from "lucide-react";
+import { Search, Trash2, Users, Plus } from "lucide-react";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -41,6 +41,9 @@ interface PlayerWithRegistration extends Player {
 export default function PlayersAdmin() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [newName, setNewName] = useState("");
+  const [newRole, setNewRole] = useState<string>("batsman");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { selectedSeasonId } = useSeason();
 
   const { toast } = useToast();
@@ -136,6 +139,57 @@ export default function PlayersAdmin() {
     unsold: "destructive",
   };
 
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedSeasonId) throw new Error("No season selected");
+      if (!newName.trim()) throw new Error("Full name is required");
+
+      // Generate a placeholder email client-side (no DB trigger dependency)
+      const slugBase = newName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const uid = Math.random().toString(36).slice(2, 10);
+      const placeholderEmail = `${slugBase || "player"}.${uid}@gcnpl.local`;
+
+      // Insert player with name + role + generated email
+      const { data: player, error: playerErr } = await supabase
+        .from("players")
+        .insert({
+          full_name: newName.trim(),
+          role: newRole,
+          season_id: selectedSeasonId,
+          email: placeholderEmail,
+        })
+        .select("*")
+        .single();
+      if (playerErr) throw playerErr;
+
+      // Create season registration so the list shows this player
+      const { error: regErr } = await supabase
+        .from("player_season_registrations")
+        .insert({
+          player_id: player.id,
+          season_id: selectedSeasonId,
+          auction_status: "registered",
+          base_price: player.base_price ?? 10000,
+        });
+      if (regErr) throw regErr;
+
+      return player;
+    },
+    onSuccess: () => {
+      setNewName("");
+      setNewRole("batsman");
+      queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
+      toast({ title: "Player added", description: "Player registered for the current season." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to add player", description: error.message, variant: "destructive" });
+    },
+    onSettled: () => setIsSubmitting(false),
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -143,6 +197,40 @@ export default function PlayersAdmin() {
         <p className="text-muted-foreground mt-1">
           View and manage registered players for the auction
         </p>
+      </div>
+
+      {/* Add Player */}
+      <div className="border rounded-lg border-border p-4 space-y-3">
+        <h2 className="font-display text-xl">Add Player</h2>
+        <div className="flex flex-col md:flex-row gap-3">
+          <Input
+            placeholder="Full name"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="flex-1"
+          />
+          <Select value={newRole} onValueChange={setNewRole}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="batsman">Batsman</SelectItem>
+              <SelectItem value="bowler">Bowler</SelectItem>
+              <SelectItem value="all_rounder">All-Rounder</SelectItem>
+              <SelectItem value="wicket_keeper">Wicket Keeper</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={() => {
+              setIsSubmitting(true);
+              addMutation.mutate();
+            }}
+            disabled={isSubmitting || !newName.trim()}
+          >
+            <Plus className="w-4 h-4 mr-2" /> Add
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Email is generated automatically for admin imports. Player appears under the current season.</p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
