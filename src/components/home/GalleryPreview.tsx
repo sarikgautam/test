@@ -1,17 +1,60 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Camera, Image } from "lucide-react";
-
-const galleryImages = [
-  { id: 1, title: "Opening Ceremony", category: "Events" },
-  { id: 2, title: "Match Highlights", category: "Matches" },
-  { id: 3, title: "Team Photos", category: "Teams" },
-  { id: 4, title: "Award Ceremony", category: "Awards" },
-  { id: 5, title: "Practice Sessions", category: "Practice" },
-  { id: 6, title: "Fan Moments", category: "Fans" },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function GalleryPreview() {
+  const { data: galleryImages, isLoading } = useQuery({
+    queryKey: ['gallery-preview'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('gallery')
+        .select('*')
+        .eq('is_featured', true)
+        .order('display_order', { ascending: true })
+        .limit(6);
+      
+      // If no featured images, get the latest ones
+      if (!error && (!data || data.length === 0)) {
+        const { data: latestData, error: latestError } = await supabase
+          .from('gallery')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(6);
+        if (latestError) throw latestError;
+        return latestData;
+      }
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <Skeleton className="h-8 w-32 mx-auto mb-4" />
+            <Skeleton className="h-10 w-64 mx-auto mb-4" />
+            <Skeleton className="h-6 w-96 mx-auto" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className={`aspect-square rounded-xl ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}`} />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!galleryImages || galleryImages.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-16 md:py-24">
       <div className="container mx-auto px-4">
@@ -37,11 +80,21 @@ export function GalleryPreview() {
               }`}
             >
               <div className={`aspect-square ${index === 0 ? 'md:aspect-auto md:h-full' : ''} bg-muted/20 flex items-center justify-center`}>
-                <Image className="w-12 h-12 text-muted-foreground/50" />
+                {image.image_url ? (
+                  <img 
+                    src={image.image_url} 
+                    alt={image.title} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Image className="w-12 h-12 text-muted-foreground/50" />
+                )}
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                 <div>
-                  <span className="text-xs font-medium text-primary mb-1 block">{image.category}</span>
+                  {image.event_name && (
+                    <span className="text-xs font-medium text-primary mb-1 block">{image.event_name}</span>
+                  )}
                   <h3 className="text-foreground font-medium">{image.title}</h3>
                 </div>
               </div>

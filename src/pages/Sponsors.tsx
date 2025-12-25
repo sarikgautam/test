@@ -1,27 +1,70 @@
 import { Layout } from "@/components/layout/Layout";
-import { Handshake, Mail, ArrowRight } from "lucide-react";
+import { Handshake, Mail, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-
-const platinumSponsors = [
-  { name: "Platinum Sponsor 1", description: "Main event sponsor" },
-  { name: "Platinum Sponsor 2", description: "Title sponsor" },
-];
-
-const goldSponsors = [
-  { name: "Gold Sponsor 1", description: "Match sponsor" },
-  { name: "Gold Sponsor 2", description: "Team sponsor" },
-  { name: "Gold Sponsor 3", description: "Award sponsor" },
-];
-
-const silverSponsors = [
-  { name: "Silver Sponsor 1", description: "Supporting partner" },
-  { name: "Silver Sponsor 2", description: "Supporting partner" },
-  { name: "Silver Sponsor 3", description: "Supporting partner" },
-  { name: "Silver Sponsor 4", description: "Supporting partner" },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Sponsors = () => {
+  const { data: sponsors, isLoading } = useQuery({
+    queryKey: ['sponsors'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sponsors')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const platinumSponsors = sponsors?.filter(s => s.tier === 'platinum') || [];
+  const goldSponsors = sponsors?.filter(s => s.tier === 'gold') || [];
+  const silverSponsors = sponsors?.filter(s => s.tier === 'silver') || [];
+  const bronzeSponsors = sponsors?.filter(s => s.tier === 'bronze') || [];
+
+  const SponsorCard = ({ sponsor, size = 'md' }: { sponsor: any; size?: 'lg' | 'md' | 'sm' }) => (
+    <div
+      className={`group relative bg-card rounded-xl border ${
+        size === 'lg' ? 'border-2 border-accent/30 p-8 hover:border-accent' :
+        size === 'md' ? 'border-primary/20 p-6 hover:border-primary/40' :
+        'border-border/50 p-4 hover:border-muted'
+      } text-center transition-all duration-300`}
+    >
+      <div className={`mx-auto ${
+        size === 'lg' ? 'w-24 h-24' : size === 'md' ? 'w-20 h-20' : 'w-14 h-14'
+      } bg-muted/20 rounded-xl flex items-center justify-center mb-4 overflow-hidden`}>
+        {sponsor.logo_url ? (
+          <img 
+            src={sponsor.logo_url} 
+            alt={sponsor.name} 
+            className="w-full h-full object-contain p-2"
+          />
+        ) : (
+          <Handshake className={`${size === 'lg' ? 'w-12 h-12' : size === 'md' ? 'w-10 h-10' : 'w-7 h-7'} text-muted-foreground`} />
+        )}
+      </div>
+      <h3 className={`font-bold text-foreground mb-2 ${size === 'sm' ? 'text-sm' : size === 'md' ? 'text-lg' : 'text-xl'}`}>
+        {sponsor.name}
+      </h3>
+      {sponsor.description && size !== 'sm' && (
+        <p className="text-muted-foreground text-sm mb-3">{sponsor.description}</p>
+      )}
+      {sponsor.website && (
+        <a 
+          href={sponsor.website} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-primary text-sm hover:underline"
+        >
+          Visit Website <ExternalLink className="w-3 h-3" />
+        </a>
+      )}
+    </div>
+  );
+
   return (
     <Layout>
       <div className="min-h-screen py-12 md:py-20">
@@ -40,70 +83,86 @@ const Sponsors = () => {
             </p>
           </div>
 
-          {/* Platinum Sponsors */}
-          <div className="mb-16">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-2">Platinum Sponsors</h2>
-              <div className="w-24 h-1 bg-accent mx-auto rounded-full" />
-            </div>
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {platinumSponsors.map((sponsor, index) => (
-                <div
-                  key={index}
-                  className="bg-card rounded-2xl border-2 border-accent/30 p-8 text-center hover:border-accent transition-colors duration-300"
-                >
-                  <div className="w-24 h-24 mx-auto bg-accent/10 rounded-xl flex items-center justify-center mb-4">
-                    <Handshake className="w-12 h-12 text-accent-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">{sponsor.name}</h3>
-                  <p className="text-muted-foreground">{sponsor.description}</p>
+          {isLoading ? (
+            <div className="space-y-12">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="grid md:grid-cols-3 gap-6">
+                  {[1, 2, 3].map((j) => (
+                    <Skeleton key={j} className="h-48 rounded-xl" />
+                  ))}
                 </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Platinum Sponsors */}
+              {platinumSponsors.length > 0 && (
+                <div className="mb-16">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-display font-bold text-foreground mb-2">Platinum Sponsors</h2>
+                    <div className="w-24 h-1 bg-accent mx-auto rounded-full" />
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    {platinumSponsors.map((sponsor) => (
+                      <SponsorCard key={sponsor.id} sponsor={sponsor} size="lg" />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {/* Gold Sponsors */}
-          <div className="mb-16">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-2">Gold Sponsors</h2>
-              <div className="w-24 h-1 bg-primary mx-auto rounded-full" />
-            </div>
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {goldSponsors.map((sponsor, index) => (
-                <div
-                  key={index}
-                  className="bg-card rounded-xl border border-primary/20 p-6 text-center hover:border-primary/40 transition-colors duration-300"
-                >
-                  <div className="w-20 h-20 mx-auto bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Handshake className="w-10 h-10 text-primary" />
+              {/* Gold Sponsors */}
+              {goldSponsors.length > 0 && (
+                <div className="mb-16">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-display font-bold text-foreground mb-2">Gold Sponsors</h2>
+                    <div className="w-24 h-1 bg-primary mx-auto rounded-full" />
                   </div>
-                  <h3 className="text-lg font-bold text-foreground mb-2">{sponsor.name}</h3>
-                  <p className="text-muted-foreground text-sm">{sponsor.description}</p>
+                  <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                    {goldSponsors.map((sponsor) => (
+                      <SponsorCard key={sponsor.id} sponsor={sponsor} size="md" />
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* Silver Sponsors */}
-          <div className="mb-16">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-2">Silver Sponsors</h2>
-              <div className="w-24 h-1 bg-muted mx-auto rounded-full" />
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
-              {silverSponsors.map((sponsor, index) => (
-                <div
-                  key={index}
-                  className="bg-card rounded-lg border border-border/50 p-4 text-center hover:border-muted transition-colors duration-300"
-                >
-                  <div className="w-14 h-14 mx-auto bg-muted/20 rounded-lg flex items-center justify-center mb-3">
-                    <Handshake className="w-7 h-7 text-muted-foreground" />
+              {/* Silver Sponsors */}
+              {silverSponsors.length > 0 && (
+                <div className="mb-16">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-display font-bold text-foreground mb-2">Silver Sponsors</h2>
+                    <div className="w-24 h-1 bg-muted mx-auto rounded-full" />
                   </div>
-                  <h3 className="text-sm font-bold text-foreground">{sponsor.name}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                    {silverSponsors.map((sponsor) => (
+                      <SponsorCard key={sponsor.id} sponsor={sponsor} size="sm" />
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
+
+              {/* Bronze Sponsors */}
+              {bronzeSponsors.length > 0 && (
+                <div className="mb-16">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-display font-bold text-foreground mb-2">Bronze Sponsors</h2>
+                    <div className="w-24 h-1 bg-muted/50 mx-auto rounded-full" />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                    {bronzeSponsors.map((sponsor) => (
+                      <SponsorCard key={sponsor.id} sponsor={sponsor} size="sm" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {sponsors?.length === 0 && (
+                <div className="text-center py-12">
+                  <Handshake className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No sponsors to display yet</p>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Become a Sponsor CTA */}
           <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 rounded-2xl p-8 md:p-12 text-center">

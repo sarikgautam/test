@@ -1,17 +1,48 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Handshake } from "lucide-react";
-
-const sponsors = [
-  { name: "Sponsor 1", tier: "platinum" },
-  { name: "Sponsor 2", tier: "platinum" },
-  { name: "Sponsor 3", tier: "gold" },
-  { name: "Sponsor 4", tier: "gold" },
-  { name: "Sponsor 5", tier: "silver" },
-  { name: "Sponsor 6", tier: "silver" },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function SponsorsSection() {
+  const { data: sponsors, isLoading } = useQuery({
+    queryKey: ['sponsors-preview'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sponsors')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+        .limit(6);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <section className="py-16 md:py-24 bg-secondary/5">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <Skeleton className="h-8 w-32 mx-auto mb-4" />
+            <Skeleton className="h-10 w-64 mx-auto mb-4" />
+            <Skeleton className="h-6 w-96 mx-auto" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-10">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="aspect-square rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!sponsors || sponsors.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-16 md:py-24 bg-secondary/5">
       <div className="container mx-auto px-4">
@@ -29,9 +60,9 @@ export function SponsorsSection() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-10">
-          {sponsors.map((sponsor, index) => (
+          {sponsors.map((sponsor) => (
             <div
-              key={index}
+              key={sponsor.id}
               className="group relative bg-card rounded-xl p-6 flex items-center justify-center aspect-square border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg"
             >
               <div className="absolute top-2 right-2">
@@ -46,8 +77,16 @@ export function SponsorsSection() {
                 </span>
               </div>
               <div className="text-center">
-                <div className="w-16 h-16 mx-auto bg-muted/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                  <Handshake className="w-8 h-8 text-muted-foreground" />
+                <div className="w-16 h-16 mx-auto bg-muted/20 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 overflow-hidden">
+                  {sponsor.logo_url ? (
+                    <img 
+                      src={sponsor.logo_url} 
+                      alt={sponsor.name} 
+                      className="w-full h-full object-contain p-1"
+                    />
+                  ) : (
+                    <Handshake className="w-8 h-8 text-muted-foreground" />
+                  )}
                 </div>
                 <p className="text-sm font-medium text-foreground">{sponsor.name}</p>
               </div>
