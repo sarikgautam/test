@@ -16,6 +16,7 @@ import {
   Handshake,
   Image,
   Phone,
+  Newspaper,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/admin/auction", label: "Auction", icon: Gavel },
   { href: "/admin/sponsors", label: "Sponsors", icon: Handshake },
   { href: "/admin/gallery", label: "Gallery", icon: Image },
+  { href: "/admin/news", label: "News", icon: Newspaper },
   { href: "/admin/contact", label: "Contact Info", icon: Phone },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

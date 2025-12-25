@@ -379,6 +379,59 @@ export type Database = {
           },
         ]
       }
+      news: {
+        Row: {
+          body_content: string | null
+          bottom_content: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_published: boolean
+          published_at: string | null
+          season_id: string | null
+          subtitle: string | null
+          title: string
+          top_content: string | null
+          updated_at: string
+        }
+        Insert: {
+          body_content?: string | null
+          bottom_content?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          published_at?: string | null
+          season_id?: string | null
+          subtitle?: string | null
+          title: string
+          top_content?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body_content?: string | null
+          bottom_content?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          published_at?: string | null
+          season_id?: string | null
+          subtitle?: string | null
+          title?: string
+          top_content?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_season_registrations: {
         Row: {
           auction_status: string

@@ -19,6 +19,8 @@ import AuctionStats from "./pages/AuctionStats";
 import Sponsors from "./pages/Sponsors";
 import Gallery from "./pages/Gallery";
 import Contact from "./pages/Contact";
+import News from "./pages/News";
+import NewsDetail from "./pages/NewsDetail";
 import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
@@ -33,6 +35,7 @@ import AuctionAdmin from "./pages/admin/AuctionAdmin";
 import SponsorsAdmin from "./pages/admin/SponsorsAdmin";
 import GalleryAdmin from "./pages/admin/GalleryAdmin";
 import ContactAdmin from "./pages/admin/ContactAdmin";
+import NewsAdmin from "./pages/admin/NewsAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
 
 const queryClient = new QueryClient();
@@ -59,6 +62,8 @@ const App = () => (
               <Route path="/auction/stats" element={<AuctionStats />} />
               <Route path="/sponsors" element={<Sponsors />} />
               <Route path="/gallery" element={<Gallery />} />
+              <Route path="/news" element={<News />} />
+              <Route path="/news/:id" element={<NewsDetail />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
@@ -72,6 +77,7 @@ const App = () => (
                 <Route path="auction" element={<AuctionAdmin />} />
                 <Route path="sponsors" element={<SponsorsAdmin />} />
                 <Route path="gallery" element={<GalleryAdmin />} />
+                <Route path="news" element={<NewsAdmin />} />
                 <Route path="contact" element={<ContactAdmin />} />
                 <Route path="settings" element={<SettingsAdmin />} />
               </Route>
