@@ -600,7 +600,12 @@ export default function MatchResultsAdmin() {
 
   const calculateEconomy = (runs: number, overs: number) => {
     if (overs === 0) return "-";
-    return (runs / overs).toFixed(2);
+    // Convert cricket overs (X.Y where Y is balls) to actual overs
+    const wholeOvers = Math.floor(overs);
+    const balls = Math.round((overs - wholeOvers) * 10);
+    const actualOvers = wholeOvers + (balls / 6);
+    if (actualOvers === 0) return "-";
+    return (runs / actualOvers).toFixed(2);
   };
 
   return (
