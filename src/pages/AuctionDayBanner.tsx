@@ -212,14 +212,14 @@ export default function AuctionDayBanner() {
                           src={team.logo_url}
                           alt={team.name}
                           className="relative w-32 h-32 rounded-full object-cover ring-4 shadow-xl"
-                          style={{ ringColor: team.primary_color }}
+                          style={{ boxShadow: `0 0 0 4px ${team.primary_color}` }}
                         />
                       ) : (
                         <div
                           className="relative w-32 h-32 rounded-full flex items-center justify-center text-3xl font-bold text-white ring-4 shadow-xl"
                           style={{ 
                             background: `linear-gradient(135deg, ${team.primary_color}, ${team.secondary_color})`,
-                            ringColor: team.primary_color
+                            boxShadow: `0 0 0 4px ${team.primary_color}`
                           }}
                         >
                           {team.short_name?.substring(0, 2)}
@@ -518,14 +518,14 @@ export default function AuctionDayBanner() {
                           src={team.logo_url}
                           alt={team.name}
                           className="relative w-32 h-32 rounded-full object-cover ring-4 shadow-xl"
-                          style={{ ringColor: team.primary_color }}
+                          style={{ boxShadow: `0 0 0 4px ${team.primary_color}` }}
                         />
                       ) : (
                         <div
                           className="relative w-32 h-32 rounded-full flex items-center justify-center text-3xl font-bold text-white ring-4 shadow-xl"
                           style={{ 
                             background: `linear-gradient(135deg, ${team.primary_color}, ${team.secondary_color})`,
-                            ringColor: team.primary_color
+                            boxShadow: `0 0 0 4px ${team.primary_color}`
                           }}
                         >
                           {team.short_name?.substring(0, 2)}

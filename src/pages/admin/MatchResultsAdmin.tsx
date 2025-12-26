@@ -80,6 +80,8 @@ interface PlayerStatForm {
 
 interface BulkStatEntry extends PlayerStatForm {
   player_name?: string;
+  match_id?: string;
+  season_id?: string;
 }
 
 const defaultStatForm: PlayerStatForm = {
@@ -566,7 +568,9 @@ export default function MatchResultsAdmin() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      distance: 8,
+      activationConstraint: {
+        distance: 8,
+      },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -606,7 +610,7 @@ export default function MatchResultsAdmin() {
         <p className="text-muted-foreground mt-1">Enter player statistics for completed matches</p>
       </div>
 
-      {selectedMatchId && console.log(`[MatchResultsAdmin RENDER] Selected matchId: ${selectedMatchId}, Match Number: ${selectedMatch?.match_number}`)}
+      {selectedMatchId && (() => { console.log(`[MatchResultsAdmin RENDER] Selected matchId: ${selectedMatchId}, Match Number: ${selectedMatch?.match_number}`); return null; })()}
 
       {/* Match Selector */}
       <Card>
@@ -1353,33 +1357,6 @@ function StatsTable({
               <TableCell className="text-center">{stat.run_outs}</TableCell>
               <TableCell>
                 <div className="flex gap-1">
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    onClick={() => moveToTopMutation.mutate(stat.id)}
-                    title="Move to top"
-                    className="h-8 w-8"
-                  >
-                    <ChevronsUp className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    onClick={() => moveUpMutation.mutate(stat.id)}
-                    title="Move up"
-                    className="h-8 w-8"
-                  >
-                    <ArrowUp className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    onClick={() => moveDownMutation.mutate(stat.id)}
-                    title="Move down"
-                    className="h-8 w-8"
-                  >
-                    <ArrowDown className="w-4 h-4" />
-                  </Button>
                   <Button size="icon" variant="ghost" onClick={() => onEdit(stat)} className="h-8 w-8">
                     <Pencil className="w-4 h-4" />
                   </Button>

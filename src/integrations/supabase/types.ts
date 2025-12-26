@@ -541,8 +541,13 @@ export type Database = {
       player_stats: {
         Row: {
           balls_faced: number
+          batting_order: number | null
+          bowler_id: string | null
           catches: number
           created_at: string
+          dismissal_other_text: string | null
+          dismissal_type: string | null
+          fielder_id: string | null
           fours: number
           id: string
           maidens: number
@@ -550,6 +555,7 @@ export type Database = {
           overs_bowled: number
           player_id: string
           run_outs: number
+          runout_by_id: string | null
           runs_conceded: number
           runs_scored: number
           season_id: string | null
@@ -559,8 +565,13 @@ export type Database = {
         }
         Insert: {
           balls_faced?: number
+          batting_order?: number | null
+          bowler_id?: string | null
           catches?: number
           created_at?: string
+          dismissal_other_text?: string | null
+          dismissal_type?: string | null
+          fielder_id?: string | null
           fours?: number
           id?: string
           maidens?: number
@@ -568,6 +579,7 @@ export type Database = {
           overs_bowled?: number
           player_id: string
           run_outs?: number
+          runout_by_id?: string | null
           runs_conceded?: number
           runs_scored?: number
           season_id?: string | null
@@ -577,8 +589,13 @@ export type Database = {
         }
         Update: {
           balls_faced?: number
+          batting_order?: number | null
+          bowler_id?: string | null
           catches?: number
           created_at?: string
+          dismissal_other_text?: string | null
+          dismissal_type?: string | null
+          fielder_id?: string | null
           fours?: number
           id?: string
           maidens?: number
@@ -586,6 +603,7 @@ export type Database = {
           overs_bowled?: number
           player_id?: string
           run_outs?: number
+          runout_by_id?: string | null
           runs_conceded?: number
           runs_scored?: number
           season_id?: string | null
@@ -594,6 +612,20 @@ export type Database = {
           wickets?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "player_stats_bowler_id_fkey"
+            columns: ["bowler_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_stats_fielder_id_fkey"
+            columns: ["fielder_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_stats_match_id_fkey"
             columns: ["match_id"]
@@ -604,6 +636,13 @@ export type Database = {
           {
             foreignKeyName: "player_stats_player_id_fkey"
             columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_stats_runout_by_id_fkey"
+            columns: ["runout_by_id"]
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["id"]
