@@ -22,8 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BarChart3, Trophy, Target, User, Search } from "lucide-react";
+import { BarChart3, Trophy, Target, User, Search, Zap, Shield, Hand, TrendingUp } from "lucide-react";
 import { useActiveSeason } from "@/hooks/useSeason";
+import { cricketOversToDecimal } from "@/lib/utils";
 
 interface PlayerWithStats {
   id: string;
@@ -51,6 +52,79 @@ interface PlayerWithStats {
     run_outs: number;
   };
 }
+
+// Reusable leaderboard card component
+const LeaderboardCard = ({
+  title,
+  icon: Icon,
+  players,
+  statKey,
+  statLabel,
+  formatValue,
+  gradient,
+}: {
+  title: string;
+  icon: React.ElementType;
+  players: PlayerWithStats[];
+  statKey: keyof PlayerWithStats["stats"] | "calculated";
+  statLabel: string;
+  formatValue: (player: PlayerWithStats) => string | number;
+  gradient: string;
+}) => {
+  if (players.length === 0) return null;
+
+  return (
+    <Card className={`border-primary/30 ${gradient} overflow-hidden`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Icon className="w-5 h-5 text-primary" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {players.slice(0, 5).map((player, index) => (
+            <div
+              key={player.id}
+              className={`flex items-center gap-3 p-2 rounded-lg transition-all ${
+                index === 0 
+                  ? "bg-gradient-to-r from-yellow-500/20 to-amber-500/10 border border-yellow-500/30" 
+                  : "bg-muted/30 hover:bg-muted/50"
+              }`}
+            >
+              <span className={`font-bold w-6 text-center ${index === 0 ? "text-yellow-500" : "text-primary"}`}>
+                {index + 1}
+              </span>
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                {player.photo_url ? (
+                  <img
+                    src={player.photo_url}
+                    alt={player.full_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-4 h-4 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-grow min-w-0">
+                <p className="font-medium text-sm truncate">{player.full_name}</p>
+                {player.team && (
+                  <p className="text-xs text-muted-foreground">{player.team.short_name}</p>
+                )}
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className={`font-bold ${index === 0 ? "text-yellow-500" : ""}`}>
+                  {formatValue(player)}
+                </p>
+                <p className="text-xs text-muted-foreground">{statLabel}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const Stats = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -187,34 +261,40 @@ const Stats = () => {
       return matchesSearch && matchesTeam && matchesRole;
     });
 
-  // Top performers
-  const topRunScorers = [...(playersWithStats || [])]
-    .filter((p) => p.stats.matches > 0)
+  // Top performers calculations
+  const playersWithMatches = (playersWithStats || []).filter((p) => p.stats.matches > 0);
+
+  const topRunScorers = [...playersWithMatches]
     .sort((a, b) => b.stats.runs_scored - a.stats.runs_scored)
     .slice(0, 5);
 
-  const topWicketTakers = [...(playersWithStats || [])]
-    .filter((p) => p.stats.matches > 0)
+  const topWicketTakers = [...playersWithMatches]
+    .filter((p) => p.stats.wickets > 0)
     .sort((a, b) => b.stats.wickets - a.stats.wickets)
     .slice(0, 5);
 
-  const mostSixes = [...(playersWithStats || [])]
-    .filter((p) => p.stats.matches > 0)
+  const mostSixes = [...playersWithMatches]
+    .filter((p) => p.stats.sixes > 0)
     .sort((a, b) => b.stats.sixes - a.stats.sixes)
     .slice(0, 5);
 
-  const mostFours = [...(playersWithStats || [])]
-    .filter((p) => p.stats.matches > 0)
+  const mostFours = [...playersWithMatches]
+    .filter((p) => p.stats.fours > 0)
     .sort((a, b) => b.stats.fours - a.stats.fours)
     .slice(0, 5);
 
-  const mostCatches = [...(playersWithStats || [])]
-    .filter((p) => p.stats.matches > 0)
+  const mostCatches = [...playersWithMatches]
+    .filter((p) => p.stats.catches > 0)
     .sort((a, b) => b.stats.catches - a.stats.catches)
     .slice(0, 5);
 
-  const bestStrikeRate = [...(playersWithStats || [])]
-    .filter((p) => p.stats.matches > 0 && p.stats.balls_faced >= 30) // Minimum 30 balls
+  const mostRunOuts = [...playersWithMatches]
+    .filter((p) => p.stats.run_outs > 0)
+    .sort((a, b) => b.stats.run_outs - a.stats.run_outs)
+    .slice(0, 5);
+
+  const bestStrikeRate = [...playersWithMatches]
+    .filter((p) => p.stats.balls_faced >= 20) // Minimum 20 balls
     .sort((a, b) => {
       const srA = (a.stats.runs_scored / a.stats.balls_faced) * 100;
       const srB = (b.stats.runs_scored / b.stats.balls_faced) * 100;
@@ -222,772 +302,468 @@ const Stats = () => {
     })
     .slice(0, 5);
 
-  const bestEconomy = [...(playersWithStats || [])]
-    .filter((p) => p.stats.matches > 0 && p.stats.overs_bowled >= 5) // Minimum 5 overs
+  const bestEconomy = [...playersWithMatches]
+    .filter((p) => p.stats.overs_bowled >= 2) // Minimum 2 overs
     .sort((a, b) => {
-      const econA = a.stats.runs_conceded / a.stats.overs_bowled;
-      const econB = b.stats.runs_conceded / b.stats.overs_bowled;
+      const econA = a.stats.runs_conceded / cricketOversToDecimal(a.stats.overs_bowled);
+      const econB = b.stats.runs_conceded / cricketOversToDecimal(b.stats.overs_bowled);
       return econA - econB;
     })
     .slice(0, 5);
 
-  const mostRunOuts = [...(playersWithStats || [])]
-    .filter((p) => p.stats.matches > 0)
-    .sort((a, b) => b.stats.run_outs - a.stats.run_outs)
-    .slice(0, 5);
-
   const calculateStrikeRate = (runs: number, balls: number) => {
-    if (balls === 0) return 0;
-    return ((runs / balls) * 100).toFixed(1);
+    if (balls === 0) return "0.00";
+    return ((runs / balls) * 100).toFixed(2);
   };
 
   const calculateEconomy = (runsConceded: number, overs: number) => {
-    if (overs === 0) return 0;
-    // Convert cricket overs (X.Y where Y is balls) to actual overs
-    const wholeOvers = Math.floor(overs);
-    const balls = Math.round((overs - wholeOvers) * 10);
-    const actualOvers = wholeOvers + (balls / 6);
-    if (actualOvers === 0) return 0;
+    if (overs === 0) return "-";
+    const actualOvers = cricketOversToDecimal(overs);
+    if (actualOvers === 0) return "-";
     return (runsConceded / actualOvers).toFixed(2);
   };
+
+  const hasStats = playersWithMatches.length > 0;
 
   return (
     <Layout>
       <div className="min-h-screen py-12 px-4">
         <div className="container mx-auto">
-          <div className="text-center mb-12">
+          {/* Header */}
+          <div className="text-center mb-10">
             <h1 className="font-display text-4xl md:text-5xl tracking-wide mb-4">
-              Player <span className="text-gradient-gold">Stats</span>
+              Player <span className="text-gradient-gold">Statistics</span>
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground max-w-2xl mx-auto">
               {seasonFilter === "all" 
-                ? "Showing stats from all seasons" 
+                ? "Complete statistics from all seasons" 
                 : seasons?.find(s => s.id === seasonFilter)?.name || "View player statistics"}
             </p>
           </div>
 
+          {/* Season Filter at Top */}
+          <div className="flex justify-center mb-8">
+            <Select value={seasonFilter} onValueChange={setSeasonFilter}>
+              <SelectTrigger className="w-full max-w-xs">
+                <SelectValue placeholder="Select Season" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Seasons</SelectItem>
+                {seasons?.map((season) => (
+                  <SelectItem key={season.id} value={season.id}>
+                    {season.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {isLoading ? (
             <div className="space-y-4">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-64 w-full" />
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-64 w-full" />
+                ))}
+              </div>
+              <Skeleton className="h-96 w-full" />
             </div>
+          ) : !hasStats ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <BarChart3 className="w-16 h-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No Statistics Yet</h3>
+                <p className="text-muted-foreground text-center max-w-md">
+                  Player statistics will appear here once matches are completed and scores are recorded.
+                </p>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="space-y-8">
-              {/* Top Performers - Batting */}
-              {(topRunScorers.length > 0 || bestStrikeRate.length > 0 || mostFours.length > 0 || mostSixes.length > 0) && (
-                <>
-                  <div>
-                    <h2 className="font-display text-2xl mb-4 flex items-center gap-2">
-                      <Trophy className="w-6 h-6 text-primary" />
-                      Batting Leaders
-                    </h2>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                      {/* Top Run Scorers */}
-                      {topRunScorers.length > 0 && (
-                    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <Trophy className="w-5 h-5 text-primary" />
-                          Top Run Scorers
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {topRunScorers.map((player, index) => (
-                            <div
-                              key={player.id}
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                index === 0 ? "bg-yellow-500/10" : "bg-muted/30"
-                              }`}
-                            >
-                              <span className="font-bold text-primary w-6">
-                                #{index + 1}
-                              </span>
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                {player.photo_url ? (
-                                  <img
-                                    src={player.photo_url}
-                                    alt={player.full_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="flex-grow">
-                                <p className="font-medium text-sm">{player.full_name}</p>
-                                {player.team && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {player.team.short_name}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">{player.stats.runs_scored}</p>
-                                <p className="text-xs text-muted-foreground">runs</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Best Strike Rate */}
-                  {bestStrikeRate.length > 0 && (
-                    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <Target className="w-5 h-5 text-primary" />
-                          Best Strike Rate
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {bestStrikeRate.map((player, index) => (
-                            <div
-                              key={player.id}
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                index === 0 ? "bg-yellow-500/10" : "bg-muted/30"
-                              }`}
-                            >
-                              <span className="font-bold text-primary w-6">
-                                #{index + 1}
-                              </span>
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                {player.photo_url ? (
-                                  <img
-                                    src={player.photo_url}
-                                    alt={player.full_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="flex-grow">
-                                <p className="font-medium text-sm">{player.full_name}</p>
-                                {player.team && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {player.team.short_name}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">{calculateStrikeRate(player.stats.runs_scored, player.stats.balls_faced)}</p>
-                                <p className="text-xs text-muted-foreground">SR</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                    </div>
+            <div className="space-y-10">
+              {/* Batting Leaders Section */}
+              <section>
+                <h2 className="font-display text-2xl mb-6 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/20">
+                    <Trophy className="w-6 h-6 text-blue-400" />
                   </div>
-                </>
-              )}
-
-              {/* Bowling Leaders */}
-              {(topWicketTakers.length > 0 || bestEconomy.length > 0) && (
-                <>
-                  <div>
-                    <h2 className="font-display text-2xl mb-4 flex items-center gap-2">
-                      <Target className="w-6 h-6 text-primary" />
-                      Bowling Leaders
-                    </h2>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {/* Top Wicket Takers */}
-                      {topWicketTakers.length > 0 && (
-                    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <Target className="w-5 h-5 text-primary" />
-                          Top Wicket Takers
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {topWicketTakers.map((player, index) => (
-                            <div
-                              key={player.id}
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                index === 0 ? "bg-yellow-500/10" : "bg-muted/30"
-                              }`}
-                            >
-                              <span className="font-bold text-primary w-6">
-                                #{index + 1}
-                              </span>
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                {player.photo_url ? (
-                                  <img
-                                    src={player.photo_url}
-                                    alt={player.full_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="flex-grow">
-                                <p className="font-medium text-sm">{player.full_name}</p>
-                                {player.team && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {player.team.short_name}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">{player.stats.wickets}</p>
-                                <p className="text-xs text-muted-foreground">wickets</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Best Economy */}
-                  {bestEconomy.length > 0 && (
-                    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <BarChart3 className="w-5 h-5 text-primary" />
-                          Best Economy
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {bestEconomy.map((player, index) => (
-                            <div
-                              key={player.id}
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                index === 0 ? "bg-yellow-500/10" : "bg-muted/30"
-                              }`}
-                            >
-                              <span className="font-bold text-primary w-6">
-                                #{index + 1}
-                              </span>
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                {player.photo_url ? (
-                                  <img
-                                    src={player.photo_url}
-                                    alt={player.full_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="flex-grow">
-                                <p className="font-medium text-sm">{player.full_name}</p>
-                                {player.team && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {player.team.short_name}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">{calculateEconomy(player.stats.runs_conceded, player.stats.overs_bowled)}</p>
-                                <p className="text-xs text-muted-foreground">Econ</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Fielding Leaders */}
-              {(mostCatches.length > 0 || mostRunOuts.length > 0) && (
-                <>
-                  <div>
-                    <h2 className="font-display text-2xl mb-4 flex items-center gap-2">
-                      <Trophy className="w-6 h-6 text-primary" />
-                      Fielding Leaders
-                    </h2>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {/* Most Catches */}
-                      {mostCatches.length > 0 && (
-                    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <Target className="w-5 h-5 text-primary" />
-                          Most Sixes
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {mostSixes.map((player, index) => (
-                            <div
-                              key={player.id}
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                index === 0 ? "bg-yellow-500/10" : "bg-muted/30"
-                              }`}
-                            >
-                              <span className="font-bold text-primary w-6">
-                                #{index + 1}
-                              </span>
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                {player.photo_url ? (
-                                  <img
-                                    src={player.photo_url}
-                                    alt={player.full_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="flex-grow">
-                                <p className="font-medium text-sm">{player.full_name}</p>
-                                {player.team && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {player.team.short_name}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">{player.stats.sixes}</p>
-                                <p className="text-xs text-muted-foreground">sixes</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Most Fours */}
-                  {mostFours.length > 0 && (
-                    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <Trophy className="w-5 h-5 text-primary" />
-                          Most Fours
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {mostFours.map((player, index) => (
-                            <div
-                              key={player.id}
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                index === 0 ? "bg-yellow-500/10" : "bg-muted/30"
-                              }`}
-                            >
-                              <span className="font-bold text-primary w-6">
-                                #{index + 1}
-                              </span>
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                {player.photo_url ? (
-                                  <img
-                                    src={player.photo_url}
-                                    alt={player.full_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="flex-grow">
-                                <p className="font-medium text-sm">{player.full_name}</p>
-                                {player.team && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {player.team.short_name}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">{player.stats.fours}</p>
-                                <p className="text-xs text-muted-foreground">fours</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Most Catches */}
-                  {mostCatches.length > 0 && (
-                    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <Trophy className="w-5 h-5 text-primary" />
-                          Most Catches
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {mostCatches.map((player, index) => (
-                            <div
-                              key={player.id}
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                index === 0 ? "bg-yellow-500/10" : "bg-muted/30"
-                              }`}
-                            >
-                              <span className="font-bold text-primary w-6">
-                                #{index + 1}
-                              </span>
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                {player.photo_url ? (
-                                  <img
-                                    src={player.photo_url}
-                                    alt={player.full_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="flex-grow">
-                                <p className="font-medium text-sm">{player.full_name}</p>
-                                {player.team && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {player.team.short_name}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">{player.stats.catches}</p>
-                                <p className="text-xs text-muted-foreground">catches</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Most Run Outs */}
-                  {mostRunOuts.length > 0 && (
-                    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <Target className="w-5 h-5 text-primary" />
-                          Most Run Outs
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {mostRunOuts.map((player, index) => (
-                            <div
-                              key={player.id}
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                index === 0 ? "bg-yellow-500/10" : "bg-muted/30"
-                              }`}
-                            >
-                              <span className="font-bold text-primary w-6">
-                                #{index + 1}
-                              </span>
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                {player.photo_url ? (
-                                  <img
-                                    src={player.photo_url}
-                                    alt={player.full_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="flex-grow">
-                                <p className="font-medium text-sm">{player.full_name}</p>
-                                {player.team && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {player.team.short_name}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">{player.stats.run_outs}</p>
-                                <p className="text-xs text-muted-foreground">run outs</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search players..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                  Batting Leaders
+                </h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <LeaderboardCard
+                    title="Top Run Scorers"
+                    icon={Trophy}
+                    players={topRunScorers}
+                    statKey="runs_scored"
+                    statLabel="runs"
+                    formatValue={(p) => p.stats.runs_scored}
+                    gradient="bg-gradient-to-br from-blue-500/10 to-transparent"
+                  />
+                  <LeaderboardCard
+                    title="Most Sixes"
+                    icon={Zap}
+                    players={mostSixes}
+                    statKey="sixes"
+                    statLabel="sixes"
+                    formatValue={(p) => p.stats.sixes}
+                    gradient="bg-gradient-to-br from-purple-500/10 to-transparent"
+                  />
+                  <LeaderboardCard
+                    title="Most Fours"
+                    icon={TrendingUp}
+                    players={mostFours}
+                    statKey="fours"
+                    statLabel="fours"
+                    formatValue={(p) => p.stats.fours}
+                    gradient="bg-gradient-to-br from-green-500/10 to-transparent"
+                  />
+                  <LeaderboardCard
+                    title="Best Strike Rate"
+                    icon={Target}
+                    players={bestStrikeRate}
+                    statKey="calculated"
+                    statLabel="SR"
+                    formatValue={(p) => calculateStrikeRate(p.stats.runs_scored, p.stats.balls_faced)}
+                    gradient="bg-gradient-to-br from-amber-500/10 to-transparent"
                   />
                 </div>
-                <Select value={seasonFilter} onValueChange={setSeasonFilter}>
-                  <SelectTrigger className="w-full sm:w-44">
-                    <SelectValue placeholder="All Seasons" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Seasons</SelectItem>
-                    {seasons?.map((season) => (
-                      <SelectItem key={season.id} value={season.id}>
-                        {season.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={teamFilter} onValueChange={setTeamFilter}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="All Teams" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
-                    {teams?.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.short_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="All Roles" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="batsman">Batsman</SelectItem>
-                    <SelectItem value="bowler">Bowler</SelectItem>
-                    <SelectItem value="all_rounder">All-Rounder</SelectItem>
-                    <SelectItem value="wicket_keeper">Wicket Keeper</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              </section>
 
-              {/* Stats Tabs */}
-              <Tabs defaultValue="batting" className="w-full">
-                <TabsList className="grid w-full max-w-md grid-cols-3">
-                  <TabsTrigger value="batting">Batting</TabsTrigger>
-                  <TabsTrigger value="bowling">Bowling</TabsTrigger>
-                  <TabsTrigger value="fielding">Fielding</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="batting" className="mt-4">
-                  <Card className="border-border/50">
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Player</TableHead>
-                              <TableHead className="text-center">M</TableHead>
-                              <TableHead className="text-center">Runs</TableHead>
-                              <TableHead className="text-center">Balls</TableHead>
-                              <TableHead className="text-center">4s</TableHead>
-                              <TableHead className="text-center">6s</TableHead>
-                              <TableHead className="text-center">SR</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredPlayers
-                              ?.sort((a, b) => b.stats.runs_scored - a.stats.runs_scored)
-                              .map((player) => (
-                                <TableRow key={player.id}>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                        {player.photo_url ? (
-                                          <img
-                                            src={player.photo_url}
-                                            alt={player.full_name}
-                                            className="w-full h-full rounded-full object-cover"
-                                          />
-                                        ) : (
-                                          <User className="w-4 h-4 text-muted-foreground" />
-                                        )}
-                                      </div>
-                                      <div>
-                                        <p className="font-medium">{player.full_name}</p>
-                                        <div className="flex items-center gap-1">
-                                          {player.team && (
-                                            <div
-                                              className="w-3 h-3 rounded-full"
-                                              style={{ backgroundColor: player.team.primary_color }}
-                                            />
-                                          )}
-                                          <Badge className={`text-[10px] px-1 ${getRoleBadgeStyle(player.role)}`}>
-                                            {roleLabels[player.role]}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-center">{player.stats.matches}</TableCell>
-                                  <TableCell className="text-center font-bold">{player.stats.runs_scored}</TableCell>
-                                  <TableCell className="text-center">{player.stats.balls_faced}</TableCell>
-                                  <TableCell className="text-center">{player.stats.fours}</TableCell>
-                                  <TableCell className="text-center">{player.stats.sixes}</TableCell>
-                                  <TableCell className="text-center">
-                                    {calculateStrikeRate(player.stats.runs_scored, player.stats.balls_faced)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="bowling" className="mt-4">
-                  <Card className="border-border/50">
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Player</TableHead>
-                              <TableHead className="text-center">M</TableHead>
-                              <TableHead className="text-center">Overs</TableHead>
-                              <TableHead className="text-center">Runs</TableHead>
-                              <TableHead className="text-center">Wkts</TableHead>
-                              <TableHead className="text-center">Mdn</TableHead>
-                              <TableHead className="text-center">Econ</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredPlayers
-                              ?.sort((a, b) => b.stats.wickets - a.stats.wickets)
-                              .map((player) => (
-                                <TableRow key={player.id}>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                        {player.photo_url ? (
-                                          <img
-                                            src={player.photo_url}
-                                            alt={player.full_name}
-                                            className="w-full h-full rounded-full object-cover"
-                                          />
-                                        ) : (
-                                          <User className="w-4 h-4 text-muted-foreground" />
-                                        )}
-                                      </div>
-                                      <div>
-                                        <p className="font-medium">{player.full_name}</p>
-                                        <div className="flex items-center gap-1">
-                                          {player.team && (
-                                            <div
-                                              className="w-3 h-3 rounded-full"
-                                              style={{ backgroundColor: player.team.primary_color }}
-                                            />
-                                          )}
-                                          <Badge className={`text-[10px] px-1 ${getRoleBadgeStyle(player.role)}`}>
-                                            {roleLabels[player.role]}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-center">{player.stats.matches}</TableCell>
-                                  <TableCell className="text-center">{player.stats.overs_bowled.toFixed(1)}</TableCell>
-                                  <TableCell className="text-center">{player.stats.runs_conceded}</TableCell>
-                                  <TableCell className="text-center font-bold">{player.stats.wickets}</TableCell>
-                                  <TableCell className="text-center">{player.stats.maidens}</TableCell>
-                                  <TableCell className="text-center">
-                                    {calculateEconomy(player.stats.runs_conceded, player.stats.overs_bowled)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="fielding" className="mt-4">
-                  <Card className="border-border/50">
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Player</TableHead>
-                              <TableHead className="text-center">M</TableHead>
-                              <TableHead className="text-center">Catches</TableHead>
-                              <TableHead className="text-center">Stumpings</TableHead>
-                              <TableHead className="text-center">Run Outs</TableHead>
-                              <TableHead className="text-center">Total</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredPlayers
-                              ?.sort((a, b) => 
-                                (b.stats.catches + b.stats.stumpings + b.stats.run_outs) - 
-                                (a.stats.catches + a.stats.stumpings + a.stats.run_outs)
-                              )
-                              .map((player) => (
-                                <TableRow key={player.id}>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                        {player.photo_url ? (
-                                          <img
-                                            src={player.photo_url}
-                                            alt={player.full_name}
-                                            className="w-full h-full rounded-full object-cover"
-                                          />
-                                        ) : (
-                                          <User className="w-4 h-4 text-muted-foreground" />
-                                        )}
-                                      </div>
-                                      <div>
-                                        <p className="font-medium">{player.full_name}</p>
-                                        <div className="flex items-center gap-1">
-                                          {player.team && (
-                                            <div
-                                              className="w-3 h-3 rounded-full"
-                                              style={{ backgroundColor: player.team.primary_color }}
-                                            />
-                                          )}
-                                          <Badge className={`text-[10px] px-1 ${getRoleBadgeStyle(player.role)}`}>
-                                            {roleLabels[player.role]}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-center">{player.stats.matches}</TableCell>
-                                  <TableCell className="text-center">{player.stats.catches}</TableCell>
-                                  <TableCell className="text-center">{player.stats.stumpings}</TableCell>
-                                  <TableCell className="text-center">{player.stats.run_outs}</TableCell>
-                                  <TableCell className="text-center font-bold">
-                                    {player.stats.catches + player.stats.stumpings + player.stats.run_outs}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-
-              {filteredPlayers?.length === 0 && (
-                <div className="text-center py-12 bg-card rounded-xl border border-border">
-                  <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No players match your filters</p>
+              {/* Bowling Leaders Section */}
+              <section>
+                <h2 className="font-display text-2xl mb-6 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-500/20">
+                    <Target className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  Bowling Leaders
+                </h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <LeaderboardCard
+                    title="Top Wicket Takers"
+                    icon={Target}
+                    players={topWicketTakers}
+                    statKey="wickets"
+                    statLabel="wickets"
+                    formatValue={(p) => p.stats.wickets}
+                    gradient="bg-gradient-to-br from-emerald-500/10 to-transparent"
+                  />
+                  <LeaderboardCard
+                    title="Best Economy"
+                    icon={BarChart3}
+                    players={bestEconomy}
+                    statKey="calculated"
+                    statLabel="econ"
+                    formatValue={(p) => calculateEconomy(p.stats.runs_conceded, p.stats.overs_bowled)}
+                    gradient="bg-gradient-to-br from-teal-500/10 to-transparent"
+                  />
                 </div>
-              )}
+              </section>
+
+              {/* Fielding Leaders Section */}
+              <section>
+                <h2 className="font-display text-2xl mb-6 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/20">
+                    <Hand className="w-6 h-6 text-amber-400" />
+                  </div>
+                  Fielding Leaders
+                </h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <LeaderboardCard
+                    title="Most Catches"
+                    icon={Hand}
+                    players={mostCatches}
+                    statKey="catches"
+                    statLabel="catches"
+                    formatValue={(p) => p.stats.catches}
+                    gradient="bg-gradient-to-br from-amber-500/10 to-transparent"
+                  />
+                  <LeaderboardCard
+                    title="Most Run Outs"
+                    icon={Shield}
+                    players={mostRunOuts}
+                    statKey="run_outs"
+                    statLabel="run outs"
+                    formatValue={(p) => p.stats.run_outs}
+                    gradient="bg-gradient-to-br from-orange-500/10 to-transparent"
+                  />
+                </div>
+              </section>
+
+              {/* Detailed Stats Section */}
+              <section>
+                <h2 className="font-display text-2xl mb-6 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <BarChart3 className="w-6 h-6 text-primary" />
+                  </div>
+                  Detailed Statistics
+                </h2>
+
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search players..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Select value={teamFilter} onValueChange={setTeamFilter}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="All Teams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Teams</SelectItem>
+                      {teams?.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.short_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="All Roles" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="batsman">Batsman</SelectItem>
+                      <SelectItem value="bowler">Bowler</SelectItem>
+                      <SelectItem value="all_rounder">All-Rounder</SelectItem>
+                      <SelectItem value="wicket_keeper">Wicket Keeper</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Stats Tabs */}
+                <Tabs defaultValue="batting" className="w-full">
+                  <TabsList className="grid w-full max-w-md grid-cols-3">
+                    <TabsTrigger value="batting">Batting</TabsTrigger>
+                    <TabsTrigger value="bowling">Bowling</TabsTrigger>
+                    <TabsTrigger value="fielding">Fielding</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="batting" className="mt-4">
+                    <Card className="border-border/50">
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="sticky left-0 bg-card">Player</TableHead>
+                                <TableHead className="text-center">M</TableHead>
+                                <TableHead className="text-center">Runs</TableHead>
+                                <TableHead className="text-center">Balls</TableHead>
+                                <TableHead className="text-center">4s</TableHead>
+                                <TableHead className="text-center">6s</TableHead>
+                                <TableHead className="text-center">SR</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredPlayers
+                                ?.filter((p) => p.stats.matches > 0)
+                                ?.sort((a, b) => b.stats.runs_scored - a.stats.runs_scored)
+                                .map((player) => (
+                                  <TableRow key={player.id}>
+                                    <TableCell className="sticky left-0 bg-card">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                          {player.photo_url ? (
+                                            <img
+                                              src={player.photo_url}
+                                              alt={player.full_name}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          ) : (
+                                            <User className="w-4 h-4 text-muted-foreground" />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <p className="font-medium text-sm">{player.full_name}</p>
+                                          <div className="flex items-center gap-2">
+                                            {player.team && (
+                                              <span className="text-xs text-muted-foreground">
+                                                {player.team.short_name}
+                                              </span>
+                                            )}
+                                            <Badge variant="outline" className={`text-xs ${getRoleBadgeStyle(player.role)}`}>
+                                              {roleLabels[player.role]}
+                                            </Badge>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">{player.stats.matches}</TableCell>
+                                    <TableCell className="text-center font-semibold">{player.stats.runs_scored}</TableCell>
+                                    <TableCell className="text-center">{player.stats.balls_faced}</TableCell>
+                                    <TableCell className="text-center">{player.stats.fours}</TableCell>
+                                    <TableCell className="text-center">{player.stats.sixes}</TableCell>
+                                    <TableCell className="text-center">{calculateStrikeRate(player.stats.runs_scored, player.stats.balls_faced)}</TableCell>
+                                  </TableRow>
+                                ))}
+                              {filteredPlayers?.filter((p) => p.stats.matches > 0).length === 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                    No batting stats available
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="bowling" className="mt-4">
+                    <Card className="border-border/50">
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="sticky left-0 bg-card">Player</TableHead>
+                                <TableHead className="text-center">M</TableHead>
+                                <TableHead className="text-center">Overs</TableHead>
+                                <TableHead className="text-center">Runs</TableHead>
+                                <TableHead className="text-center">Wkts</TableHead>
+                                <TableHead className="text-center">Maidens</TableHead>
+                                <TableHead className="text-center">Econ</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredPlayers
+                                ?.filter((p) => p.stats.matches > 0 && p.stats.overs_bowled > 0)
+                                ?.sort((a, b) => b.stats.wickets - a.stats.wickets)
+                                .map((player) => (
+                                  <TableRow key={player.id}>
+                                    <TableCell className="sticky left-0 bg-card">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                          {player.photo_url ? (
+                                            <img
+                                              src={player.photo_url}
+                                              alt={player.full_name}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          ) : (
+                                            <User className="w-4 h-4 text-muted-foreground" />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <p className="font-medium text-sm">{player.full_name}</p>
+                                          <div className="flex items-center gap-2">
+                                            {player.team && (
+                                              <span className="text-xs text-muted-foreground">
+                                                {player.team.short_name}
+                                              </span>
+                                            )}
+                                            <Badge variant="outline" className={`text-xs ${getRoleBadgeStyle(player.role)}`}>
+                                              {roleLabels[player.role]}
+                                            </Badge>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">{player.stats.matches}</TableCell>
+                                    <TableCell className="text-center">{player.stats.overs_bowled}</TableCell>
+                                    <TableCell className="text-center">{player.stats.runs_conceded}</TableCell>
+                                    <TableCell className="text-center font-semibold">{player.stats.wickets}</TableCell>
+                                    <TableCell className="text-center">{player.stats.maidens}</TableCell>
+                                    <TableCell className="text-center">{calculateEconomy(player.stats.runs_conceded, player.stats.overs_bowled)}</TableCell>
+                                  </TableRow>
+                                ))}
+                              {filteredPlayers?.filter((p) => p.stats.matches > 0 && p.stats.overs_bowled > 0).length === 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                    No bowling stats available
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="fielding" className="mt-4">
+                    <Card className="border-border/50">
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="sticky left-0 bg-card">Player</TableHead>
+                                <TableHead className="text-center">M</TableHead>
+                                <TableHead className="text-center">Catches</TableHead>
+                                <TableHead className="text-center">Stumpings</TableHead>
+                                <TableHead className="text-center">Run Outs</TableHead>
+                                <TableHead className="text-center">Total</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredPlayers
+                                ?.filter((p) => p.stats.matches > 0)
+                                ?.sort((a, b) => {
+                                  const totalA = a.stats.catches + a.stats.stumpings + a.stats.run_outs;
+                                  const totalB = b.stats.catches + b.stats.stumpings + b.stats.run_outs;
+                                  return totalB - totalA;
+                                })
+                                .map((player) => {
+                                  const total = player.stats.catches + player.stats.stumpings + player.stats.run_outs;
+                                  return (
+                                    <TableRow key={player.id}>
+                                      <TableCell className="sticky left-0 bg-card">
+                                        <div className="flex items-center gap-3">
+                                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                            {player.photo_url ? (
+                                              <img
+                                                src={player.photo_url}
+                                                alt={player.full_name}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            ) : (
+                                              <User className="w-4 h-4 text-muted-foreground" />
+                                            )}
+                                          </div>
+                                          <div>
+                                            <p className="font-medium text-sm">{player.full_name}</p>
+                                            <div className="flex items-center gap-2">
+                                              {player.team && (
+                                                <span className="text-xs text-muted-foreground">
+                                                  {player.team.short_name}
+                                                </span>
+                                              )}
+                                              <Badge variant="outline" className={`text-xs ${getRoleBadgeStyle(player.role)}`}>
+                                                {roleLabels[player.role]}
+                                              </Badge>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-center">{player.stats.matches}</TableCell>
+                                      <TableCell className="text-center">{player.stats.catches}</TableCell>
+                                      <TableCell className="text-center">{player.stats.stumpings}</TableCell>
+                                      <TableCell className="text-center">{player.stats.run_outs}</TableCell>
+                                      <TableCell className="text-center font-semibold">{total}</TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              {filteredPlayers?.filter((p) => p.stats.matches > 0).length === 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                    No fielding stats available
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </section>
             </div>
           )}
         </div>
