@@ -1048,6 +1048,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      recalculate_standings: {
+        Args: { p_season_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
