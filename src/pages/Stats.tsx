@@ -161,10 +161,10 @@ const Stats = () => {
   const { data: playersWithStats, isLoading } = useQuery({
     queryKey: ["players-with-stats", seasonFilter],
     queryFn: async () => {
-      // Get all players
+      // Get all players - use explicit foreign key hint to avoid ambiguity
       const { data: players, error: playersError } = await supabase
         .from("players")
-        .select("id, full_name, role, photo_url, team:teams(*)")
+        .select("id, full_name, role, photo_url, team:teams!players_team_id_fkey(*)")
         .order("full_name");
       if (playersError) throw playersError;
 
