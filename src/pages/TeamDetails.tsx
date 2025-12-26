@@ -390,70 +390,71 @@ const TeamDetails = () => {
                   <Crown className="w-6 h-6" style={{ color: team.primary_color }} />
                   <h3 className="font-display text-xl">Team Owner</h3>
                 </div>
-                <div className="flex flex-col md:flex-row gap-6">
-                  {/* Owner Photo & Info */}
-                  <div className="flex items-center gap-4">
-                    {owner.photo_url ? (
-                      <img 
-                        src={owner.photo_url} 
-                        alt={owner.name}
-                        className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-2"
-                        style={{ borderColor: team.primary_color }}
-                      />
-                    ) : (
-                      <div 
-                        className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: `${team.primary_color}20` }}
-                      >
-                        <User className="w-10 h-10" style={{ color: team.primary_color }} />
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="font-semibold text-lg">{owner.name}</h4>
-                      {owner.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{owner.description}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Business Info */}
-                  {owner.business_name && (
-                    <div className="flex-1 md:border-l md:border-border md:pl-6">
-                      <div className="flex items-center gap-3 mb-2">
-                        {owner.business_logo_url ? (
-                          <img 
-                            src={owner.business_logo_url} 
-                            alt={owner.business_name}
-                            className="w-12 h-12 object-contain rounded-lg bg-background p-1"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-xs text-muted-foreground">Business</p>
-                          <p className="font-medium">{owner.business_name}</p>
-                        </div>
-                      </div>
-                      {owner.business_description && (
-                        <p className="text-sm text-muted-foreground mb-3">{owner.business_description}</p>
-                      )}
-                      {owner.business_website && (
-                        <a 
-                          href={owner.business_website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-sm font-medium hover:underline"
-                          style={{ color: team.primary_color }}
-                        >
-                          Visit Website
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      )}
+                
+                {/* Owner Photo & Info */}
+                <div className="flex items-center gap-4 mb-6">
+                  {owner.photo_url ? (
+                    <img 
+                      src={owner.photo_url} 
+                      alt={owner.name}
+                      className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-2"
+                      style={{ borderColor: team.primary_color }}
+                    />
+                  ) : (
+                    <div 
+                      className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: `${team.primary_color}20` }}
+                    >
+                      <User className="w-10 h-10" style={{ color: team.primary_color }} />
                     </div>
                   )}
+                  <div>
+                    <h4 className="font-semibold text-lg">{owner.name}</h4>
+                    {owner.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{owner.description}</p>
+                    )}
+                  </div>
                 </div>
+
+                {/* Business Info */}
+                {owner.business_name && (
+                  <div className="border-t border-border pt-6">
+                    <div className="flex items-start gap-4">
+                      {owner.business_logo_url ? (
+                        <img 
+                          src={owner.business_logo_url} 
+                          alt={owner.business_name}
+                          className="w-16 h-16 md:w-20 md:h-20 object-contain rounded-lg bg-background p-2 border border-border flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                          <Building2 className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="mb-3">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Business</p>
+                          <h5 className="font-semibold text-lg">{owner.business_name}</h5>
+                        </div>
+                        {owner.business_description && (
+                          <p className="text-sm text-muted-foreground leading-relaxed mb-4">{owner.business_description}</p>
+                        )}
+                        {owner.business_website && (
+                          <a 
+                            href={owner.business_website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                            style={{ color: team.primary_color }}
+                          >
+                            Visit Website
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

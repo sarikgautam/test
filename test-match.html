@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Match Stats</title>
+</head>
+<body>
+  <h1>Match Stats Debug</h1>
+  <div id="output"></div>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    
+    const supabase = createClient(
+      'https://mhzsusgknwmsqrcxbuvo.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1oenN1c2drbndtc3FyY3hidXZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDMyNzcwNDAsImV4cCI6MTg2MDkyNzA0MH0.VHfB6s81k-j6dCXnW-9swJUe5m_T6r6WCF0I_1EsLDw'
+    )
+    
+    async function debug() {
+      const output = document.getElementById('output')
+      
+      // Get recent player stats
+      const { data: stats, error } = await supabase
+        .from('player_stats')
+        .select('id, player_id, match_id, runs_scored, balls_faced, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      
+      if (error) {
+        output.innerHTML = `<p>Error: ${error.message}</p>`
+        return
+      }
+      
+      // Get unique match IDs
+      const matchIds = [...new Set(stats.map(s => s.match_id))]
+      
+      // Get match details
+      const { data: matches } = await supabase
+        .from('matches')
+        .select('id, match_number, status, home_team_id, away_team_id')
+        .in('id', matchIds)
+      
+      let html = `<h2>Recent Stats (${stats.length} records)</h2>`
+      html += `<p>Unique matches: ${matchIds.length}</p>`
+      
+      html += `<table border="1" cellpadding="5"><tr><th>Match ID</th><th>Status</th><th>Stats Count</th></tr>`
+      
+      matchIds.forEach(mid => {
+        const match = matches?.find(m => m.id === mid)
+        const count = stats.filter(s => s.match_id === mid).length
+        html += `<tr><td>${mid}</td><td>${match?.status || '?'}</td><td>${count}</td></tr>`
+      })
+      
+      html += `</table>`
+      
+      html += `<h3>All recent stats:</h3>`
+      html += `<table border="1" cellpadding="5"><tr><th>Match ID</th><th>Player ID</th><th>Runs</th><th>Balls</th><th>Created</th></tr>`
+      stats.forEach(s => {
+        html += `<tr><td>${s.match_id}</td><td>${s.player_id}</td><td>${s.runs_scored}</td><td>${s.balls_faced}</td><td>${new Date(s.created_at).toLocaleString()}</td></tr>`
+      })
+      html += `</table>`
+      
+      output.innerHTML = html
+    }
+    
+    debug()
+  </script>
+</body>
+</html>

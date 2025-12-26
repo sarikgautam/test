@@ -23,12 +23,29 @@ interface PlayerStat {
   catches: number;
   stumpings: number;
   run_outs: number;
+  dismissal_type: string | null;
+  bowler_id: string | null;
+  fielder_id: string | null;
+  runout_by_id: string | null;
+  dismissal_other_text: string | null;
   player: {
     id: string;
     full_name: string;
     role: string;
     team_id: string;
   };
+  bowler?: {
+    id: string;
+    full_name: string;
+  } | null;
+  fielder?: {
+    id: string;
+    full_name: string;
+  } | null;
+  runout_by?: {
+    id: string;
+    full_name: string;
+  } | null;
 }
 
 const MatchScorecard = () => {
@@ -63,11 +80,101 @@ const MatchScorecard = () => {
       const { data, error } = await supabase
         .from("player_stats")
         .select(`
-          *,
-          player:players!player_stats_player_id_fkey(id, full_name, role, team_id)
+          id,
+          player_id,
+          match_id,
+          season_id,
+          runs_scored,
+          balls_faced,
+          fours,
+          sixes,
+          overs_bowled,
+          runs_conceded,
+          wickets,
+          maidens,
+          catches,
+          stumpings,
+          run_outs,
+          dismissal_type,
+          bowler_id,
+          fielder_id,
+          runout_by_id,
+          dismissal_other_text,
+          created_at,
+          player:players!player_stats_player_id_fkey(id, full_name, role)
         `)
         .eq("match_id", matchId!);
-      if (error) throw error;
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Get team info from player_season_registrations for this season
+      if (data && data.length > 0) {
+        const seasonId = data[0].season_id;
+        const playerIds = [...new Set(data.map(s => s.player_id))];
+        
+        const { data: registrations } = await supabase
+          .from("player_season_registrations")
+          .select("player_id, team_id")
+          .eq("season_id", seasonId)
+          .in("player_id", playerIds);
+        
+        // Create a map of player_id -> team_id
+        const playerTeamMap = new Map();
+        registrations?.forEach(reg => {
+          playerTeamMap.set(reg.player_id, reg.team_id);
+        });
+        
+        // Get all unique bowler, fielder, and runout_by IDs
+        const allPlayerIdsForNames = new Set<string>();
+        data.forEach(stat => {
+          if (stat.bowler_id) allPlayerIdsForNames.add(stat.bowler_id);
+          if (stat.fielder_id) allPlayerIdsForNames.add(stat.fielder_id);
+          if (stat.runout_by_id) allPlayerIdsForNames.add(stat.runout_by_id);
+        });
+        
+        // Fetch names for bowlers, fielders, runout_by players
+        let playerNamesMap = new Map();
+        if (allPlayerIdsForNames.size > 0) {
+          const { data: playerNames } = await supabase
+            .from("players")
+            .select("id, full_name")
+            .in("id", Array.from(allPlayerIdsForNames));
+          
+          playerNames?.forEach(p => {
+            playerNamesMap.set(p.id, p.full_name);
+          });
+        }
+        
+        // Add team_id and dismissal player names to each stat
+        data.forEach(stat => {
+          if (stat.player) {
+            stat.player.team_id = playerTeamMap.get(stat.player_id) || null;
+          }
+          
+          // Add bowler, fielder, runout_by objects
+          if (stat.bowler_id) {
+            stat.bowler = {
+              id: stat.bowler_id,
+              full_name: playerNamesMap.get(stat.bowler_id) || ''
+            };
+          }
+          if (stat.fielder_id) {
+            stat.fielder = {
+              id: stat.fielder_id,
+              full_name: playerNamesMap.get(stat.fielder_id) || ''
+            };
+          }
+          if (stat.runout_by_id) {
+            stat.runout_by = {
+              id: stat.runout_by_id,
+              full_name: playerNamesMap.get(stat.runout_by_id) || ''
+            };
+          }
+        });
+      }
+      
       return data as PlayerStat[];
     },
     enabled: !!matchId,
@@ -136,6 +243,94 @@ const MatchScorecard = () => {
   const calculateEconomy = (runs: number, overs: number) => {
     if (overs === 0) return "-";
     return (runs / overs).toFixed(2);
+  };
+
+  const formatDismissal = (stat: PlayerStat) => {
+    if (!stat.dismissal_type || stat.dismissal_type === "not_out") {
+      return <span className="text-emerald-500 font-medium">not out</span>;
+    }
+
+    const bowlerName = stat.bowler?.full_name || "";
+    const fielderName = stat.fielder?.full_name || "";
+    const runoutByName = stat.runout_by?.full_name || "";
+    
+    switch (stat.dismissal_type) {
+      case "caught":
+        // Format: c fielder b bowler
+        if (fielderName && bowlerName) {
+          return (
+            <span className="text-muted-foreground text-xs">
+              c {fielderName} b {bowlerName}
+            </span>
+          );
+        } else if (bowlerName) {
+          return (
+            <span className="text-muted-foreground text-xs">
+              c & b {bowlerName}
+            </span>
+          );
+        }
+        return (
+          <span className="text-muted-foreground text-xs">
+            caught
+          </span>
+        );
+      case "bowled":
+        // Format: b bowler
+        return (
+          <span className="text-muted-foreground text-xs">
+            {bowlerName ? `b ${bowlerName}` : "bowled"}
+          </span>
+        );
+      case "lbw":
+        // Format: lbw bowler
+        return (
+          <span className="text-muted-foreground text-xs">
+            {bowlerName ? `lbw ${bowlerName}` : "lbw"}
+          </span>
+        );
+      case "runout":
+        // Format: run out (fielder)
+        return (
+          <span className="text-muted-foreground text-xs">
+            {runoutByName ? `run out (${runoutByName})` : "run out"}
+          </span>
+        );
+      case "stumped":
+        // Format: st fielder b bowler
+        if (fielderName && bowlerName) {
+          return (
+            <span className="text-muted-foreground text-xs">
+              st {fielderName} b {bowlerName}
+            </span>
+          );
+        }
+        return (
+          <span className="text-muted-foreground text-xs">
+            {fielderName ? `st ${fielderName}` : "stumped"}
+          </span>
+        );
+      case "mankad":
+        return (
+          <span className="text-muted-foreground text-xs">
+            {bowlerName ? `mankad ${bowlerName}` : "mankad"}
+          </span>
+        );
+      case "retired_hurt":
+        return (
+          <span className="text-amber-500 text-xs">
+            retired hurt
+          </span>
+        );
+      case "other":
+        return (
+          <span className="text-muted-foreground text-xs">
+            {stat.dismissal_other_text || "out"}
+          </span>
+        );
+      default:
+        return null;
+    }
   };
 
   // Get total runs, wickets for each team
@@ -302,6 +497,7 @@ const MatchScorecard = () => {
                     overs={match.home_team_overs}
                     calculateStrikeRate={calculateStrikeRate}
                     calculateEconomy={calculateEconomy}
+                    formatDismissal={formatDismissal}
                   />
                 </TabsContent>
 
@@ -313,6 +509,7 @@ const MatchScorecard = () => {
                     overs={match.away_team_overs}
                     calculateStrikeRate={calculateStrikeRate}
                     calculateEconomy={calculateEconomy}
+                    formatDismissal={formatDismissal}
                   />
                 </TabsContent>
               </Tabs>
@@ -335,7 +532,8 @@ function TeamScorecard({
   score, 
   overs,
   calculateStrikeRate,
-  calculateEconomy 
+  calculateEconomy,
+  formatDismissal
 }: { 
   stats: PlayerStat[];
   teamName: string;
@@ -343,6 +541,7 @@ function TeamScorecard({
   overs: string | null;
   calculateStrikeRate: (runs: number, balls: number) => string;
   calculateEconomy: (runs: number, overs: number) => string;
+  formatDismissal: (stat: PlayerStat) => React.ReactNode;
 }) {
   // Separate batters and bowlers
   const batters = stats.filter((s) => s.balls_faced > 0 || s.runs_scored > 0);
@@ -384,7 +583,12 @@ function TeamScorecard({
               <tbody>
                 {batters.map((stat) => (
                   <tr key={stat.id} className="border-b border-border/50 hover:bg-muted/30">
-                    <td className="py-3 px-2 font-medium">{stat.player?.full_name}</td>
+                    <td className="py-3 px-2">
+                      <div>
+                        <div className="font-medium">{stat.player?.full_name}</div>
+                        <div className="mt-0.5">{formatDismissal(stat)}</div>
+                      </div>
+                    </td>
                     <td className="text-center py-3 px-2 font-bold">{stat.runs_scored}</td>
                     <td className="text-center py-3 px-2 text-muted-foreground">{stat.balls_faced}</td>
                     <td className="text-center py-3 px-2">{stat.fours}</td>

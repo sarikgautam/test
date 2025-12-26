@@ -172,7 +172,7 @@ export default function PlayersAdmin() {
           player_id: player.id,
           season_id: selectedSeasonId,
           auction_status: "registered",
-          base_price: player.base_price ?? 10000,
+          base_price: player.base_price ?? 20,
         });
       if (regErr) throw regErr;
 

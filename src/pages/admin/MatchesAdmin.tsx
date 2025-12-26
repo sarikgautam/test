@@ -95,16 +95,28 @@ export default function MatchesAdmin() {
 
   // Fetch players for man of match selection
   const { data: players } = useQuery({
-    queryKey: ["players-for-match", formData.home_team_id, formData.away_team_id],
+    queryKey: ["players-for-match", formData.home_team_id, formData.away_team_id, selectedSeasonId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("players")
-        .select("id, full_name, team_id")
+      if (!selectedSeasonId) return [];
+      
+      // Get players from player_season_registrations for the current season
+      const { data: registrations, error } = await supabase
+        .from("player_season_registrations")
+        .select("player:players(id, full_name), team_id")
+        .eq("season_id", selectedSeasonId)
+        .eq("auction_status", "sold")
         .in("team_id", [formData.home_team_id, formData.away_team_id].filter(Boolean));
+      
       if (error) throw error;
-      return data;
+      
+      // Extract player data from registrations
+      return registrations?.map(reg => ({
+        id: (reg.player as any).id,
+        full_name: (reg.player as any).full_name,
+        team_id: reg.team_id
+      })) || [];
     },
-    enabled: !!(formData.home_team_id || formData.away_team_id),
+    enabled: !!(formData.home_team_id || formData.away_team_id) && !!selectedSeasonId,
   });
 
   // Fetch award types

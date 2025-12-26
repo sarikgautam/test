@@ -153,6 +153,8 @@ export default function TeamsAdmin() {
         captain_id: data.captain_id || null,
         primary_color: data.primary_color,
         secondary_color: data.secondary_color,
+        budget: 1000,
+        remaining_budget: 1000,
       }).select().single();
       if (error) throw error;
 

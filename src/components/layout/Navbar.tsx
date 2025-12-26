@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Trophy, Users, Calendar, BarChart3, UserPlus, Gavel, Handshake, Camera, Mail } from "lucide-react";
+import { Menu, X, Trophy, Users, Calendar, BarChart3, UserPlus, Gavel, Mail, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -11,9 +11,8 @@ const navLinks = [
   { href: "/teams", label: "Teams", icon: Users },
   { href: "/fixtures", label: "Fixtures", icon: Calendar },
   { href: "/standings", label: "Standings", icon: BarChart3 },
+  { href: "/stats", label: "Stats", icon: TrendingUp },
   { href: "/auction", label: "Auction", icon: Gavel },
-  { href: "/sponsors", label: "Sponsors", icon: Handshake },
-  { href: "/gallery", label: "Gallery", icon: Camera },
   { href: "/contact", label: "Contact", icon: Mail },
 ];
 

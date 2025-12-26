@@ -30,9 +30,27 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, ClipboardList, Users, Upload, Save } from "lucide-react";
+import { Plus, Pencil, Trash2, ClipboardList, Users, Upload, Save, ArrowUp, ArrowDown, ChevronsUp, GripVertical, FileUp } from "lucide-react";
 import { formatAEST } from "@/lib/utils";
 import { useSeason } from "@/hooks/useSeason";
+import { PDFImportDialog } from "@/components/admin/PDFImportDialog";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Database } from "@/integrations/supabase/types";
 
 type Match = Database["public"]["Tables"]["matches"]["Row"];
@@ -53,6 +71,11 @@ interface PlayerStatForm {
   catches: number;
   stumpings: number;
   run_outs: number;
+  dismissal_type?: string;
+  bowler_id?: string;
+  fielder_id?: string;
+  runout_by_id?: string;
+  dismissal_other_text?: string;
 }
 
 interface BulkStatEntry extends PlayerStatForm {
@@ -72,15 +95,22 @@ const defaultStatForm: PlayerStatForm = {
   catches: 0,
   stumpings: 0,
   run_outs: 0,
+  dismissal_type: undefined,
+  bowler_id: undefined,
+  fielder_id: undefined,
+  runout_by_id: undefined,
+  dismissal_other_text: undefined,
 };
 
 export default function MatchResultsAdmin() {
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [isStatDialogOpen, setIsStatDialogOpen] = useState(false);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [isPDFDialogOpen, setIsPDFDialogOpen] = useState(false);
   const [editingStat, setEditingStat] = useState<PlayerStat | null>(null);
   const [statForm, setStatForm] = useState<PlayerStatForm>(defaultStatForm);
-  const [bulkStats, setBulkStats] = useState<Map<string, BulkStatEntry>>(new Map());
+  const [homeTeamBulkStats, setHomeTeamBulkStats] = useState<BulkStatEntry[]>([]);
+  const [awayTeamBulkStats, setAwayTeamBulkStats] = useState<BulkStatEntry[]>([]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -115,17 +145,27 @@ export default function MatchResultsAdmin() {
   // Fetch players for selected match's teams
   const selectedMatch = matches?.find((m) => m.id === selectedMatchId);
   const { data: matchPlayers } = useQuery({
-    queryKey: ["match-players", selectedMatch?.home_team_id, selectedMatch?.away_team_id],
+    queryKey: ["match-players", selectedMatch?.home_team_id, selectedMatch?.away_team_id, selectedSeasonId],
     queryFn: async () => {
-      if (!selectedMatch) return [];
-      const { data, error } = await supabase
-        .from("players")
-        .select("*")
+      if (!selectedMatch || !selectedSeasonId) return [];
+      
+      // Get players from player_season_registrations for the current season
+      const { data: registrations, error } = await supabase
+        .from("player_season_registrations")
+        .select("player:players(*), team_id")
+        .eq("season_id", selectedSeasonId)
+        .eq("auction_status", "sold")
         .in("team_id", [selectedMatch.home_team_id, selectedMatch.away_team_id]);
+      
       if (error) throw error;
-      return data as Player[];
+      
+      // Extract player data from registrations
+      return registrations?.map(reg => ({
+        ...(reg.player as Player),
+        team_id: reg.team_id
+      })) as Player[];
     },
-    enabled: !!selectedMatch,
+    enabled: !!selectedMatch && !!selectedSeasonId,
   });
 
   // Fetch player stats for selected match
@@ -135,7 +175,8 @@ export default function MatchResultsAdmin() {
       const { data, error } = await supabase
         .from("player_stats")
         .select("*")
-        .eq("match_id", selectedMatchId!);
+        .eq("match_id", selectedMatchId!)
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data as PlayerStat[];
     },
@@ -159,11 +200,17 @@ export default function MatchResultsAdmin() {
         catches: data.catches,
         stumpings: data.stumpings,
         run_outs: data.run_outs,
+        dismissal_type: data.dismissal_type || null,
+        bowler_id: data.bowler_id || null,
+        fielder_id: data.fielder_id || null,
+        runout_by_id: data.runout_by_id || null,
+        dismissal_other_text: data.dismissal_other_text || null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["match-stats", selectedMatchId] });
+      queryClient.invalidateQueries({ queryKey: ["match-player-stats", selectedMatchId] });
       toast({ title: "Player stats added successfully" });
       resetStatForm();
     },
@@ -188,12 +235,18 @@ export default function MatchResultsAdmin() {
           catches: data.catches,
           stumpings: data.stumpings,
           run_outs: data.run_outs,
+          dismissal_type: data.dismissal_type || null,
+          bowler_id: data.bowler_id || null,
+          fielder_id: data.fielder_id || null,
+          runout_by_id: data.runout_by_id || null,
+          dismissal_other_text: data.dismissal_other_text || null,
         })
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["match-stats", selectedMatchId] });
+      queryClient.invalidateQueries({ queryKey: ["match-player-stats", selectedMatchId] });
       toast({ title: "Player stats updated successfully" });
       resetStatForm();
     },
@@ -209,6 +262,7 @@ export default function MatchResultsAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["match-stats", selectedMatchId] });
+      queryClient.invalidateQueries({ queryKey: ["match-player-stats", selectedMatchId] });
       toast({ title: "Player stats deleted successfully" });
     },
     onError: (error) => {
@@ -218,10 +272,10 @@ export default function MatchResultsAdmin() {
 
   const bulkCreateMutation = useMutation({
     mutationFn: async (entries: BulkStatEntry[]) => {
-      const statsToInsert = entries.map((entry) => ({
+      const statsToInsert = entries.map((entry, index) => ({
         player_id: entry.player_id,
-        match_id: selectedMatchId!,
-        season_id: selectedSeasonId!,
+        match_id: entry.match_id || selectedMatchId!,
+        season_id: entry.season_id || selectedSeasonId!,
         runs_scored: entry.runs_scored,
         balls_faced: entry.balls_faced,
         fours: entry.fours,
@@ -233,18 +287,142 @@ export default function MatchResultsAdmin() {
         catches: entry.catches,
         stumpings: entry.stumpings,
         run_outs: entry.run_outs,
+        dismissal_type: entry.dismissal_type || null,
+        bowler_id: entry.bowler_id || null,
+        fielder_id: entry.fielder_id || null,
+        runout_by_id: entry.runout_by_id || null,
+        dismissal_other_text: entry.dismissal_other_text || null,
       }));
-      const { error } = await supabase.from("player_stats").insert(statsToInsert);
+      console.log(`[bulkCreateMutation] Upserting ${statsToInsert.length} stats. First entry matchId: ${statsToInsert[0]?.match_id}`, statsToInsert.slice(0, 2));
+      // Use upsert to update existing stats or insert new ones
+      const { error } = await supabase
+        .from("player_stats")
+        .upsert(statsToInsert, { 
+          onConflict: 'player_id,match_id'
+        });
       if (error) throw error;
+      return statsToInsert;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["match-stats", selectedMatchId] });
+    onSuccess: (statsInserted) => {
+      // Get unique match IDs from the stats that were inserted
+      const matchIdsToInvalidate = [...new Set(statsInserted.map(s => s.match_id))];
+      console.log(`[MatchResultsAdmin] Invalidating queries for matchIds: ${matchIdsToInvalidate.join(', ')}`);
+      
+      matchIdsToInvalidate.forEach(matchId => {
+        queryClient.invalidateQueries({ queryKey: ["match-stats", matchId] });
+        queryClient.invalidateQueries({ queryKey: ["match-player-stats", matchId] });
+      });
+      
       toast({ title: "Bulk stats added successfully" });
-      setBulkStats(new Map());
+      setHomeTeamBulkStats([]);
+      setAwayTeamBulkStats([]);
       setIsBulkDialogOpen(false);
     },
     onError: (error) => {
       toast({ title: "Error adding bulk stats", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const moveToTopMutation = useMutation({
+    mutationFn: async (statId: string) => {
+      // Get all stats for this match
+      const stats = matchStats || [];
+      const targetStat = stats.find(s => s.id === statId);
+      if (!targetStat) throw new Error("Stat not found");
+
+      // Find the minimum batting_order or set to 0
+      const minOrder = Math.min(...stats.map(s => s.batting_order || 999), 0);
+      const newOrder = minOrder - 1;
+
+      // Update the target stat to have the lowest order
+      const { error } = await supabase
+        .from("player_stats")
+        .update({ batting_order: newOrder })
+        .eq("id", statId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["match-stats", selectedMatchId] });
+      queryClient.invalidateQueries({ queryKey: ["match-player-stats", selectedMatchId] });
+      toast({ title: "Player moved to top" });
+    },
+    onError: (error) => {
+      toast({ title: "Error moving player", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const moveUpMutation = useMutation({
+    mutationFn: async (statId: string) => {
+      const stats = matchStats || [];
+      const currentIndex = stats.findIndex(s => s.id === statId);
+      
+      if (currentIndex <= 0) return; // Already at top
+      
+      const currentStat = stats[currentIndex];
+      const aboveStat = stats[currentIndex - 1];
+      
+      // Swap batting orders
+      const currentOrder = currentStat.batting_order ?? currentIndex;
+      const aboveOrder = aboveStat.batting_order ?? currentIndex - 1;
+      
+      const { error } = await supabase
+        .from("player_stats")
+        .update({ batting_order: aboveOrder })
+        .eq("id", statId);
+      
+      if (error) throw error;
+      
+      const { error: error2 } = await supabase
+        .from("player_stats")
+        .update({ batting_order: currentOrder })
+        .eq("id", aboveStat.id);
+      
+      if (error2) throw error2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["match-stats", selectedMatchId] });
+      queryClient.invalidateQueries({ queryKey: ["match-player-stats", selectedMatchId] });
+    },
+    onError: (error) => {
+      toast({ title: "Error moving player", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const moveDownMutation = useMutation({
+    mutationFn: async (statId: string) => {
+      const stats = matchStats || [];
+      const currentIndex = stats.findIndex(s => s.id === statId);
+      
+      if (currentIndex >= stats.length - 1) return; // Already at bottom
+      
+      const currentStat = stats[currentIndex];
+      const belowStat = stats[currentIndex + 1];
+      
+      // Swap batting orders
+      const currentOrder = currentStat.batting_order ?? currentIndex;
+      const belowOrder = belowStat.batting_order ?? currentIndex + 1;
+      
+      const { error } = await supabase
+        .from("player_stats")
+        .update({ batting_order: belowOrder })
+        .eq("id", statId);
+      
+      if (error) throw error;
+      
+      const { error: error2 } = await supabase
+        .from("player_stats")
+        .update({ batting_order: currentOrder })
+        .eq("id", belowStat.id);
+      
+      if (error2) throw error2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["match-stats", selectedMatchId] });
+      queryClient.invalidateQueries({ queryKey: ["match-player-stats", selectedMatchId] });
+    },
+    onError: (error) => {
+      toast({ title: "Error moving player", description: error.message, variant: "destructive" });
     },
   });
 
@@ -255,31 +433,49 @@ export default function MatchResultsAdmin() {
   };
 
   const initBulkStats = () => {
-    const newBulkStats = new Map<string, BulkStatEntry>();
-    playersWithoutStats?.forEach((player) => {
-      newBulkStats.set(player.id, {
+    if (!selectedMatch || !playersWithoutStats) return;
+    
+    // Separate players by team
+    const homeTeamPlayers = playersWithoutStats
+      .filter(player => player.team_id === selectedMatch.home_team_id)
+      .map((player) => ({
         ...defaultStatForm,
         player_id: player.id,
         player_name: player.full_name,
-      });
-    });
-    setBulkStats(newBulkStats);
+      }));
+    
+    const awayTeamPlayers = playersWithoutStats
+      .filter(player => player.team_id === selectedMatch.away_team_id)
+      .map((player) => ({
+        ...defaultStatForm,
+        player_id: player.id,
+        player_name: player.full_name,
+      }));
+    
+    setHomeTeamBulkStats(homeTeamPlayers);
+    setAwayTeamBulkStats(awayTeamPlayers);
     setIsBulkDialogOpen(true);
   };
 
-  const updateBulkStat = (playerId: string, field: keyof PlayerStatForm, value: number) => {
-    setBulkStats((prev) => {
-      const newMap = new Map(prev);
-      const existing = newMap.get(playerId);
-      if (existing) {
-        newMap.set(playerId, { ...existing, [field]: value });
-      }
-      return newMap;
-    });
+  const updateBulkStat = (playerId: string, field: keyof PlayerStatForm, value: number, isHomeTeam: boolean) => {
+    if (isHomeTeam) {
+      setHomeTeamBulkStats((prev) => {
+        return prev.map(entry =>
+          entry.player_id === playerId ? { ...entry, [field]: value } : entry
+        );
+      });
+    } else {
+      setAwayTeamBulkStats((prev) => {
+        return prev.map(entry =>
+          entry.player_id === playerId ? { ...entry, [field]: value } : entry
+        );
+      });
+    }
   };
 
   const handleBulkSubmit = () => {
-    const entries = Array.from(bulkStats.values()).filter(
+    const allEntries = [...homeTeamBulkStats, ...awayTeamBulkStats];
+    const entries = allEntries.filter(
       (entry) =>
         entry.runs_scored > 0 ||
         entry.balls_faced > 0 ||
@@ -311,6 +507,11 @@ export default function MatchResultsAdmin() {
       catches: stat.catches,
       stumpings: stat.stumpings,
       run_outs: stat.run_outs,
+      dismissal_type: stat.dismissal_type || undefined,
+      bowler_id: stat.bowler_id || undefined,
+      fielder_id: stat.fielder_id || undefined,
+      runout_by_id: stat.runout_by_id || undefined,
+      dismissal_other_text: stat.dismissal_other_text || undefined,
     });
     setIsStatDialogOpen(true);
   };
@@ -336,6 +537,41 @@ export default function MatchResultsAdmin() {
     const player = matchPlayers?.find((p) => p.id === playerId);
     return player?.team_id ? getTeamName(player.team_id) : "";
   };
+
+  const handleHomeTeamDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = homeTeamBulkStats.findIndex(item => item.player_id === active.id);
+      const newIndex = homeTeamBulkStats.findIndex(item => item.player_id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setHomeTeamBulkStats(arrayMove(homeTeamBulkStats, oldIndex, newIndex));
+      }
+    }
+  };
+
+  const handleAwayTeamDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = awayTeamBulkStats.findIndex(item => item.player_id === active.id);
+      const newIndex = awayTeamBulkStats.findIndex(item => item.player_id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setAwayTeamBulkStats(arrayMove(awayTeamBulkStats, oldIndex, newIndex));
+      }
+    }
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      distance: 8,
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Filter players who don't have stats for this match yet
   const playersWithoutStats = matchPlayers?.filter(
@@ -369,6 +605,8 @@ export default function MatchResultsAdmin() {
         <h1 className="font-display text-3xl text-gradient-gold">Match Results & Scorecards</h1>
         <p className="text-muted-foreground mt-1">Enter player statistics for completed matches</p>
       </div>
+
+      {selectedMatchId && console.log(`[MatchResultsAdmin RENDER] Selected matchId: ${selectedMatchId}, Match Number: ${selectedMatch?.match_number}`)}
 
       {/* Match Selector */}
       <Card>
@@ -414,6 +652,10 @@ export default function MatchResultsAdmin() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsPDFDialogOpen(true)}>
+                <FileUp className="w-4 h-4 mr-2" />
+                Import PDF
+              </Button>
               <Button variant="outline" onClick={initBulkStats} disabled={!playersWithoutStats?.length}>
                 <Upload className="w-4 h-4 mr-2" />
                 Bulk Entry
@@ -622,6 +864,110 @@ export default function MatchResultsAdmin() {
               </div>
             </div>
 
+            {/* Dismissal Information */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Dismissal Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>How Out</Label>
+                  <Select
+                    value={statForm.dismissal_type || ""}
+                    onValueChange={(value) => setStatForm({ ...statForm, dismissal_type: value || undefined })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select dismissal type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="not_out">Not Out</SelectItem>
+                      <SelectItem value="caught">Caught</SelectItem>
+                      <SelectItem value="bowled">Bowled</SelectItem>
+                      <SelectItem value="lbw">LBW</SelectItem>
+                      <SelectItem value="runout">Run Out</SelectItem>
+                      <SelectItem value="stumped">Stumped</SelectItem>
+                      <SelectItem value="mankad">Mankad</SelectItem>
+                      <SelectItem value="retired_hurt">Retired Hurt</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {statForm.dismissal_type && statForm.dismissal_type !== "not_out" && statForm.dismissal_type !== "retired_hurt" && (
+                  <div className="space-y-2">
+                    <Label>Bowler</Label>
+                    <Select
+                      value={statForm.bowler_id || ""}
+                      onValueChange={(value) => setStatForm({ ...statForm, bowler_id: value || undefined })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select bowler" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {matchPlayers?.filter(p => p.team_id !== matchPlayers.find(mp => mp.id === statForm.player_id)?.team_id).map((player) => (
+                          <SelectItem key={player.id} value={player.id}>
+                            {player.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {statForm.dismissal_type === "caught" && (
+                  <div className="space-y-2">
+                    <Label>Caught By (Fielder)</Label>
+                    <Select
+                      value={statForm.fielder_id || ""}
+                      onValueChange={(value) => setStatForm({ ...statForm, fielder_id: value || undefined })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select fielder" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {matchPlayers?.filter(p => p.team_id !== matchPlayers.find(mp => mp.id === statForm.player_id)?.team_id).map((player) => (
+                          <SelectItem key={player.id} value={player.id}>
+                            {player.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {statForm.dismissal_type === "runout" && (
+                  <div className="space-y-2">
+                    <Label>Run Out By</Label>
+                    <Select
+                      value={statForm.runout_by_id || ""}
+                      onValueChange={(value) => setStatForm({ ...statForm, runout_by_id: value || undefined })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select fielder" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {matchPlayers?.filter(p => p.team_id !== matchPlayers.find(mp => mp.id === statForm.player_id)?.team_id).map((player) => (
+                          <SelectItem key={player.id} value={player.id}>
+                            {player.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {statForm.dismissal_type === "other" && (
+                  <div className="space-y-2 col-span-2">
+                    <Label>Other Dismissal Details</Label>
+                    <Input
+                      type="text"
+                      placeholder="Enter dismissal details"
+                      value={statForm.dismissal_other_text || ""}
+                      onChange={(e) => setStatForm({ ...statForm, dismissal_other_text: e.target.value })}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={resetStatForm}>
                 Cancel
@@ -644,143 +990,124 @@ export default function MatchResultsAdmin() {
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
-              Enter stats for all players at once. Only players with at least one non-zero stat will be saved.
+              Enter stats for all players at once. Drag players within each team to reorder by batting order. Only players with at least one non-zero stat will be saved.
             </p>
-            
-            <div className="border rounded-lg border-border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="sticky left-0 bg-background z-10">Player</TableHead>
-                    <TableHead className="text-center w-16">Runs</TableHead>
-                    <TableHead className="text-center w-16">Balls</TableHead>
-                    <TableHead className="text-center w-16">4s</TableHead>
-                    <TableHead className="text-center w-16">6s</TableHead>
-                    <TableHead className="text-center w-16">Overs</TableHead>
-                    <TableHead className="text-center w-16">RC</TableHead>
-                    <TableHead className="text-center w-16">Wkts</TableHead>
-                    <TableHead className="text-center w-16">Mdn</TableHead>
-                    <TableHead className="text-center w-16">Ct</TableHead>
-                    <TableHead className="text-center w-16">St</TableHead>
-                    <TableHead className="text-center w-16">RO</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from(bulkStats.entries()).map(([playerId, entry]) => (
-                    <TableRow key={playerId}>
-                      <TableCell className="sticky left-0 bg-background font-medium">
-                        {entry.player_name}
-                        <span className="text-xs text-muted-foreground ml-2">
-                          ({getPlayerTeam(playerId)})
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.runs_scored || ""}
-                          onChange={(e) => updateBulkStat(playerId, "runs_scored", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.balls_faced || ""}
-                          onChange={(e) => updateBulkStat(playerId, "balls_faced", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.fours || ""}
-                          onChange={(e) => updateBulkStat(playerId, "fours", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.sixes || ""}
-                          onChange={(e) => updateBulkStat(playerId, "sixes", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.overs_bowled || ""}
-                          onChange={(e) => updateBulkStat(playerId, "overs_bowled", parseFloat(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.runs_conceded || ""}
-                          onChange={(e) => updateBulkStat(playerId, "runs_conceded", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.wickets || ""}
-                          onChange={(e) => updateBulkStat(playerId, "wickets", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.maidens || ""}
-                          onChange={(e) => updateBulkStat(playerId, "maidens", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.catches || ""}
-                          onChange={(e) => updateBulkStat(playerId, "catches", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.stumpings || ""}
-                          onChange={(e) => updateBulkStat(playerId, "stumpings", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-16 h-8 text-center p-1"
-                          value={entry.run_outs || ""}
-                          onChange={(e) => updateBulkStat(playerId, "run_outs", parseInt(e.target.value) || 0)}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+
+            {/* Home Team Batting / Away Team Bowling */}
+            {homeTeamBulkStats.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-primary/10 px-4 py-2 rounded-lg">
+                  <h3 className="font-semibold text-lg">
+                    {getTeamName(selectedMatch?.home_team_id || "")} Batting / {getTeamName(selectedMatch?.away_team_id || "")} Bowling
+                  </h3>
+                  <Badge variant="secondary">{homeTeamBulkStats.length} players</Badge>
+                </div>
+                
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleHomeTeamDragEnd}
+                >
+                  <div className="border rounded-lg border-border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="sticky left-0 bg-background z-10 w-8"></TableHead>
+                          <TableHead className="sticky left-8 bg-background z-10">Player</TableHead>
+                          <TableHead className="text-center w-16">Runs</TableHead>
+                          <TableHead className="text-center w-16">Balls</TableHead>
+                          <TableHead className="text-center w-16">4s</TableHead>
+                          <TableHead className="text-center w-16">6s</TableHead>
+                          <TableHead className="text-center w-16">Overs</TableHead>
+                          <TableHead className="text-center w-16">RC</TableHead>
+                          <TableHead className="text-center w-16">Wkts</TableHead>
+                          <TableHead className="text-center w-16">Mdn</TableHead>
+                          <TableHead className="text-center w-16">Ct</TableHead>
+                          <TableHead className="text-center w-16">St</TableHead>
+                          <TableHead className="text-center w-16">RO</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <SortableContext
+                          items={homeTeamBulkStats.map(entry => entry.player_id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {homeTeamBulkStats.map((entry, index) => (
+                            <BulkStatRow
+                              key={entry.player_id}
+                              entry={entry}
+                              index={index}
+                              getPlayerTeam={getPlayerTeam}
+                              updateBulkStat={updateBulkStat}
+                              isHomeTeam={true}
+                            />
+                          ))}
+                        </SortableContext>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </DndContext>
+              </div>
+            )}
+
+            {/* Away Team Batting / Home Team Bowling */}
+            {awayTeamBulkStats.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-primary/10 px-4 py-2 rounded-lg">
+                  <h3 className="font-semibold text-lg">
+                    {getTeamName(selectedMatch?.away_team_id || "")} Batting / {getTeamName(selectedMatch?.home_team_id || "")} Bowling
+                  </h3>
+                  <Badge variant="secondary">{awayTeamBulkStats.length} players</Badge>
+                </div>
+                
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleAwayTeamDragEnd}
+                >
+                  <div className="border rounded-lg border-border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="sticky left-0 bg-background z-10 w-8"></TableHead>
+                          <TableHead className="sticky left-8 bg-background z-10">Player</TableHead>
+                          <TableHead className="text-center w-16">Runs</TableHead>
+                          <TableHead className="text-center w-16">Balls</TableHead>
+                          <TableHead className="text-center w-16">4s</TableHead>
+                          <TableHead className="text-center w-16">6s</TableHead>
+                          <TableHead className="text-center w-16">Overs</TableHead>
+                          <TableHead className="text-center w-16">RC</TableHead>
+                          <TableHead className="text-center w-16">Wkts</TableHead>
+                          <TableHead className="text-center w-16">Mdn</TableHead>
+                          <TableHead className="text-center w-16">Ct</TableHead>
+                          <TableHead className="text-center w-16">St</TableHead>
+                          <TableHead className="text-center w-16">RO</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <SortableContext
+                          items={awayTeamBulkStats.map(entry => entry.player_id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {awayTeamBulkStats.map((entry, index) => (
+                            <BulkStatRow
+                              key={entry.player_id}
+                              entry={entry}
+                              index={index}
+                              getPlayerTeam={getPlayerTeam}
+                              updateBulkStat={updateBulkStat}
+                              isHomeTeam={false}
+                            />
+                          ))}
+                        </SortableContext>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </DndContext>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setIsBulkDialogOpen(false)}>
@@ -794,7 +1121,172 @@ export default function MatchResultsAdmin() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* PDF Import Dialog */}
+      {selectedMatch && (
+        <PDFImportDialog
+          open={isPDFDialogOpen}
+          onOpenChange={setIsPDFDialogOpen}
+          matchId={selectedMatch.id}
+          seasonId={selectedSeasonId!}
+          homeTeamId={selectedMatch.home_team_id}
+          awayTeamId={selectedMatch.away_team_id}
+          homePlayers={matchPlayers?.filter(p => p.team_id === selectedMatch.home_team_id).map(p => ({ id: p.id, name: p.full_name })) || []}
+          awayPlayers={matchPlayers?.filter(p => p.team_id === selectedMatch.away_team_id).map(p => ({ id: p.id, name: p.full_name })) || []}
+          onImportComplete={(stats) => {
+            bulkCreateMutation.mutate(stats);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// Draggable Bulk Stat Row Component
+function BulkStatRow({
+  entry,
+  index,
+  getPlayerTeam,
+  updateBulkStat,
+  isHomeTeam,
+}: {
+  entry: BulkStatEntry;
+  index: number;
+  getPlayerTeam: (id: string) => string;
+  updateBulkStat: (playerId: string, field: keyof PlayerStatForm, value: number, isHomeTeam: boolean) => void;
+  isHomeTeam: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: entry.player_id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className={isDragging ? "bg-blue-100 dark:bg-blue-900" : ""}>
+      <TableCell className="sticky left-0 bg-background z-10 p-1" {...attributes} {...listeners}>
+        <div className="flex items-center justify-center cursor-grab active:cursor-grabbing">
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
+      </TableCell>
+      <TableCell className="sticky left-8 bg-background font-medium">
+        <div className="text-sm">
+          {entry.player_name}
+        </div>
+        <span className="text-xs text-muted-foreground">
+          ({getPlayerTeam(entry.player_id)})
+        </span>
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.runs_scored || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "runs_scored", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.balls_faced || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "balls_faced", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.fours || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "fours", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.sixes || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "sixes", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          step="0.1"
+          className="w-16 h-8 text-center p-1"
+          value={entry.overs_bowled || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "overs_bowled", parseFloat(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.runs_conceded || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "runs_conceded", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.wickets || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "wickets", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.maidens || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "maidens", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.catches || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "catches", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.stumpings || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "stumpings", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          min="0"
+          className="w-16 h-8 text-center p-1"
+          value={entry.run_outs || ""}
+          onChange={(e) => updateBulkStat(entry.player_id, "run_outs", parseInt(e.target.value) || 0, isHomeTeam)}
+        />
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -860,14 +1352,41 @@ function StatsTable({
               <TableCell className="text-center">{stat.stumpings}</TableCell>
               <TableCell className="text-center">{stat.run_outs}</TableCell>
               <TableCell>
-                <div className="flex gap-2">
-                  <Button size="icon" variant="ghost" onClick={() => onEdit(stat)}>
+                <div className="flex gap-1">
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={() => moveToTopMutation.mutate(stat.id)}
+                    title="Move to top"
+                    className="h-8 w-8"
+                  >
+                    <ChevronsUp className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={() => moveUpMutation.mutate(stat.id)}
+                    title="Move up"
+                    className="h-8 w-8"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={() => moveDownMutation.mutate(stat.id)}
+                    title="Move down"
+                    className="h-8 w-8"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => onEdit(stat)} className="h-8 w-8">
                     <Pencil className="w-4 h-4" />
                   </Button>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive h-8 w-8"
                     onClick={() => onDelete(stat.id)}
                   >
                     <Trash2 className="w-4 h-4" />

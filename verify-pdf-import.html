@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verify PDF Import</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    .section { margin: 30px 0; padding: 20px; border: 1px solid #ccc; }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <h1>PDF Import Verification</h1>
+  
+  <div class="section">
+    <h2>1. Recent Player Stats (Last 24 hours)</h2>
+    <div id="stats-section">Loading...</div>
+  </div>
+
+  <div class="section">
+    <h2>2. Stats by Match</h2>
+    <div id="matches-section">Loading...</div>
+  </div>
+
+  <div class="section">
+    <h2>3. Recent PDFs (should have match_id and season_id set)</h2>
+    <div id="recent-section">Loading...</div>
+  </div>
+
+  <script type="module">
+    const supabaseUrl = 'https://mhzsusgknwmsqrcxbuvo.supabase.co'
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1oenN1c2drbndtc3FyY3hidXZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDMyNzcwNDAsImV4cCI6MTg2MDkyNzA0MH0.VHfB6s81k-j6dCXnW-9swJUe5m_T6r6WCF0I_1EsLDw'
+
+    // Inline fetch since we can't import modules in browsers
+    async function supabaseQuery(table, select, filters) {
+      let url = `${supabaseUrl}/rest/v1/${table}?select=${encodeURIComponent(select)}`
+      if (filters) {
+        Object.entries(filters).forEach(([k, v]) => {
+          url += `&${k}=eq.${v}`
+        })
+      }
+      
+      const response = await fetch(url, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Query failed: ${response.status}`)
+      }
+      
+      return response.json()
+    }
+
+    async function verify() {
+      try {
+        // Get recent stats
+        const statsResponse = await fetch(
+          `${supabaseUrl}/rest/v1/player_stats?select=id,player_id,match_id,season_id,runs_scored,balls_faced,wickets,overs_bowled,created_at&order=created_at.desc&limit=20`,
+          {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`
+            }
+          }
+        )
+        const stats = await statsResponse.json()
+        
+        // Get match info for each unique match_id
+        const matchIds = [...new Set(stats.map(s => s.match_id))]
+        
+        let matchesHtml = `<p>Found <strong>${stats.length}</strong> recent stats from <strong>${matchIds.length}</strong> unique matches</p>`
+        matchesHtml += `<table><tr><th>Match ID</th><th>Count</th><th>Created</th></tr>`
+        
+        const matchGroups = {}
+        stats.forEach(s => {
+          if (!matchGroups[s.match_id]) matchGroups[s.match_id] = []
+          matchGroups[s.match_id].push(s)
+        })
+        
+        Object.entries(matchGroups).forEach(([mid, mstats]) => {
+          const latest = mstats[0]
+          matchesHtml += `<tr><td>${mid}</td><td>${mstats.length}</td><td>${new Date(latest.created_at).toLocaleString()}</td></tr>`
+        })
+        matchesHtml += '</table>'
+        
+        document.getElementById('matches-section').innerHTML = matchesHtml
+        
+        // Show recent stats
+        let statsHtml = `<p>Total: <strong>${stats.length}</strong> records</p>`
+        statsHtml += `<table><tr><th>Player ID</th><th>Match ID</th><th>Season ID</th><th>Runs</th><th>Balls</th><th>Wickets</th><th>Overs</th><th>Created</th></tr>`
+        
+        stats.slice(0, 15).forEach(s => {
+          statsHtml += `<tr>
+            <td>${s.player_id?.substring(0, 8)}...</td>
+            <td>${s.match_id?.substring(0, 8)}...</td>
+            <td>${s.season_id?.substring(0, 8)}...</td>
+            <td>${s.runs_scored || 0}</td>
+            <td>${s.balls_faced || 0}</td>
+            <td>${s.wickets || 0}</td>
+            <td>${s.overs_bowled || 0}</td>
+            <td>${new Date(s.created_at).toLocaleString()}</td>
+          </tr>`
+        })
+        statsHtml += '</table>'
+        
+        document.getElementById('stats-section').innerHTML = statsHtml
+        
+        // Summary
+        let summary = '<h3>Summary</h3><ul>'
+        summary += `<li>Recent stats: ${stats.length > 0 ? '<span class="success">✓ YES</span>' : '<span class="error">✗ NO</span>'}</li>`
+        summary += `<li>Matches affected: ${matchIds.length}</li>`
+        
+        if (stats.length > 0) {
+          const hasAllFields = stats.every(s => s.match_id && s.season_id && s.player_id)
+          summary += `<li>All fields present: ${hasAllFields ? '<span class="success">✓ YES</span>' : '<span class="error">✗ NO - some missing match_id or season_id</span>'}</li>`
+        }
+        
+        summary += '</ul>'
+        document.getElementById('recent-section').innerHTML = summary
+        
+      } catch (error) {
+        document.getElementById('stats-section').innerHTML = `<span class="error">Error: ${error.message}</span>`
+        document.getElementById('matches-section').innerHTML = `<span class="error">Error: ${error.message}</span>`
+        document.getElementById('recent-section').innerHTML = `<span class="error">Error: ${error.message}</span>`
+      }
+    }
+
+    verify()
+  </script>
+</body>
+</html>

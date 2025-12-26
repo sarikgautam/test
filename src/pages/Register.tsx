@@ -114,7 +114,27 @@ const Register = () => {
         throw new Error("No active season found");
       }
 
-      // Check for existing player with same email
+      let receiptUrl: string | null = null;
+
+      // Upload payment receipt if provided
+      if (paymentReceipt) {
+        const receiptExt = paymentReceipt.name.split(".").pop();
+        const receiptPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${receiptExt}`;
+        
+        const { error: receiptError } = await supabase.storage
+          .from("payment-receipts")
+          .upload(receiptPath, paymentReceipt);
+        
+        if (receiptError) throw new Error("Failed to upload payment receipt");
+        
+        const { data: receiptUrlData } = supabase.storage
+          .from("payment-receipts")
+          .getPublicUrl(receiptPath);
+        
+        receiptUrl = receiptUrlData.publicUrl;
+      }
+
+      // Check if player already exists
       const { data: existingPlayer, error: checkError } = await supabase
         .from("players")
         .select("id")
@@ -123,25 +143,9 @@ const Register = () => {
 
       if (checkError) throw checkError;
 
-      // If player exists, check if already registered for this season
-      if (existingPlayer) {
-        const { data: existingReg, error: regCheckError } = await supabase
-          .from("player_season_registrations")
-          .select("id")
-          .eq("player_id", existingPlayer.id)
-          .eq("season_id", activeSeason.id)
-          .maybeSingle();
-
-        if (regCheckError) throw regCheckError;
-        if (existingReg) {
-          throw new Error("You are already registered for this season");
-        }
-      }
-
       let photoUrl: string | null = null;
-      let receiptUrl: string | null = null;
 
-      // Upload profile photo
+      // Upload profile photo if provided
       if (profilePhoto) {
         const photoExt = profilePhoto.name.split(".").pop();
         const photoPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${photoExt}`;
@@ -159,31 +163,17 @@ const Register = () => {
         photoUrl = photoUrlData.publicUrl;
       }
 
-      // Upload payment receipt
-      if (paymentReceipt) {
-        const receiptExt = paymentReceipt.name.split(".").pop();
-        const receiptPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${receiptExt}`;
-        
-        const { error: receiptError } = await supabase.storage
-          .from("payment-receipts")
-          .upload(receiptPath, paymentReceipt);
-        
-        if (receiptError) throw new Error("Failed to upload payment receipt");
-        
-        receiptUrl = receiptPath;
-      }
-
       let playerId: string;
 
       if (existingPlayer) {
-        // Update existing player info
+        // Update existing player
         const { error: updateError } = await supabase
           .from("players")
           .update({
             full_name: data.full_name,
             phone: data.phone,
-            date_of_birth: data.date_of_birth,
-            address: data.address,
+            date_of_birth: data.date_of_birth || null,
+            address: data.address || null,
             current_team: data.current_team || null,
             emergency_contact_name: data.emergency_contact_name,
             emergency_contact_phone: data.emergency_contact_phone,
@@ -191,23 +181,23 @@ const Register = () => {
             role: data.role,
             batting_style: data.batting_style || null,
             bowling_style: data.bowling_style || null,
-            photo_url: photoUrl || undefined,
-            payment_receipt_url: receiptUrl || undefined,
+            ...(photoUrl && { photo_url: photoUrl }),
+            ...(receiptUrl && { payment_receipt_url: receiptUrl }),
           })
           .eq("id", existingPlayer.id);
 
         if (updateError) throw updateError;
         playerId = existingPlayer.id;
       } else {
-        // Insert new player record
+        // Create new player
         const { data: newPlayer, error: playerError } = await supabase
           .from("players")
           .insert({
             full_name: data.full_name,
             email: data.email,
             phone: data.phone,
-            date_of_birth: data.date_of_birth,
-            address: data.address,
+            date_of_birth: data.date_of_birth || null,
+            address: data.address || null,
             current_team: data.current_team || null,
             emergency_contact_name: data.emergency_contact_name,
             emergency_contact_phone: data.emergency_contact_phone,
@@ -219,30 +209,42 @@ const Register = () => {
             payment_receipt_url: receiptUrl,
             original_season_id: activeSeason.id,
           })
-          .select("id")
+          .select()
           .single();
 
         if (playerError) throw playerError;
         playerId = newPlayer.id;
       }
 
-      // Create season registration
-      const { error: regError } = await supabase
+      // Check if already registered for this season
+      const { data: existingReg, error: regCheckError } = await supabase
         .from("player_season_registrations")
-        .insert({
-          player_id: playerId,
-          season_id: activeSeason.id,
-          auction_status: "registered",
-          base_price: 10000,
-        });
+        .select("id")
+        .eq("player_id", playerId)
+        .eq("season_id", activeSeason.id)
+        .maybeSingle();
 
-      if (regError) throw regError;
+      if (regCheckError) throw regCheckError;
+
+      if (!existingReg) {
+        // Create season registration
+        const { error: regError } = await supabase
+          .from("player_season_registrations")
+          .insert({
+            player_id: playerId,
+            season_id: activeSeason.id,
+            auction_status: "registered",
+            base_price: 20,
+          });
+
+        if (regError) throw regError;
+      }
     },
     onSuccess: () => {
       setIsSuccess(true);
       toast({
-        title: "Registration Successful!",
-        description: "You have been added to the auction pool.",
+        title: "Registration Submitted!",
+        description: "Your registration is pending admin approval. You will be notified once reviewed.",
       });
     },
     onError: (error: any) => {

@@ -16,6 +16,7 @@ import Register from "./pages/Register";
 import Auth from "./pages/Auth";
 import Auction from "./pages/Auction";
 import AuctionStats from "./pages/AuctionStats";
+import AuctionDayBanner from "./pages/AuctionDayBanner";
 import Sponsors from "./pages/Sponsors";
 import Gallery from "./pages/Gallery";
 import Contact from "./pages/Contact";
@@ -24,8 +25,11 @@ import NewsDetail from "./pages/NewsDetail";
 import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
+import SeasonsAdmin from "./pages/admin/SeasonsAdmin";
 import TeamsAdmin from "./pages/admin/TeamsAdmin";
 import PlayersAdmin from "./pages/admin/PlayersAdmin";
+import PlayersImportAdmin from "./pages/admin/PlayersImportAdmin";
+import SeasonMigrationAdmin from "./pages/admin/SeasonMigrationAdmin";
 import MatchesAdmin from "./pages/admin/MatchesAdmin";
 import StandingsAdmin from "./pages/admin/StandingsAdmin";
 import StatsAdmin from "./pages/admin/StatsAdmin";
@@ -61,6 +65,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/auction" element={<Auction />} />
               <Route path="/auction/stats" element={<AuctionStats />} />
+              <Route path="/auction-day-banner" element={<AuctionDayBanner />} />
               <Route path="/sponsors" element={<Sponsors />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/news" element={<News />} />
@@ -68,9 +73,12 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
+                <Route path="seasons" element={<SeasonsAdmin />} />
                 <Route path="teams" element={<TeamsAdmin />} />
                 <Route path="owners" element={<OwnersAdmin />} />
                 <Route path="players" element={<PlayersAdmin />} />
+                <Route path="players-import" element={<PlayersImportAdmin />} />
+                <Route path="season-migration" element={<SeasonMigrationAdmin />} />
                 <Route path="matches" element={<MatchesAdmin />} />
                 <Route path="results" element={<MatchResultsAdmin />} />
                 <Route path="awards" element={<AwardsAdmin />} />

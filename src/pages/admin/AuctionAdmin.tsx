@@ -209,7 +209,11 @@ export default function AuctionAdmin() {
       const team = teams?.find((t) => t.id === teamId);
       if (!team) return;
 
-      const newBid = liveAuction.current_bid + liveAuction.increment_amount;
+      // First bid is the base price, subsequent bids increase by increment
+      const isFirstBid = !liveAuction.current_bidding_team_id;
+      const newBid = isFirstBid 
+        ? liveAuction.base_price 
+        : liveAuction.current_bid + liveAuction.increment_amount;
       
       if (newBid > team.remaining_budget) {
         throw new Error("Team doesn't have enough budget");
