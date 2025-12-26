@@ -32,7 +32,7 @@ interface PlayerStat {
     id: string;
     full_name: string;
     role: string;
-    team_id: string;
+    team_id?: string | null;
   };
   bowler?: {
     id: string;
@@ -148,34 +148,43 @@ const MatchScorecard = () => {
         }
         
         // Add team_id and dismissal player names to each stat
-        data.forEach(stat => {
+        const enrichedData = data.map(stat => {
+          const enrichedStat: any = { ...stat };
+          
           if (stat.player) {
-            stat.player.team_id = playerTeamMap.get(stat.player_id) || null;
+            enrichedStat.player = {
+              ...stat.player,
+              team_id: playerTeamMap.get(stat.player_id) || null
+            };
           }
           
           // Add bowler, fielder, runout_by objects
           if (stat.bowler_id) {
-            stat.bowler = {
+            enrichedStat.bowler = {
               id: stat.bowler_id,
               full_name: playerNamesMap.get(stat.bowler_id) || ''
             };
           }
           if (stat.fielder_id) {
-            stat.fielder = {
+            enrichedStat.fielder = {
               id: stat.fielder_id,
               full_name: playerNamesMap.get(stat.fielder_id) || ''
             };
           }
           if (stat.runout_by_id) {
-            stat.runout_by = {
+            enrichedStat.runout_by = {
               id: stat.runout_by_id,
               full_name: playerNamesMap.get(stat.runout_by_id) || ''
             };
           }
+          
+          return enrichedStat;
         });
+        
+        return enrichedData as PlayerStat[];
       }
       
-      return data as PlayerStat[];
+      return data as unknown as PlayerStat[];
     },
     enabled: !!matchId,
   });

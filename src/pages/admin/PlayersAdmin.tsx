@@ -157,8 +157,8 @@ export default function PlayersAdmin() {
         .from("players")
         .insert({
           full_name: newName.trim(),
-          role: newRole,
-          season_id: selectedSeasonId,
+          role: newRole as "batsman" | "bowler" | "all_rounder" | "wicket_keeper",
+          original_season_id: selectedSeasonId,
           email: placeholderEmail,
         })
         .select("*")
