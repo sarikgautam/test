@@ -34,10 +34,10 @@ export const StatsPreview = () => {
     queryFn: async () => {
       if (!activeSeason?.id) return [];
 
-      // Get all players with their teams
+      // Get all players with their teams - use explicit FK to avoid ambiguity
       const { data: players, error: playersError } = await supabase
         .from("players")
-        .select("id, full_name, photo_url, team:teams(id, name, short_name, primary_color)")
+        .select("id, full_name, photo_url, team:teams!players_team_id_fkey(id, name, short_name, primary_color)")
         .order("full_name");
       if (playersError) throw playersError;
 
