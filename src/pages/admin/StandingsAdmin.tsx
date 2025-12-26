@@ -153,6 +153,7 @@ export default function StandingsAdmin() {
           net_run_rate: standing.net_run_rate,
         };
 
+        // Use upsert: if record exists (by id), update it; otherwise check if team_id exists for this season
         if (standing.id) {
           const { error } = await supabase
             .from("standings")
@@ -160,8 +161,26 @@ export default function StandingsAdmin() {
             .eq("id", standing.id);
           if (error) throw error;
         } else {
-          const { error } = await supabase.from("standings").insert(data);
-          if (error) throw error;
+          // Check if standing already exists for this team and season
+          const { data: existing } = await supabase
+            .from("standings")
+            .select("id")
+            .eq("team_id", standing.team_id)
+            .eq("season_id", selectedSeasonId!)
+            .maybeSingle();
+
+          if (existing) {
+            // Update existing record
+            const { error } = await supabase
+              .from("standings")
+              .update(data)
+              .eq("id", existing.id);
+            if (error) throw error;
+          } else {
+            // Insert new record
+            const { error } = await supabase.from("standings").insert(data);
+            if (error) throw error;
+          }
         }
       }
     },
