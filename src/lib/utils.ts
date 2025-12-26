@@ -115,3 +115,30 @@ export function utcToAESTInput(utcDate: string | Date | null | undefined): strin
     return "";
   }
 }
+
+/**
+ * Convert cricket overs notation (X.Y where Y is balls out of 6) to actual overs
+ * For example: 2.3 = 2 overs + 3 balls = 2.5 actual overs
+ * 0.5 = 5 balls = 0.833 overs
+ * @param cricketOvers - Overs in cricket notation (e.g., 2.3 means 2 overs and 3 balls)
+ * @returns Actual overs as a decimal
+ */
+export function cricketOversToDecimal(cricketOvers: number): number {
+  if (cricketOvers === 0) return 0;
+  const wholeOvers = Math.floor(cricketOvers);
+  const balls = Math.round((cricketOvers - wholeOvers) * 10); // 0.3 -> 3 balls
+  return wholeOvers + (balls / 6);
+}
+
+/**
+ * Calculate bowling economy rate using cricket overs notation
+ * @param runs - Runs conceded
+ * @param cricketOvers - Overs in cricket notation (e.g., 2.3 means 2 overs and 3 balls)
+ * @returns Economy rate as a string, or "-" if no overs bowled
+ */
+export function calculateCricketEconomy(runs: number, cricketOvers: number): string {
+  if (cricketOvers === 0) return "-";
+  const actualOvers = cricketOversToDecimal(cricketOvers);
+  if (actualOvers === 0) return "-";
+  return (runs / actualOvers).toFixed(2);
+}

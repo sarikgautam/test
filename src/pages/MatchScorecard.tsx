@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Trophy, Calendar, MapPin, Star, Award } from "lucide-react";
-import { formatLocalTime } from "@/lib/utils";
+import { formatLocalTime, calculateCricketEconomy } from "@/lib/utils";
 
 interface PlayerStat {
   id: string;
@@ -250,8 +250,7 @@ const MatchScorecard = () => {
   };
 
   const calculateEconomy = (runs: number, overs: number) => {
-    if (overs === 0) return "-";
-    return (runs / overs).toFixed(2);
+    return calculateCricketEconomy(runs, overs);
   };
 
   const formatDismissal = (stat: PlayerStat) => {
