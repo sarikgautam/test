@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import gcnplLogo from "@/assets/gcnpl-logo.png";
 
-type SlideType = "team" | "sponsors" | "owner" | "all-teams";
+type SlideType = "intro" | "support" | "team" | "sponsors" | "owner" | "all-teams";
 
 export default function AuctionDayBanner() {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [slideType, setSlideType] = useState<SlideType>("team");
+  const [slideType, setSlideType] = useState<SlideType>("intro");
   const [isPaused, setIsPaused] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const hideControlsTimeout = useRef<number | null>(null);
@@ -57,9 +57,35 @@ export default function AuctionDayBanner() {
     },
   });
 
-  // Calculate total slides: teams + sponsors + individual owners + all-teams slide
+  const { data: supportClubs, isLoading: supportLoading } = useQuery({
+    queryKey: ["support-clubs-banner"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("support_club")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: activeSeason } = useQuery({
+    queryKey: ["active-season-banner"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("name")
+        .eq("is_active", true)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Calculate total slides: intro + support + teams + sponsors + individual owners + all-teams slide
   const ownersCount = teams?.filter(t => t.owner_id).length || 0;
-  const totalSlides = (teams?.length || 0) + (sponsors?.length || 0) + ownersCount + 1;
+  const totalSlides = 2 + (teams?.length || 0) + (sponsors?.length || 0) + ownersCount + 1;
 
   // Auto-rotate through teams, sponsors, and owners
   useEffect(() => {
@@ -114,10 +140,14 @@ export default function AuctionDayBanner() {
     const ownersCount = ownersWithIds.length;
     
     if (index === 0) {
+      setSlideType("intro");
+    } else if (index === 1) {
+      setSlideType("support");
+    } else if (index === 2) {
       setSlideType("all-teams");
-    } else if (index <= teamsCount) {
+    } else if (index <= 2 + teamsCount) {
       setSlideType("team");
-    } else if (index <= teamsCount + sponsorsCount) {
+    } else if (index <= 2 + teamsCount + sponsorsCount) {
       setSlideType("sponsors");
     } else {
       setSlideType("owner");
@@ -173,10 +203,72 @@ export default function AuctionDayBanner() {
       {/* Main Content Area */}
       <div className="flex-1 flex items-center justify-center relative z-10 px-8">
         <div key={slideKey} className="w-full max-w-7xl mx-auto animate-slide-fade">
-        {teamsLoading || sponsorsLoading || ownersLoading ? (
+        {teamsLoading || sponsorsLoading || ownersLoading || supportLoading ? (
           <div className="flex items-center justify-center gap-12 w-full max-w-7xl">
             <Skeleton className="w-96 h-96 rounded-3xl" />
             <Skeleton className="flex-1 h-96 rounded-3xl" />
+          </div>
+        ) : slideType === "intro" ? (
+          // Intro Slide (First)
+          <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto animate-fade-in text-center space-y-8">
+            <div className="relative">
+              {/* Glow effects */}
+              <div className="absolute -inset-12 rounded-full bg-gradient-to-r from-primary/30 to-secondary/30 blur-3xl opacity-50 animate-pulse" />
+              
+              <img 
+                src={gcnplLogo} 
+                alt="GCNPL Logo"
+                className="relative w-64 h-64 object-contain drop-shadow-2xl"
+              />
+            </div>
+            
+            <div className="space-y-4">
+              <h1 className="font-display text-6xl md:text-7xl font-bold">
+                <span className="text-gradient-gold">Gold Coast</span>
+              </h1>
+              <h2 className="font-display text-5xl md:text-6xl font-bold text-foreground">
+                Nepalese Premier League
+              </h2>
+              
+              <div className="pt-6 space-y-3">
+                <p className="text-4xl md:text-5xl font-bold text-primary">
+                  {activeSeason?.name || "Season 2"}
+                </p>
+                <p className="text-5xl md:text-6xl font-bold text-gradient-gold">
+                  Auction Day
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : slideType === "support" && supportClubs && supportClubs.length > 0 ? (
+          // Support Club Slide (Second)
+          <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto animate-fade-in text-center space-y-12">
+            <h3 className="font-display text-5xl md:text-6xl font-bold text-foreground">
+              Supported By
+            </h3>
+            
+            <div className="flex flex-wrap justify-center items-center gap-12">
+              {supportClubs.map((club) => (
+                <div key={club.id} className="flex flex-col items-center gap-6">
+                  <div className="relative">
+                    {/* Glow effects */}
+                    <div className="absolute -inset-12 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 blur-3xl opacity-50 animate-pulse" />
+                    
+                    <div className="relative w-64 h-64 rounded-3xl bg-white/95 dark:bg-card/95 backdrop-blur-sm shadow-2xl ring-8 ring-primary/40 flex items-center justify-center p-8">
+                      <img 
+                        src={club.logo_url} 
+                        alt={club.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  </div>
+                  
+                  <h4 className="font-display text-3xl md:text-4xl font-bold text-foreground">
+                    {club.name}
+                  </h4>
+                </div>
+              ))}
+            </div>
           </div>
         ) : slideType === "all-teams" && teams && teams.length > 0 ? (
           // All Teams Summary Slide (First)
@@ -256,7 +348,7 @@ export default function AuctionDayBanner() {
         ) : slideType === "sponsors" && sponsors && sponsors.length > 0 ? (
           // Sponsor Slide (individual)
           (() => {
-            const sponsorIndex = currentSlideIndex - (teams?.length || 0) - 1;
+            const sponsorIndex = currentSlideIndex - (teams?.length || 0) - 3; // Adjusted for intro, support, and all-teams slides
             const currentSponsor = sponsors[sponsorIndex];
             
             if (!currentSponsor) return null;
@@ -354,7 +446,7 @@ export default function AuctionDayBanner() {
           // Individual Owner Slide
           (() => {
             const teamsWithOwners = teams.filter(t => t.owner_id);
-            const ownerIndex = currentSlideIndex - (teams?.length || 0) - (sponsors?.length || 0) - 1;
+            const ownerIndex = currentSlideIndex - (teams?.length || 0) - (sponsors?.length || 0) - 3; // Adjusted for intro, support, and all-teams slides
             const currentTeam = teamsWithOwners[ownerIndex];
             const ownerData = owners?.find(o => o.id === currentTeam?.owner_id);
             
@@ -559,7 +651,7 @@ export default function AuctionDayBanner() {
               </div>
             </div>
           </div>
-        ) : teams && teams.length > 0 && currentSlideIndex > 0 && teams[currentSlideIndex - 1] ? (
+        ) : teams && teams.length > 0 && currentSlideIndex > 2 && teams[currentSlideIndex - 3] ? (
           // Team Slide
           <div className="flex items-center justify-center gap-12 w-full max-w-7xl animate-fade-in">
             {/* Left - Team Logo */}
@@ -569,32 +661,32 @@ export default function AuctionDayBanner() {
                 <div 
                   className="absolute -inset-12 rounded-full blur-3xl opacity-70 animate-pulse"
                   style={{ 
-                    backgroundColor: teams[currentSlideIndex - 1].primary_color,
+                    backgroundColor: teams[currentSlideIndex - 3].primary_color,
                   }}
                 />
                 
                 <div 
                   className="absolute -inset-8 rounded-full blur-xl opacity-40 animate-pulse"
                   style={{ 
-                    backgroundColor: teams[currentSlideIndex - 1].secondary_color,
+                    backgroundColor: teams[currentSlideIndex - 3].secondary_color,
                     animationDelay: '1s',
                   }}
                 />
                 
-                {teams[currentSlideIndex - 1].logo_url ? (
+                {teams[currentSlideIndex - 3].logo_url ? (
                   <img 
-                    src={teams[currentSlideIndex - 1].logo_url} 
-                    alt={teams[currentSlideIndex - 1].name}
+                    src={teams[currentSlideIndex - 3].logo_url} 
+                    alt={teams[currentSlideIndex - 3].name}
                     className="relative w-96 h-96 mx-auto rounded-3xl object-cover shadow-2xl backdrop-blur-sm"
                   />
                 ) : (
                   <div
                     className="relative w-96 h-96 mx-auto rounded-3xl flex items-center justify-center text-9xl font-bold text-white shadow-2xl backdrop-blur-sm"
                     style={{ 
-                      background: `linear-gradient(135deg, ${teams[currentSlideIndex - 1].primary_color}, ${teams[currentSlideIndex - 1].secondary_color})`,
+                      background: `linear-gradient(135deg, ${teams[currentSlideIndex - 3].primary_color}, ${teams[currentSlideIndex - 3].secondary_color})`,
                     }}
                   >
-                    {teams[currentSlideIndex - 1].short_name?.substring(0, 2)}
+                    {teams[currentSlideIndex - 3].short_name?.substring(0, 2)}
                   </div>
                 )}
               </div>
@@ -605,22 +697,22 @@ export default function AuctionDayBanner() {
               <div 
                 className="inline-flex items-center justify-center px-6 py-2 rounded-full text-lg font-semibold shadow-lg mb-4"
                 style={{ 
-                  backgroundColor: `${teams[currentSlideIndex - 1].primary_color}25`,
-                  color: teams[currentSlideIndex - 1].primary_color,
-                  border: `2px solid ${teams[currentSlideIndex - 1].primary_color}60`
+                  backgroundColor: `${teams[currentSlideIndex - 3].primary_color}25`,
+                  color: teams[currentSlideIndex - 3].primary_color,
+                  border: `2px solid ${teams[currentSlideIndex - 3].primary_color}60`
                 }}
               >
-                {teams[currentSlideIndex - 1].short_name}
+                {teams[currentSlideIndex - 3].short_name}
               </div>
 
               <h3 className="font-display font-bold text-5xl md:text-6xl text-primary mb-6 leading-tight">
-                {teams[currentSlideIndex - 1].name}
+                {teams[currentSlideIndex - 3].name}
               </h3>
 
               <div className="space-y-6 text-muted-foreground">
                 <p className="text-lg leading-relaxed">
-                  {teams[currentSlideIndex - 1].description || 
-                    `${teams[currentSlideIndex - 1].name} is one of the four competing franchises in the Gold Coast Nepalese Premier League Season 2. With a talented roster and passionate fanbase, they're ready to compete for the championship.`
+                  {teams[currentSlideIndex - 3].description || 
+                    `${teams[currentSlideIndex - 3].name} is one of the four competing franchises in the Gold Coast Nepalese Premier League Season 2. With a talented roster and passionate fanbase, they're ready to compete for the championship.`
                   }
                 </p>
                 
@@ -630,26 +722,26 @@ export default function AuctionDayBanner() {
                     <div className="flex gap-3">
                       <div 
                         className="w-12 h-12 rounded-full ring-2 ring-border shadow-lg"
-                        style={{ backgroundColor: teams[currentSlideIndex - 1].primary_color }}
+                        style={{ backgroundColor: teams[currentSlideIndex - 3].primary_color }}
                       />
                       <div 
                         className="w-12 h-12 rounded-full ring-2 ring-border shadow-lg"
-                        style={{ backgroundColor: teams[currentSlideIndex - 1].secondary_color }}
+                        style={{ backgroundColor: teams[currentSlideIndex - 3].secondary_color }}
                       />
                     </div>
                   </div>
                   
-                  {teams[currentSlideIndex - 1].owner_name && (
+                  {teams[currentSlideIndex - 3].owner_name && (
                     <div className="flex items-center gap-4">
                       <span className="text-sm font-semibold text-foreground w-32">Owner</span>
-                      <span className="text-lg text-foreground font-medium">{teams[currentSlideIndex - 1].owner_name}</span>
+                      <span className="text-lg text-foreground font-medium">{teams[currentSlideIndex - 3].owner_name}</span>
                     </div>
                   )}
                   
-                  {teams[currentSlideIndex - 1].manager_name && (
+                  {teams[currentSlideIndex - 3].manager_name && (
                     <div className="flex items-center gap-4">
                       <span className="text-sm font-semibold text-foreground w-32">Manager</span>
-                      <span className="text-lg text-foreground font-medium">{teams[currentSlideIndex - 1].manager_name}</span>
+                      <span className="text-lg text-foreground font-medium">{teams[currentSlideIndex - 3].manager_name}</span>
                     </div>
                   )}
                 </div>
