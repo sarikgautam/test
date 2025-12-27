@@ -14,6 +14,10 @@ dist-ssr
 
 # Ignore root-level utility scripts
 /*.mjs
+/*.cjs
+/*.py
+test-*.html
+verify-*.html
 
 # Editor directories and files
 .vscode/*
