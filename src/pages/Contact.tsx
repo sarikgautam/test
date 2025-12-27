@@ -47,8 +47,7 @@ const Contact = () => {
           email,
           phone: phone || null,
           subject,
-          message,
-          status: 'unread'
+          message
         });
 
       if (error) throw error;
