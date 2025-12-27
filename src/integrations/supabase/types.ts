@@ -91,39 +91,39 @@ export type Database = {
       }
       contact_messages: {
         Row: {
-          id: string
-          first_name: string
-          last_name: string
-          email: string
-          phone: string | null
-          subject: string
-          message: string
-          status: string
           created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          message: string
+          phone: string | null
+          status: string
+          subject: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          first_name: string
-          last_name: string
-          email: string
-          phone?: string | null
-          subject: string
-          message: string
-          status?: string
           created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          message: string
+          phone?: string | null
+          status?: string
+          subject: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          first_name?: string
-          last_name?: string
-          email?: string
-          phone?: string | null
-          subject?: string
-          message?: string
-          status?: string
           created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          message?: string
+          phone?: string | null
+          status?: string
+          subject?: string
           updated_at?: string
         }
         Relationships: []
