@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Ignore root-level utility scripts
+/*.mjs
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
