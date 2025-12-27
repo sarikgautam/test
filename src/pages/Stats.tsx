@@ -166,7 +166,7 @@ const Stats = () => {
         .from("player_stats")
         .select(`
           *,
-          player:players(id, full_name, role, photo_url),
+          player:players!player_stats_player_id_fkey(id, full_name, role, photo_url),
           match:matches(id, match_date)
         `)
         .gt("wickets", 0);
