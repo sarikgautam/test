@@ -227,7 +227,7 @@ const Register = () => {
       if (regCheckError) throw regCheckError;
 
       if (!existingReg) {
-        // Create season registration
+        // Create season registration with pending status for admin review
         const { error: regError } = await supabase
           .from("player_season_registrations")
           .insert({
@@ -235,6 +235,7 @@ const Register = () => {
             season_id: activeSeason.id,
             auction_status: "registered",
             base_price: 20,
+            registration_status: "pending",
           });
 
         if (regError) throw regError;

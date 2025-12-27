@@ -524,6 +524,7 @@ export type Database = {
           id: string
           jersey_number: number | null
           player_id: string
+          registration_status: string | null
           season_id: string
           sold_price: number | null
           team_id: string | null
@@ -536,6 +537,7 @@ export type Database = {
           id?: string
           jersey_number?: number | null
           player_id: string
+          registration_status?: string | null
           season_id: string
           sold_price?: number | null
           team_id?: string | null
@@ -548,6 +550,7 @@ export type Database = {
           id?: string
           jersey_number?: number | null
           player_id?: string
+          registration_status?: string | null
           season_id?: string
           sold_price?: number | null
           team_id?: string | null
