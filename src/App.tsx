@@ -30,6 +30,7 @@ import TeamsAdmin from "./pages/admin/TeamsAdmin";
 import PlayersAdmin from "./pages/admin/PlayersAdmin";
 import PlayersImportAdmin from "./pages/admin/PlayersImportAdmin";
 import SeasonMigrationAdmin from "./pages/admin/SeasonMigrationAdmin";
+import RegistrationReviewAdmin from "./pages/admin/RegistrationReviewAdmin";
 import MatchesAdmin from "./pages/admin/MatchesAdmin";
 import StandingsAdmin from "./pages/admin/StandingsAdmin";
 import StatsAdmin from "./pages/admin/StatsAdmin";
@@ -79,6 +80,7 @@ const App = () => (
                 <Route path="owners" element={<OwnersAdmin />} />
                 <Route path="players" element={<PlayersAdmin />} />
                 <Route path="players-import" element={<PlayersImportAdmin />} />
+                <Route path="registration-review" element={<RegistrationReviewAdmin />} />
                 <Route path="season-migration" element={<SeasonMigrationAdmin />} />
                 <Route path="matches" element={<MatchesAdmin />} />
                 <Route path="results" element={<MatchResultsAdmin />} />

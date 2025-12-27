@@ -19,6 +19,7 @@ import {
   Newspaper,
   ArrowRightLeft,
   MessageSquare,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/admin/owners", label: "Owners", icon: Handshake },
   { href: "/admin/players", label: "Players", icon: Users },
   { href: "/admin/players-import", label: "Import Players", icon: FileSpreadsheet },
+  { href: "/admin/registration-review", label: "Review Registrations", icon: ClipboardCheck },
   { href: "/admin/season-migration", label: "Season Migration", icon: ArrowRightLeft },
   { href: "/admin/matches", label: "Matches", icon: Calendar },
   { href: "/admin/results", label: "Match Results", icon: FileSpreadsheet },
