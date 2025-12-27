@@ -871,6 +871,39 @@ export type Database = {
           },
         ]
       }
+      support_club: {
+        Row: {
+          id: string
+          name: string
+          logo_url: string
+          website_url: string | null
+          is_active: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          logo_url: string
+          website_url?: string | null
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          logo_url?: string
+          website_url?: string | null
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       standings: {
         Row: {
           id: string

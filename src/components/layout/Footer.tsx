@@ -1,8 +1,23 @@
 import { Mail, MapPin, Facebook, Instagram, Youtube } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import gcnplLogo from "@/assets/gcnpl-logo.png";
 
 export function Footer() {
+  const { data: supportClubs } = useQuery({
+    queryKey: ["support-clubs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("support_club")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   return (
     <footer className="bg-card border-t border-border">
       <div className="container mx-auto px-4 py-12">
@@ -78,6 +93,35 @@ export function Footer() {
             </div>
           </div>
         </div>
+
+        {/* Support Club Section */}
+        {supportClubs && supportClubs.length > 0 && (
+          <div className="mt-8 pt-8 border-t border-border">
+            <div className="text-center space-y-4">
+              <p className="text-muted-foreground text-sm font-medium">Supported By</p>
+              <div className="flex flex-wrap justify-center items-center gap-6">
+                {supportClubs.map((club) => (
+                  <a
+                    key={club.id}
+                    href={club.website_url || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                  >
+                    <img
+                      src={club.logo_url}
+                      alt={club.name}
+                      className="h-12 w-auto object-contain"
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      {club.name}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-12 pt-8 border-t border-border text-center">
           <p className="text-muted-foreground text-sm">

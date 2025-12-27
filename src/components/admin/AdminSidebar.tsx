@@ -20,6 +20,7 @@ import {
   ArrowRightLeft,
   MessageSquare,
   ClipboardCheck,
+  Footprints,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +45,7 @@ const navItems = [
   { href: "/admin/news", label: "News", icon: Newspaper },
   { href: "/admin/contact", label: "Contact Info", icon: Phone },
   { href: "/admin/messages", label: "Messages", icon: MessageSquare },
+  { href: "/admin/footer", label: "Footer", icon: Footprints },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
