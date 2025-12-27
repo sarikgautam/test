@@ -111,9 +111,9 @@ export function Footer() {
                     <img
                       src={club.logo_url}
                       alt={club.name}
-                      className="h-12 w-auto object-contain"
+                      className="h-20 w-auto object-contain"
                     />
-                    <span className="text-sm font-medium text-foreground">
+                    <span className="text-base font-medium text-foreground">
                       {club.name}
                     </span>
                   </a>
