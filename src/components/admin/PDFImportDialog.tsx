@@ -217,6 +217,7 @@ export function PDFImportDialog({
       fielder_id: null,
       runout_by_id: null,
       dismissal_other_text: null,
+      batting_order: null,
     }));
 
     // Merge batting and bowling stats for same players
