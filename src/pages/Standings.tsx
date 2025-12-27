@@ -19,20 +19,30 @@ const Standings = () => {
     },
   });
 
-  const { data: standings, isLoading } = useQuery({
+  const { data: standings, isLoading, error: standingsError } = useQuery({
     queryKey: ["standings", activeSeason?.id],
     queryFn: async () => {
+      console.log("[Standings] Fetching for season:", activeSeason?.id);
       const { data, error } = await supabase
         .from("standings")
         .select(`*, team:teams(*)`)
         .eq("season_id", activeSeason!.id)
         .order("points", { ascending: false })
         .order("net_run_rate", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error("[Standings] Query error:", error);
+        throw error;
+      }
+      console.log("[Standings] Fetched data:", data);
       return data;
     },
     enabled: !!activeSeason?.id,
   });
+
+  // Debug log
+  if (standingsError) {
+    console.error("[Standings] Error:", standingsError);
+  }
   return (
     <Layout>
       <div className="min-h-screen py-12 px-4">

@@ -78,6 +78,9 @@ interface Match {
   status: string;
   match_number: number;
   venue: string;
+  match_stage?: string | null;
+  home_team?: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
+  away_team?: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
 }
 
 const TeamDetails = () => {
@@ -159,7 +162,21 @@ const TeamDetails = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("matches")
-        .select("*")
+        .select(`
+          id,
+          match_number,
+          match_date,
+          venue,
+          status,
+          match_stage,
+          home_team_id,
+          away_team_id,
+          home_team_score,
+          away_team_score,
+          winner_team_id,
+          home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, logo_url),
+          away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, logo_url)
+        `)
         .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
         .order("match_date", { ascending: false });
       if (error) throw error;
@@ -203,6 +220,14 @@ const TeamDetails = () => {
 
   const completedMatches = matches?.filter(m => m.status === "completed").slice(0, 5) || [];
   const upcomingMatches = matches?.filter(m => m.status === "upcoming").slice(0, 3) || [];
+
+  const getMatchLabel = (match: Match) => {
+    if (match.match_stage === 'final') return 'Final';
+    if (match.match_stage === 'eliminator') return 'Eliminator';
+    if (match.match_stage === 'qualifier') return 'Qualifier';
+    if (match.match_stage === 'group') return `Match ${match.match_number}`;
+    return `Match ${match.match_number}`;
+  };
 
   const getOpponentTeam = (match: Match) => {
     const opponentId = match.home_team_id === teamId ? match.away_team_id : match.home_team_id;
@@ -759,84 +784,78 @@ const TeamDetails = () => {
               </div>
               
               {completedMatches.length ? (
-                <div className="space-y-4">
-                  {completedMatches.map((match) => {
-                    const opponent = getOpponentTeam(match);
-                    const result = getMatchResult(match);
-                    const resultDescription = getMatchResultDescription(match, match.home_team_id === teamId);
+                <div className="grid grid-cols-1 gap-6">
+                  {completedMatches.map((match, index) => {
                     const isHome = match.home_team_id === teamId;
+                    const opponent = isHome ? match.away_team : match.home_team;
+                    const result = getMatchResult(match);
+                    const resultDescription = getMatchResultDescription(match, isHome);
                     const teamScore = isHome ? match.home_team_score : match.away_team_score;
                     const opponentScore = isHome ? match.away_team_score : match.home_team_score;
                     
                     const resultColor = result === 'win' ? team.primary_color : result === 'loss' ? '#ef4444' : '#8b5cf6';
-                    const resultBgColor = result === 'win' ? `${team.primary_color}15` : result === 'loss' ? '#ef444415' : '#8b5cf615';
                     
                     return (
-                      <Link 
+                      <Link
                         key={match.id}
-                        to={`/fixtures`}
-                        className="group relative block overflow-hidden rounded-2xl border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
+                        to={`/fixtures/${match.id}`}
+                        className="group relative bg-card rounded-xl border border-border overflow-hidden card-hover animate-fade-in-up block"
+                        style={{ animationDelay: `${index * 120}ms` }}
                       >
-                        {/* Result accent line */}
-                        <div 
-                          className="absolute top-0 left-0 right-0 h-1.5"
-                          style={{ backgroundColor: resultColor }}
-                        />
-                        
-                        <div className="bg-card p-5 md:p-6">
-                          <div className="flex items-start gap-4">
-                            {/* Result Icon */}
-                            <div 
-                              className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
-                              style={{ backgroundColor: resultBgColor }}
-                            >
-                              {result === 'win' ? (
-                                <CheckCircle2 className="w-6 h-6" style={{ color: resultColor }} />
-                              ) : result === 'loss' ? (
-                                <XCircle className="w-6 h-6" style={{ color: resultColor }} />
+                        <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: resultColor }} />
+                        <div className="p-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: `${resultColor}22`, color: resultColor }}>
+                              {getMatchLabel(match)}
+                            </span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-4 mb-3">
+                            <div className="flex-1 text-center">
+                              {team.logo_url ? (
+                                <img src={team.logo_url} alt={team.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
                               ) : (
-                                <Minus className="w-6 h-6" style={{ color: resultColor }} />
+                                <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-sm font-bold text-white mb-1" style={{ backgroundColor: team.primary_color }}>
+                                  {team.short_name.substring(0, 2)}
+                                </div>
                               )}
+                              <p className="text-sm font-medium text-foreground truncate">{team.short_name}</p>
+                              <p className="text-xs text-muted-foreground">{teamScore || "-"}</p>
                             </div>
-                            
-                            {/* Match Details */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                {opponent?.logo_url ? (
-                                  <img src={opponent.logo_url} alt={opponent.name} className="w-6 h-6 object-contain" />
-                                ) : (
-                                  <div 
-                                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                                    style={{ backgroundColor: opponent?.primary_color || '#666', color: 'white' }}
-                                  >
-                                    {opponent?.short_name?.substring(0, 2)}
-                                  </div>
-                                )}
-                                <p className="font-semibold text-sm md:text-base">{isHome ? 'vs' : '@'} {opponent?.short_name}</p>
-                              </div>
-                              
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-2">
-                                <p className="text-sm md:text-base font-bold">
-                                  {teamScore} <span className="text-muted-foreground font-normal">vs</span> {opponentScore}
-                                </p>
-                              </div>
-                              
-                              <p className="text-sm md:text-base font-semibold" style={{ color: resultColor }}>
-                                {resultDescription}
-                              </p>
+
+                            <div className="text-lg font-display text-muted-foreground">vs</div>
+
+                            <div className="flex-1 text-center">
+                              {opponent?.logo_url ? (
+                                <img src={opponent.logo_url} alt={opponent.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
+                              ) : (
+                                <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-sm font-bold text-white mb-1" style={{ backgroundColor: opponent?.primary_color }}>
+                                  {opponent?.short_name?.substring(0, 2) || "TBA"}
+                                </div>
+                              )}
+                              <p className="text-sm font-medium text-foreground truncate">{opponent?.short_name || "TBA"}</p>
+                              <p className="text-xs text-muted-foreground">{opponentScore || "-"}</p>
                             </div>
-                            
-                            {/* Badge */}
-                            <div className="flex-shrink-0">
-                              <Badge 
-                                className={`uppercase font-semibold text-xs md:text-sm px-3 py-1 ${
-                                  result === 'win' ? 'bg-green-500/20 text-green-700 dark:text-green-400' :
-                                  result === 'loss' ? 'bg-red-500/20 text-red-700 dark:text-red-400' :
-                                  'bg-purple-500/20 text-purple-700 dark:text-purple-400'
-                                }`}
-                              >
-                                {result}
-                              </Badge>
+                          </div>
+
+                          <div className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: resultColor }}>
+                              {result === 'draw' ? (
+                                <Minus className="w-4 h-4" />
+                              ) : result === 'win' ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                              ) : (
+                                <XCircle className="w-4 h-4" />
+                              )}
+                              <span>{resultDescription || "Result pending"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Target className="w-3 h-3" />
+                              {match.venue}
                             </div>
                           </div>
                         </div>

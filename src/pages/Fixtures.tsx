@@ -18,8 +18,21 @@ import { formatLocalTime } from "@/lib/utils";
 const Fixtures = () => {
   const navigate = useNavigate();
   const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [seasonFilter, setSeasonFilter] = useState<string>("all");
   
-  const { data: teams, isLoading: teamsLoading } = useQuery({
+  const { data: seasons } = useQuery({
+    queryKey: ["seasons-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("id, name, start_date, end_date, is_active")
+        .order("start_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+  
+  const { data: teams } = useQuery({
     queryKey: ["teams-list"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -36,8 +49,8 @@ const Fixtures = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("matches")
-        .select(`*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*), winner:teams!matches_winner_team_id_fkey(*)`)
-        .order("match_date", { ascending: true });
+        .select(`*, season_id, match_stage, match_summary, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*), winner:teams!matches_winner_team_id_fkey(*)`)
+        .order("match_date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -45,11 +58,30 @@ const Fixtures = () => {
 
   const filteredMatches = useMemo(() => {
     if (!matches) return [];
-    if (teamFilter === "all") return matches;
-    return matches.filter(
-      (m) => m.home_team_id === teamFilter || m.away_team_id === teamFilter
-    );
-  }, [matches, teamFilter]);
+    let filtered = matches;
+    
+    // Filter by season
+    if (seasonFilter !== "all") {
+      filtered = filtered.filter((m) => m.season_id === seasonFilter);
+    }
+    
+    // Filter by team
+    if (teamFilter !== "all") {
+      filtered = filtered.filter(
+        (m) => m.home_team_id === teamFilter || m.away_team_id === teamFilter
+      );
+    }
+    
+    return filtered;
+  }, [matches, teamFilter, seasonFilter]);
+
+  const getMatchLabel = (match: any) => {
+    if (match.match_stage === 'final') return 'Final';
+    if (match.match_stage === 'eliminator') return 'Eliminator';
+    if (match.match_stage === 'qualifier') return 'Qualifier';
+    if (match.match_stage === 'group') return `Match ${match.match_number}`;
+    return `Match ${match.match_number}`;
+  };
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -79,6 +111,26 @@ const Fixtures = () => {
           {/* Filters */}
           <div className="flex flex-col md:flex-row md:items-center gap-4 mb-10">
             <div className="flex items-center gap-3">
+              <p className="text-sm text-muted-foreground">Filter by season</p>
+              <Select
+                value={seasonFilter}
+                onValueChange={(val) => setSeasonFilter(val)}
+              >
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="Select season" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All seasons</SelectItem>
+                  {seasons?.map((season) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      {season.name} {season.is_active && "(Active)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-3">
               <p className="text-sm text-muted-foreground">Filter by team</p>
               <Select
                 value={teamFilter}
@@ -102,8 +154,8 @@ const Fixtures = () => {
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted">
                 Showing {filteredMatches.length} match{filteredMatches.length === 1 ? "" : "es"}
               </span>
-              {teamFilter !== "all" && (
-                <Button variant="ghost" size="sm" onClick={() => setTeamFilter("all")}>
+              {(teamFilter !== "all" || seasonFilter !== "all") && (
+                <Button variant="ghost" size="sm" onClick={() => { setTeamFilter("all"); setSeasonFilter("all"); }}>
                   Clear
                 </Button>
               )}
@@ -123,7 +175,7 @@ const Fixtures = () => {
                   <div className="p-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">Match {match.match_number}</span>
+                        <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">{getMatchLabel(match)}</span>
                         {(match as any).overs_per_side && (
                           <span className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">
                             {(match as any).overs_per_side} Overs
@@ -194,6 +246,11 @@ const Fixtures = () => {
                           <Trophy className="w-4 h-4" />
                           {match.winner.name} Won
                         </span>
+                      </div>
+                    )}
+                    {match.match_summary && match.status === "completed" && (
+                      <div className="text-center mt-3">
+                        <p className="text-sm text-muted-foreground">{match.match_summary}</p>
                       </div>
                     )}
                   </div>

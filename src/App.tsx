@@ -39,6 +39,7 @@ import AuctionAdmin from "./pages/admin/AuctionAdmin";
 import SponsorsAdmin from "./pages/admin/SponsorsAdmin";
 import GalleryAdmin from "./pages/admin/GalleryAdmin";
 import ContactAdmin from "./pages/admin/ContactAdmin";
+import MessagesAdmin from "./pages/admin/MessagesAdmin";
 import NewsAdmin from "./pages/admin/NewsAdmin";
 import OwnersAdmin from "./pages/admin/OwnersAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
@@ -89,6 +90,7 @@ const App = () => (
                 <Route path="gallery" element={<GalleryAdmin />} />
                 <Route path="news" element={<NewsAdmin />} />
                 <Route path="contact" element={<ContactAdmin />} />
+                <Route path="messages" element={<MessagesAdmin />} />
                 <Route path="settings" element={<SettingsAdmin />} />
               </Route>
               <Route path="*" element={<NotFound />} />

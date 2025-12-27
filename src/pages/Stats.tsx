@@ -158,21 +158,98 @@ const Stats = () => {
     },
   });
 
+  // Query for best bowling figures in a single match
+  const { data: bestBowlingFigures } = useQuery({
+    queryKey: ["best-bowling-figures", seasonFilter],
+    queryFn: async () => {
+      let statsQuery = supabase
+        .from("player_stats")
+        .select(`
+          *,
+          player:players(id, full_name, role, photo_url),
+          match:matches(id, match_date)
+        `)
+        .gt("wickets", 0);
+
+      if (seasonFilter !== "all") {
+        statsQuery = statsQuery.eq("season_id", seasonFilter);
+      }
+
+      const { data, error } = await statsQuery;
+      if (error) {
+        console.error("[Stats] Best bowling figures query error:", error);
+        throw error;
+      }
+
+      console.log("[Stats] Best bowling figures raw data:", data?.length, "records");
+
+      if (!data || data.length === 0) return [];
+
+      // Get team info from registrations
+      const playerIds = [...new Set(data.map(s => s.player_id))];
+      const { data: registrations } = await supabase
+        .from("player_season_registrations")
+        .select("player_id, team:teams(id, name, short_name, primary_color)")
+        .in("player_id", playerIds)
+        .eq("auction_status", "sold");
+
+      const teamMap = new Map(registrations?.map(r => [r.player_id, r.team]) || []);
+
+      const result = data.map(stat => ({
+        id: stat.player.id,
+        full_name: stat.player.full_name,
+        role: stat.player.role,
+        photo_url: stat.player.photo_url,
+        team: teamMap.get(stat.player_id) || null,
+        stats: {
+          matches: 1,
+          runs_scored: 0,
+          balls_faced: 0,
+          fours: 0,
+          sixes: 0,
+          wickets: stat.wickets,
+          overs_bowled: Number(stat.overs_bowled),
+          runs_conceded: stat.runs_conceded,
+          maidens: stat.maidens,
+          catches: 0,
+          stumpings: 0,
+          run_outs: 0,
+        },
+      }));
+
+      console.log("[Stats] Best bowling figures processed:", result.length, "entries");
+      return result;
+    },
+  });
+
   const { data: playersWithStats, isLoading } = useQuery({
     queryKey: ["players-with-stats", seasonFilter],
     queryFn: async () => {
-      // Get all players - use explicit foreign key hint to avoid ambiguity
-      const { data: players, error: playersError } = await supabase
-        .from("players")
-        .select("id, full_name, role, photo_url, team:teams!players_team_id_fkey(*)")
-        .order("full_name");
-      if (playersError) throw playersError;
+      // Get season ID to filter by
+      const targetSeasonId = seasonFilter !== "all" ? seasonFilter : (activeSeason?.id || null);
+
+      // Get all players with team info from player_season_registrations
+      const { data: registrations, error: regError } = await supabase
+        .from("player_season_registrations")
+        .select(`
+          player_id,
+          team_id,
+          season_id,
+          player:players!inner(id, full_name, role, photo_url),
+          team:teams!inner(id, name, short_name, primary_color)
+        `)
+        .eq("auction_status", "sold")
+        .order("player(full_name)");
+      
+      if (regError) throw regError;
 
       // Get aggregated stats - filter by season or get all
       let statsQuery = supabase.from("player_stats").select("*");
       
       if (seasonFilter !== "all") {
         statsQuery = statsQuery.eq("season_id", seasonFilter);
+      } else if (targetSeasonId) {
+        statsQuery = statsQuery.eq("season_id", targetSeasonId);
       }
       
       const { data: stats, error: statsError } = await statsQuery;
@@ -212,10 +289,34 @@ const Stats = () => {
         s.run_outs += stat.run_outs;
       });
 
+      // Group registrations by player (handle multiple seasons)
+      const playerMap = new Map<string, {
+        player: any;
+        team: any;
+      }>();
+      
+      registrations?.forEach((reg) => {
+        const playerId = reg.player_id;
+        if (!playerMap.has(playerId)) {
+          playerMap.set(playerId, {
+            player: reg.player,
+            team: reg.team,
+          });
+        }
+      });
+
       // Combine players with their stats
-      return players?.map((player) => ({
-        ...player,
-        team: player.team as PlayerWithStats["team"],
+      return Array.from(playerMap.values()).map(({ player, team }) => ({
+        id: player.id,
+        full_name: player.full_name,
+        role: player.role,
+        photo_url: player.photo_url,
+        team: team ? {
+          id: team.id,
+          name: team.name,
+          short_name: team.short_name,
+          primary_color: team.primary_color,
+        } : null,
         stats: aggregatedStats[player.id] || {
           matches: 0,
           runs_scored: 0,
@@ -310,6 +411,19 @@ const Stats = () => {
       return econA - econB;
     })
     .slice(0, 5);
+
+  // Best bowling figures in a single match
+  const bestBowlingInMatch = [...(bestBowlingFigures || [])]
+    .sort((a, b) => {
+      // Sort by wickets (desc), then by runs conceded (asc)
+      if (b.stats.wickets !== a.stats.wickets) {
+        return b.stats.wickets - a.stats.wickets;
+      }
+      return a.stats.runs_conceded - b.stats.runs_conceded;
+    })
+    .slice(0, 5);
+
+  console.log("[Stats] Best bowling in match:", bestBowlingInMatch.length, "entries", bestBowlingInMatch[0]);
 
   const calculateStrikeRate = (runs: number, balls: number) => {
     if (balls === 0) return "0.00";
@@ -444,6 +558,15 @@ const Stats = () => {
                     statLabel="wickets"
                     formatValue={(p) => p.stats.wickets}
                     gradient="bg-gradient-to-br from-emerald-500/10 to-transparent"
+                  />
+                  <LeaderboardCard
+                    title="Best Bowling Figures"
+                    icon={Trophy}
+                    players={bestBowlingInMatch}
+                    statKey="calculated"
+                    statLabel="in match"
+                    formatValue={(p) => `${p.stats.wickets}/${p.stats.runs_conceded}`}
+                    gradient="bg-gradient-to-br from-blue-500/10 to-transparent"
                   />
                   <LeaderboardCard
                     title="Best Economy"

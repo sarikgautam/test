@@ -12,6 +12,7 @@ interface Match {
   match_date: string;
   venue: string;
   status: string;
+  match_stage?: string | null;
   winner_team_id?: string | null;
   home_team_score?: string | null;
   away_team_score?: string | null;
@@ -20,7 +21,7 @@ interface Match {
 }
 
 export function UpcomingMatches() {
-  const { data: matches, isLoading } = useQuery({
+  const { data: matches, isLoading, error: queryError } = useQuery({
     queryKey: ["upcoming-matches"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -31,6 +32,7 @@ export function UpcomingMatches() {
           match_date,
           venue,
           status,
+          match_stage,
           winner_team_id,
           home_team_score,
           away_team_score,
@@ -39,15 +41,23 @@ export function UpcomingMatches() {
         `)
         .in("status", ["upcoming", "completed"])
         .order("match_date", { ascending: true })
-        .limit(6);
+        .limit(10);
 
-      if (error) throw error;
+      if (error) {
+        console.error("[UpcomingMatches] Query error:", error);
+        throw error;
+      }
+      console.log("[UpcomingMatches] Query data:", data);
       return data as Match[];
     },
   });
 
+  if (queryError) {
+    console.error("[UpcomingMatches] Query error from hook:", queryError);
+  }
+
   const upcoming = matches?.filter((m) => m.status === "upcoming").slice(0, 3) || [];
-  const completed = matches?.filter((m) => m.status === "completed").slice(0, 3) || [];
+  const completed = matches?.filter((m) => m.status === "completed").reverse().slice(0, 3) || [];
 
   const getResult = (match: Match) => {
     if (!match.home_team_score || !match.away_team_score || !match.winner_team_id) return null;
@@ -74,6 +84,14 @@ export function UpcomingMatches() {
     if (home.wickets === 10 || home.wickets === null) return `${match.away_team.short_name} won by ${runsDiff} run${runsDiff !== 1 ? 's' : ''}`;
     const wicketsRemaining = 10 - (away.wickets ?? 0);
     return `${match.away_team.short_name} won by ${wicketsRemaining} wicket${wicketsRemaining !== 1 ? 's' : ''}`;
+  };
+
+  const getMatchLabel = (match: Match) => {
+    if (match.match_stage === 'final') return 'Final';
+    if (match.match_stage === 'eliminator') return 'Eliminator';
+    if (match.match_stage === 'qualifier') return 'Qualifier';
+    if (match.match_stage === 'group') return `Match ${match.match_number}`;
+    return `Match ${match.match_number}`;
   };
 
   return (
@@ -112,7 +130,7 @@ export function UpcomingMatches() {
                   {/* Match Number */}
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
-                      Match {match.match_number}
+                      {getMatchLabel(match)}
                     </span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
@@ -201,16 +219,17 @@ export function UpcomingMatches() {
                     const isDraw = !match.winner_team_id;
 
                     return (
-                      <div
+                      <Link
                         key={match.id}
-                        className="group relative bg-card rounded-xl border border-border overflow-hidden card-hover animate-fade-in-up"
+                        to={`/fixtures/${match.id}`}
+                        className="group relative bg-card rounded-xl border border-border overflow-hidden card-hover animate-fade-in-up block"
                         style={{ animationDelay: `${index * 120}ms` }}
                       >
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: resultColor }} />
                         <div className="p-6">
                           <div className="flex items-center justify-between mb-3">
                             <span className="text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: `${resultColor}22`, color: resultColor }}>
-                              Match {match.match_number}
+                              {getMatchLabel(match)}
                             </span>
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
@@ -263,7 +282,7 @@ export function UpcomingMatches() {
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>

@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Camera, Image, X } from "lucide-react";
+import { Camera, Image, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const Gallery = () => {
   const [activeCategory, setActiveCategory] = useState("All");
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
   const { data: galleryItems, isLoading } = useQuery({
     queryKey: ['gallery'],
@@ -35,7 +35,34 @@ const Gallery = () => {
     return galleryItems.filter(item => item.event_name === activeCategory);
   }, [galleryItems, activeCategory]);
 
-  const selectedItem = galleryItems?.find(item => item.id === selectedImage);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedImageIndex === null) return;
+      
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        navigatePrevious();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        navigateNext();
+      } else if (e.key === "Escape") {
+        setSelectedImageIndex(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedImageIndex, filteredItems]);
+
+  const navigateNext = () => {
+    if (!filteredItems || selectedImageIndex === null) return;
+    setSelectedImageIndex((selectedImageIndex + 1) % filteredItems.length);
+  };
+
+  const navigatePrevious = () => {
+    if (!filteredItems || selectedImageIndex === null) return;
+    setSelectedImageIndex((selectedImageIndex - 1 + filteredItems.length) % filteredItems.length);
+  };
 
   return (
     <Layout>
@@ -88,7 +115,7 @@ const Gallery = () => {
                 {filteredItems.map((item, index) => (
                   <div
                     key={item.id}
-                    onClick={() => setSelectedImage(item.id)}
+                    onClick={() => setSelectedImageIndex(index)}
                     className={cn(
                       "group relative overflow-hidden rounded-xl bg-card border border-border/50 cursor-pointer hover:border-primary/30 transition-all duration-300",
                       index % 7 === 0 && "md:col-span-2 md:row-span-2"
@@ -133,35 +160,80 @@ const Gallery = () => {
           )}
 
           {/* Lightbox Modal */}
-          {selectedImage && selectedItem && (
+          {selectedImageIndex !== null && filteredItems[selectedImageIndex] && (
             <div 
-              className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4"
-              onClick={() => setSelectedImage(null)}
+              className="fixed inset-0 z-50 bg-background/98 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => setSelectedImageIndex(null)}
             >
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-4 right-4"
-                onClick={() => setSelectedImage(null)}
+                className="absolute top-4 right-4 z-10 hover:bg-background/80"
+                onClick={() => setSelectedImageIndex(null)}
               >
                 <X className="w-6 h-6" />
               </Button>
-              <div className="max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-                {selectedItem.image_url ? (
+
+              {/* Previous Button */}
+              {filteredItems.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-background/80 hover:bg-background hover:scale-110 transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigatePrevious();
+                  }}
+                >
+                  <ChevronLeft className="w-8 h-8" />
+                </Button>
+              )}
+
+              {/* Next Button */}
+              {filteredItems.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-background/80 hover:bg-background hover:scale-110 transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigateNext();
+                  }}
+                >
+                  <ChevronRight className="w-8 h-8" />
+                </Button>
+              )}
+
+              <div className="max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
+                {filteredItems[selectedImageIndex].image_url ? (
                   <img 
-                    src={selectedItem.image_url} 
-                    alt={selectedItem.title} 
-                    className="w-full max-h-[80vh] object-contain rounded-xl"
+                    src={filteredItems[selectedImageIndex].image_url} 
+                    alt={filteredItems[selectedImageIndex].title} 
+                    className="w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
                   />
                 ) : (
                   <div className="aspect-video bg-card rounded-xl flex items-center justify-center">
                     <Image className="w-24 h-24 text-muted-foreground/50" />
                   </div>
                 )}
-                <div className="mt-4 text-center">
-                  <h3 className="text-xl font-bold text-foreground">{selectedItem.title}</h3>
-                  {selectedItem.description && (
-                    <p className="text-muted-foreground mt-2">{selectedItem.description}</p>
+                <div className="mt-6 text-center bg-background/80 backdrop-blur-sm rounded-xl p-4">
+                  {filteredItems[selectedImageIndex].event_name && (
+                    <span className="text-sm font-medium text-primary mb-2 block">
+                      {filteredItems[selectedImageIndex].event_name}
+                    </span>
+                  )}
+                  <h3 className="text-xl md:text-2xl font-bold text-foreground">
+                    {filteredItems[selectedImageIndex].title}
+                  </h3>
+                  {filteredItems[selectedImageIndex].description && (
+                    <p className="text-muted-foreground mt-2">
+                      {filteredItems[selectedImageIndex].description}
+                    </p>
+                  )}
+                  {filteredItems.length > 1 && (
+                    <p className="text-xs text-muted-foreground mt-3">
+                      {selectedImageIndex + 1} / {filteredItems.length} {activeCategory !== "All" && `in ${activeCategory}`}
+                    </p>
                   )}
                 </div>
               </div>

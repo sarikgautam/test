@@ -178,6 +178,7 @@ export default function MatchResultsAdmin() {
         .from("player_stats")
         .select("*")
         .eq("match_id", selectedMatchId!)
+        .order("batting_order", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as PlayerStat[];
@@ -294,6 +295,7 @@ export default function MatchResultsAdmin() {
         fielder_id: entry.fielder_id || null,
         runout_by_id: entry.runout_by_id || null,
         dismissal_other_text: entry.dismissal_other_text || null,
+        batting_order: (entry as any).batting_order ?? index,
       }));
       console.log(`[bulkCreateMutation] Upserting ${statsToInsert.length} stats. First entry matchId: ${statsToInsert[0]?.match_id}`, statsToInsert.slice(0, 2));
       // Use upsert to update existing stats or insert new ones

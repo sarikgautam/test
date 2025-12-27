@@ -18,6 +18,7 @@ import {
   Phone,
   Newspaper,
   ArrowRightLeft,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/admin/gallery", label: "Gallery", icon: Image },
   { href: "/admin/news", label: "News", icon: Newspaper },
   { href: "/admin/contact", label: "Contact Info", icon: Phone },
+  { href: "/admin/messages", label: "Messages", icon: MessageSquare },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

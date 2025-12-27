@@ -166,8 +166,8 @@ export function PDFImportDialog({
       return;
     }
 
-    // Convert batting stats
-    const battingEntries = validBattingStats.map((stat) => {
+    // Convert batting stats with batting order
+    const battingEntries = validBattingStats.map((stat, index) => {
       // Match bowler and fielder names to player IDs
       const bowlerPlayer = stat.dismissal?.bowler ? findMatchingPlayer(stat.dismissal.bowler) : undefined;
       const fielderPlayer = stat.dismissal?.fielder ? findMatchingPlayer(stat.dismissal.fielder) : undefined;
@@ -192,6 +192,7 @@ export function PDFImportDialog({
         fielder_id: fielderPlayer?.id || null,
         runout_by_id: null,
         dismissal_other_text: null,
+        batting_order: index,  // Assign order based on PDF sequence (0 = first batter)
       };
     });
 
@@ -224,7 +225,7 @@ export function PDFImportDialog({
     [...battingEntries, ...bowlingEntries].forEach(entry => {
       const existing = mergedStats.get(entry.player_id);
       if (existing) {
-        // Merge stats for the same player
+        // Merge stats for the same player, keep batting_order from batting entry
         mergedStats.set(entry.player_id, {
           player_id: entry.player_id,
           match_id: matchId,
@@ -245,6 +246,7 @@ export function PDFImportDialog({
           fielder_id: existing.fielder_id || entry.fielder_id,
           runout_by_id: existing.runout_by_id || entry.runout_by_id,
           dismissal_other_text: existing.dismissal_other_text || entry.dismissal_other_text,
+          batting_order: existing.batting_order !== undefined ? existing.batting_order : (entry.batting_order ?? 999),
         });
       } else {
         mergedStats.set(entry.player_id, entry);
