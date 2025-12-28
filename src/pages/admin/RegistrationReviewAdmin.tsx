@@ -53,6 +53,10 @@ interface PendingRegistration {
     current_team: string | null;
     date_of_birth: string | null;
     address: string | null;
+    emergency_contact_name: string | null;
+    emergency_contact_phone: string | null;
+    emergency_contact_email: string | null;
+    payment_receipt_url: string | null;
   };
 }
 
@@ -116,7 +120,7 @@ export default function RegistrationReviewAdmin() {
           season_id,
           registration_status,
           created_at,
-          player:players(id, full_name, email, phone, role, photo_url, current_team, date_of_birth, address)
+          player:players(id, full_name, email, phone, role, photo_url, current_team, date_of_birth, address, emergency_contact_name, emergency_contact_phone, emergency_contact_email, payment_receipt_url)
         `)
         .eq("season_id", selectedSeasonId)
         .eq("registration_status", "pending")
@@ -521,7 +525,7 @@ export default function RegistrationReviewAdmin() {
 
       {/* Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Registration Details</DialogTitle>
           </DialogHeader>
@@ -574,6 +578,50 @@ export default function RegistrationReviewAdmin() {
                   <p className="font-medium">{selectedRegistration.player.address || "N/A"}</p>
                 </div>
               </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">Emergency Contact</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Name</p>
+                    <p className="font-medium">{selectedRegistration.player.emergency_contact_name || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Phone</p>
+                    <p className="font-medium">{selectedRegistration.player.emergency_contact_phone || "N/A"}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedRegistration.player.emergency_contact_email || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedRegistration.player.payment_receipt_url && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Payment Receipt</h4>
+                  <a 
+                    href={selectedRegistration.player.payment_receipt_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <img 
+                      src={selectedRegistration.player.payment_receipt_url} 
+                      alt="Payment Receipt" 
+                      className="w-full h-auto rounded-lg border border-border hover:opacity-80 transition-opacity"
+                    />
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={() => window.open(selectedRegistration.player.payment_receipt_url!, '_blank')}
+                  >
+                    View Full Size
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 

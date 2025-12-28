@@ -21,9 +21,18 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Trash2, Users, Plus } from "lucide-react";
+import { Search, Trash2, Users, Plus, Eye, User } from "lucide-react";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { format } from "date-fns";
 
 type Player = Database["public"]["Tables"]["players"]["Row"];
 type Team = Database["public"]["Tables"]["teams"]["Row"];
@@ -44,6 +53,8 @@ export default function PlayersAdmin() {
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<string>("batsman");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithRegistration | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const { selectedSeasonId } = useSeason();
 
   const { toast } = useToast();
@@ -294,14 +305,26 @@ export default function PlayersAdmin() {
                     {player.registration?.sold_price ? `$${player.registration.sold_price.toLocaleString()}` : "-"}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => deleteMutation.mutate(player.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedPlayer(player);
+                          setIsDetailsDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => deleteMutation.mutate(player.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -321,6 +344,121 @@ export default function PlayersAdmin() {
       <div className="text-sm text-muted-foreground">
         Showing {filteredPlayers?.length || 0} of {players?.length || 0} players
       </div>
+
+      {/* Player Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Player Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedPlayer && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                {selectedPlayer.photo_url ? (
+                  <img 
+                    src={selectedPlayer.photo_url} 
+                    alt={selectedPlayer.full_name}
+                    className="w-20 h-20 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+                    <User className="w-10 h-10 text-muted-foreground" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-xl font-semibold">{selectedPlayer.full_name}</h3>
+                  <Badge className={
+                    selectedPlayer.role === "batsman" ? "bg-blue-500" :
+                    selectedPlayer.role === "bowler" ? "bg-green-500" :
+                    selectedPlayer.role === "all_rounder" ? "bg-purple-500" :
+                    "bg-orange-500"
+                  }>
+                    {selectedPlayer.role.replace("_", " ")}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Email</p>
+                  <p className="font-medium">{selectedPlayer.email}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Phone</p>
+                  <p className="font-medium">{selectedPlayer.phone || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Date of Birth</p>
+                  <p className="font-medium">
+                    {selectedPlayer.date_of_birth 
+                      ? format(new Date(selectedPlayer.date_of_birth), "MMM d, yyyy")
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Current Team</p>
+                  <p className="font-medium">{selectedPlayer.current_team || "N/A"}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-muted-foreground">Address</p>
+                  <p className="font-medium">{selectedPlayer.address || "N/A"}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">Emergency Contact</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Name</p>
+                    <p className="font-medium">{selectedPlayer.emergency_contact_name || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Phone</p>
+                    <p className="font-medium">{selectedPlayer.emergency_contact_phone || "N/A"}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedPlayer.emergency_contact_email || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedPlayer.payment_receipt_url && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Payment Receipt</h4>
+                  <a 
+                    href={selectedPlayer.payment_receipt_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <img 
+                      src={selectedPlayer.payment_receipt_url} 
+                      alt="Payment Receipt" 
+                      className="w-full h-auto rounded-lg border border-border hover:opacity-80 transition-opacity"
+                    />
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={() => window.open(selectedPlayer.payment_receipt_url!, '_blank')}
+                  >
+                    View Full Size
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
