@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Trophy, ChevronRight, Crown, Star, Sparkles, Wallet } from "lucide-react";
+import { Users, Trophy, ChevronRight, Crown, Star, Sparkles, Wallet, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useActiveSeason } from "@/hooks/useSeason";
@@ -11,6 +11,7 @@ interface Owner {
   id: string;
   name: string;
   description: string | null;
+  photo_url: string | null;
   business_name: string | null;
   business_description: string | null;
   business_logo_url: string | null;
@@ -219,8 +220,20 @@ const Teams = () => {
                             <div className="grid grid-cols-2 gap-4">
                               {owner && (
                                 <div className="col-span-2 flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
-                                  {owner.business_logo_url && (
-                                    <img src={owner.business_logo_url} alt={owner.business_name || ''} className="w-12 h-12 rounded-lg object-contain" />
+                                  {owner.photo_url ? (
+                                    <img 
+                                      src={owner.photo_url} 
+                                      alt={owner.name}
+                                      className="w-12 h-12 rounded-full object-cover border-2"
+                                      style={{ borderColor: team.primary_color }}
+                                    />
+                                  ) : (
+                                    <div 
+                                      className="w-12 h-12 rounded-full flex items-center justify-center"
+                                      style={{ backgroundColor: `${team.primary_color}20` }}
+                                    >
+                                      <User className="w-6 h-6" style={{ color: team.primary_color }} />
+                                    </div>
                                   )}
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
