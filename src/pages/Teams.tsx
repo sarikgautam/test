@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Trophy, ChevronRight, Crown, Star } from "lucide-react";
+import { Users, Trophy, ChevronRight, Crown, Star, Sparkles, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useActiveSeason } from "@/hooks/useSeason";
@@ -87,7 +87,7 @@ const Teams = () => {
             <div className="text-center mb-4 animate-slide-up">
               <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
                 <Trophy className="w-4 h-4" />
-                GCNPL Season 2025
+                {activeSeason?.name ? activeSeason.name : "Current Season"}
               </span>
               <h1 className="font-display text-5xl md:text-7xl tracking-tight mb-6">
                 Meet The <span className="text-gradient-gold">Franchises</span>
@@ -95,6 +95,14 @@ const Teams = () => {
               <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
                 Six elite teams battling for glory in the Gold Coast Nepalese Premier League
               </p>
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <Link to="/fixtures">
+                  <Button variant="outline" className="rounded-xl">View Fixtures</Button>
+                </Link>
+                <Link to="/standings">
+                  <Button className="rounded-xl bg-primary text-primary-foreground">League Standings</Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -120,17 +128,20 @@ const Teams = () => {
                     className={`relative group animate-slide-up`}
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
+                    <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full blur-3xl opacity-20" style={{ backgroundColor: team.primary_color }} />
+                    <div className="absolute -bottom-8 -left-8 w-52 h-52 rounded-full blur-3xl opacity-15" style={{ backgroundColor: team.secondary_color }} />
+
                     <div 
-                      className={`flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-8 lg:gap-12 items-center`}
+                      className={`relative flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-8 lg:gap-12 items-center`}
                     >
                       {/* Team Logo/Visual Side */}
                       <div className="w-full lg:w-1/2 relative">
                         <div 
-                          className="relative aspect-[4/3] rounded-3xl overflow-hidden group-hover:scale-[1.02] transition-transform duration-500"
-                          style={{ 
-                            background: `linear-gradient(135deg, ${team.primary_color}20, ${team.secondary_color}20)` 
-                          }}
+                          className="relative aspect-[4/3] rounded-3xl overflow-hidden transition-transform duration-500 border border-border bg-card"
+                          style={{ boxShadow: `0 25px 50px -12px ${team.primary_color}33` }}
                         >
+                          {/* Accent Top Bar */}
+                          <div className="absolute top-0 left-0 right-0 h-2" style={{ background: `linear-gradient(90deg, ${team.primary_color}, ${team.secondary_color})` }} />
                           {/* Background Pattern */}
                           <div className="absolute inset-0 opacity-10">
                             <div 
@@ -148,7 +159,7 @@ const Teams = () => {
                               <img 
                                 src={team.logo_url} 
                                 alt={team.name}
-                                className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-2xl group-hover:scale-110 transition-transform duration-500"
+                                className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500"
                               />
                             ) : (
                               <div 
@@ -242,7 +253,20 @@ const Teams = () => {
                                 </div>
                                 <div>
                                   <p className="text-xs text-muted-foreground uppercase tracking-wide">Squad</p>
-                                  <p className="font-medium">{teamPlayers.length} Players</p>
+                                  <p className="font-medium">{teamPlayers.length} Players <span className="text-muted-foreground text-xs">(this season)</span></p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border">
+                                <div 
+                                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                                  style={{ backgroundColor: `${team.secondary_color}20` }}
+                                >
+                                  <Wallet className="w-5 h-5" style={{ color: team.secondary_color }} />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Remaining Budget</p>
+                                  <p className="font-medium">${team.remaining_budget?.toLocaleString?.() ?? team.remaining_budget}</p>
                                 </div>
                               </div>
                             </div>
@@ -253,8 +277,9 @@ const Teams = () => {
                             <Button 
                               className="group/btn mt-4 px-8 py-6 text-lg rounded-xl"
                               style={{ 
-                                backgroundColor: team.primary_color,
-                                color: 'white'
+                                backgroundImage: `linear-gradient(90deg, ${team.primary_color}, ${team.secondary_color})`,
+                                color: 'white',
+                                boxShadow: `0 15px 30px -10px ${team.primary_color}66`
                               }}
                             >
                               View Full Squad
