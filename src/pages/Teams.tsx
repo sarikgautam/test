@@ -256,19 +256,6 @@ const Teams = () => {
                                   <p className="font-medium">{teamPlayers.length} Players <span className="text-muted-foreground text-xs">(this season)</span></p>
                                 </div>
                               </div>
-
-                              <div className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border">
-                                <div 
-                                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                                  style={{ backgroundColor: `${team.secondary_color}20` }}
-                                >
-                                  <Wallet className="w-5 h-5" style={{ color: team.secondary_color }} />
-                                </div>
-                                <div>
-                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Remaining Budget</p>
-                                  <p className="font-medium">${team.remaining_budget?.toLocaleString?.() ?? team.remaining_budget}</p>
-                                </div>
-                              </div>
                             </div>
                           </div>
 
