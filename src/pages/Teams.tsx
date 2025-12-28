@@ -61,7 +61,8 @@ const Teams = () => {
         .from("player_season_registrations")
         .select("*")
         .eq("season_id", activeSeason.id)
-        .eq("auction_status", "sold");
+        .eq("registration_status", "approved")
+        .in("auction_status", ["sold", "retained"]);
       if (error) throw error;
       return data;
     },
