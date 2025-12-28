@@ -372,7 +372,7 @@ const TeamDetails = () => {
         <div 
           className="relative py-16 md:py-24 px-4 overflow-hidden"
           style={{ 
-            background: `linear-gradient(135deg, ${team.primary_color}15, ${team.secondary_color}10, transparent)` 
+            background: `linear-gradient(135deg, ${team.primary_color}18, ${team.secondary_color}12, transparent)` 
           }}
         >
           <div className="absolute inset-0 overflow-hidden">
@@ -383,6 +383,15 @@ const TeamDetails = () => {
             <div 
               className="absolute -bottom-1/2 -left-1/4 w-[600px] h-[600px] rounded-full opacity-10"
               style={{ backgroundColor: team.secondary_color }}
+            />
+            {/* Accent rails */}
+            <div 
+              className="absolute top-6 left-0 h-1 w-40 rounded-r-full shimmer"
+              style={{ background: `linear-gradient(90deg, ${team.primary_color}, transparent)` }}
+            />
+            <div 
+              className="absolute bottom-6 right-0 h-1 w-40 rounded-l-full shimmer"
+              style={{ background: `linear-gradient(90deg, transparent, ${team.secondary_color})` }}
             />
           </div>
 
@@ -395,11 +404,16 @@ const TeamDetails = () => {
             <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
               {/* Team Logo */}
               <div className="relative">
+                {/* Spotlight glow behind logo */}
+                <div 
+                  className="absolute -inset-10 md:-inset-14 rounded-full blur-2xl opacity-35"
+                  style={{ background: `radial-gradient(closest-side, ${team.primary_color}40, transparent)` }}
+                />
                 {team.logo_url ? (
                   <img 
                     src={team.logo_url} 
                     alt={team.name}
-                    className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-2xl"
+                    className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-[1.02]"
                   />
                 ) : (
                   <div 
@@ -455,12 +469,35 @@ const TeamDetails = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Hero CTAs */}
+                <div className="mt-6 flex flex-wrap justify-center lg:justify-start gap-3">
+                  <Link to="/fixtures">
+                    <Button
+                      className="rounded-full"
+                      style={{ background: `linear-gradient(90deg, ${team.primary_color}, ${team.secondary_color})`, color: 'white' }}
+                    >
+                      View Fixtures
+                    </Button>
+                  </Link>
+                  <Link to="/standings">
+                    <Button variant="outline" className="rounded-full border-2"
+                      style={{ borderColor: `${team.primary_color}60`, color: team.primary_color }}
+                    >
+                      Standings
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
 
             {/* Owner Section */}
             {owner && (
-              <div className="mt-12 bg-card rounded-2xl border border-border p-6 md:p-8">
+              <div className="mt-12 bg-card rounded-2xl border border-border p-6 md:p-8 relative overflow-hidden">
+                <div 
+                  className="absolute top-0 left-0 right-0 h-1"
+                  style={{ background: `linear-gradient(90deg, ${team.primary_color}, ${team.secondary_color})` }}
+                />
                 <div className="flex items-center gap-3 mb-6">
                   <Crown className="w-6 h-6" style={{ color: team.primary_color }} />
                   <h3 className="font-display text-xl">Team Owner</h3>
@@ -670,7 +707,7 @@ const TeamDetails = () => {
                   return (
                     <div 
                       key={reg.player.id} 
-                      className="group relative bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 transition-all duration-300"
+                      className="group relative bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/40 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                     >
                       {isCaptain && (
                         <div 
@@ -700,7 +737,7 @@ const TeamDetails = () => {
                             <img 
                               src={reg.player.photo_url} 
                               alt={reg.player.full_name}
-                              className="w-16 h-16 rounded-xl object-cover"
+                              className="w-16 h-16 rounded-xl object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                             />
                           ) : (
                             <div 
@@ -722,7 +759,11 @@ const TeamDetails = () => {
                               )}
                             </div>
                             <h4 className="font-medium truncate mt-1">{reg.player.full_name}</h4>
-                            <Badge variant="outline" className="mt-1 text-xs">
+                            <Badge 
+                              variant="outline" 
+                              className="mt-1 text-xs"
+                              style={{ backgroundColor: `${team.secondary_color}12`, color: team.primary_color, borderColor: `${team.primary_color}40` }}
+                            >
                               {getRoleLabel(reg.player.role)}
                             </Badge>
                           </div>
@@ -799,7 +840,16 @@ const TeamDetails = () => {
                                 <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: `${team.primary_color}20`, color: team.primary_color }}>
                                   Match #{match.match_number}
                                 </span>
-                                <span className="text-xs text-muted-foreground">{isHome ? '🏠 Home' : '🏃 Away'}</span>
+                                <span 
+                                  className="text-xs font-medium px-2 py-0.5 rounded-full border"
+                                  style={{ 
+                                    backgroundColor: isHome ? `${team.primary_color}15` : `${team.secondary_color}15`,
+                                    color: isHome ? team.primary_color : team.secondary_color,
+                                    borderColor: isHome ? `${team.primary_color}40` : `${team.secondary_color}40`
+                                  }}
+                                >
+                                  {isHome ? '🏠 Home' : '🏃 Away'}
+                                </span>
                               </div>
                               
                               <div className="flex items-center gap-3">
