@@ -275,7 +275,7 @@ const Register = () => {
             </div>
             <h1 className="font-display text-4xl mb-4">Registration Complete!</h1>
             <p className="text-muted-foreground mb-8">
-              You've been successfully added to the auction pool. Teams will bid for you during the auction.
+              You have been successfully registered for GCNPL {activeSeason?.name || "the current season"}. Your registration will be reviewed by the management team before being added to the auction pool. You will be contacted if any further information is required.
             </p>
             <Button variant="default" size="lg" onClick={() => window.location.reload()}>
               Register Another Player
@@ -540,7 +540,7 @@ const Register = () => {
                   <Upload className="w-5 h-5" />
                   Profile Photo
                 </CardTitle>
-                <CardDescription>Upload a recent photo (optional but recommended)</CardDescription>
+                <CardDescription>Upload a recent photo (recommended)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">

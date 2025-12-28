@@ -111,6 +111,7 @@ export default function AuctionStats() {
           team:teams(id, name, short_name, primary_color, logo_url)
         `)
         .eq("season_id", activeSeason.id)
+        .eq("registration_status", "approved")
         .eq("auction_status", "sold")
         .order("sold_price", { ascending: false });
 
@@ -133,6 +134,7 @@ export default function AuctionStats() {
           player:players!inner(id, full_name, role, photo_url)
         `)
         .eq("season_id", activeSeason.id)
+        .eq("registration_status", "approved")
         .eq("auction_status", "unsold")
         .order("created_at");
 

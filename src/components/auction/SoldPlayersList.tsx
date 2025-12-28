@@ -26,6 +26,7 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
           players:player_id(*),
           teams:team_id(*)
         `)
+        .eq("registration_status", "approved")
         .eq("auction_status", "sold")
         .eq("season_id", seasonId!)
         .order("updated_at", { ascending: false });

@@ -81,3 +81,8 @@ USING (bucket_id = 'payment-receipts');
 CREATE POLICY "Authenticated users can delete from payment-receipts"
 ON storage.objects FOR DELETE TO authenticated
 USING (bucket_id = 'payment-receipts');
+
+-- Allow authenticated users (admins) to view payment receipts
+CREATE POLICY "Authenticated users can view payment-receipts"
+ON storage.objects FOR SELECT TO authenticated
+USING (bucket_id = 'payment-receipts');

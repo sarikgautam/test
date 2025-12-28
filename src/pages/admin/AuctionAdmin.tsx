@@ -72,6 +72,7 @@ export default function AuctionAdmin() {
           player:players!inner(id, full_name, role, photo_url)
         `)
         .eq("season_id", selectedSeasonId)
+        .eq("registration_status", "approved")
         .eq("auction_status", "registered")
         .order("base_price", { ascending: false });
 
