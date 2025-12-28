@@ -6,6 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useSeason } from "@/hooks/useSeason";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -31,10 +39,11 @@ import {
   Clock, 
   Search,
   AlertTriangle,
-  Eye
+  Eye,
+  Lock
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
 interface PendingRegistration {
@@ -101,18 +110,22 @@ export default function RegistrationReviewAdmin() {
   const [potentialMatches, setPotentialMatches] = useState<PotentialMatch[]>([]);
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isRetainDialogOpen, setIsRetainDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [retainPrice, setRetainPrice] = useState<string>("");
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedSeasonId } = useSeason();
 
-  // Fetch pending registrations
-  const { data: pendingRegistrations, isLoading } = useQuery({
-    queryKey: ["pending-registrations", selectedSeasonId],
+  // Fetch registrations based on filter
+  const { data: registrations, isLoading } = useQuery({
+    queryKey: ["registrations", selectedSeasonId, statusFilter],
     queryFn: async () => {
       if (!selectedSeasonId) return [];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("player_season_registrations")
         .select(`
           id,
@@ -122,10 +135,16 @@ export default function RegistrationReviewAdmin() {
           created_at,
           player:players(id, full_name, email, phone, role, photo_url, current_team, date_of_birth, address, emergency_contact_name, emergency_contact_phone, emergency_contact_email, payment_receipt_url)
         `)
-        .eq("season_id", selectedSeasonId)
-        .eq("registration_status", "pending")
-        .order("created_at", { ascending: false });
+        .eq("season_id", selectedSeasonId);
+      
+      // Apply status filter
+      if (statusFilter !== "all") {
+        query = query.eq("registration_status", statusFilter);
+      }
+      
+      query = query.order("created_at", { ascending: false });
 
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as PendingRegistration[];
     },
@@ -139,6 +158,19 @@ export default function RegistrationReviewAdmin() {
       const { data, error } = await supabase
         .from("players")
         .select("id, full_name, email, role");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch all teams
+  const { data: allTeams } = useQuery({
+    queryKey: ["all-teams-for-retain"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teams")
+        .select("id, name, short_name")
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -246,6 +278,42 @@ export default function RegistrationReviewAdmin() {
     },
   });
 
+  // Retain mutation
+  const retainMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedRegistration || !selectedTeamId || !retainPrice) {
+        throw new Error("Missing required fields");
+      }
+      
+      const price = parseFloat(retainPrice);
+      if (isNaN(price) || price < 0) {
+        throw new Error("Invalid price");
+      }
+
+      const { error } = await supabase
+        .from("player_season_registrations")
+        .update({
+          registration_status: "approved",
+          auction_status: "retained",
+          team_id: selectedTeamId,
+          sold_price: price
+        })
+        .eq("id", selectedRegistration.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["registrations"] });
+      setIsRetainDialogOpen(false);
+      setRetainPrice("");
+      setSelectedTeamId("");
+      toast({ title: "Player retained successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to retain", description: error.message, variant: "destructive" });
+    },
+  });
+
   const findPotentialMatches = (registration: PendingRegistration) => {
     if (!allPlayers) return [];
     
@@ -280,10 +348,14 @@ export default function RegistrationReviewAdmin() {
     setIsDetailsDialogOpen(true);
   };
 
-  const filteredRegistrations = pendingRegistrations?.filter(reg =>
+  const filteredRegistrations = registrations?.filter(reg =>
     reg.player.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     reg.player.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const pendingCount = registrations?.filter(r => r.registration_status === "pending").length || 0;
+  const approvedCount = registrations?.filter(r => r.registration_status === "approved").length || 0;
+  const rejectedCount = registrations?.filter(r => r.registration_status === "rejected").length || 0;
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -305,14 +377,47 @@ export default function RegistrationReviewAdmin() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <Clock className="w-8 h-8 text-amber-500" />
               <div>
-                <p className="text-2xl font-bold">{pendingRegistrations?.length || 0}</p>
+                <p className="text-2xl font-bold">{pendingCount}</p>
                 <p className="text-sm text-muted-foreground">Pending Review</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-green-500/30 bg-green-500/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-8 h-8 text-green-500" />
+              <div>
+                <p className="text-2xl font-bold">{approvedCount}</p>
+                <p className="text-sm text-muted-foreground">Approved</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-red-500/30 bg-red-500/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <XCircle className="w-8 h-8 text-red-500" />
+              <div>
+                <p className="text-2xl font-bold">{rejectedCount}</p>
+                <p className="text-sm text-muted-foreground">Rejected</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <User className="w-8 h-8 text-muted-foreground" />
+              <div>
+                <p className="text-2xl font-bold">{registrations?.length || 0}</p>
+                <p className="text-sm text-muted-foreground">Total</p>
               </div>
             </div>
           </CardContent>
@@ -330,12 +435,30 @@ export default function RegistrationReviewAdmin() {
         />
       </div>
 
+      {/* Tabs for filtering */}
+      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="all" className="text-sm">All ({registrations?.length || 0})</TabsTrigger>
+          <TabsTrigger value="pending" className="text-sm">Pending ({pendingCount})</TabsTrigger>
+          <TabsTrigger value="approved" className="text-sm">Approved ({approvedCount})</TabsTrigger>
+          <TabsTrigger value="rejected" className="text-sm">Rejected ({rejectedCount})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {/* Table */}
       <Card className="border-border/50">
         <CardHeader>
-          <CardTitle>Pending Registrations</CardTitle>
+          <CardTitle>
+            {statusFilter === "pending" && "Pending Registrations"}
+            {statusFilter === "approved" && "Approved Registrations"}
+            {statusFilter === "rejected" && "Rejected Registrations"}
+            {statusFilter === "all" && "All Registrations"}
+          </CardTitle>
           <CardDescription>
-            Review each registration and either approve, reject, or link to an existing player
+            {statusFilter === "pending" 
+              ? "Review each registration and either approve, reject, or link to an existing player"
+              : `Viewing ${statusFilter === "all" ? "all" : statusFilter} registrations for the selected season`
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -348,7 +471,7 @@ export default function RegistrationReviewAdmin() {
           ) : filteredRegistrations?.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <CheckCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No pending registrations to review</p>
+              <p>No {statusFilter === "all" ? "" : statusFilter} registrations found</p>
             </div>
           ) : (
             <Table>
@@ -356,6 +479,7 @@ export default function RegistrationReviewAdmin() {
                 <TableRow>
                   <TableHead>Player</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead>Matches</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -392,6 +516,22 @@ export default function RegistrationReviewAdmin() {
                           {reg.player.role.replace("_", " ")}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={
+                            reg.registration_status === "approved" ? "default" : 
+                            reg.registration_status === "rejected" ? "destructive" : 
+                            "secondary"
+                          }
+                          className={
+                            reg.registration_status === "approved" ? "bg-green-500/20 text-green-400 border-green-500/50" :
+                            reg.registration_status === "rejected" ? "bg-red-500/20 text-red-400 border-red-500/50" :
+                            "bg-amber-500/20 text-amber-400 border-amber-500/50"
+                          }
+                        >
+                          {reg.registration_status}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {format(new Date(reg.created_at), "MMM d, yyyy")}
                       </TableCell>
@@ -417,35 +557,52 @@ export default function RegistrationReviewAdmin() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          {hasMatches && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleShowMatches(reg)}
-                              className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
-                            >
-                              <Link2 className="w-4 h-4 mr-1" />
-                              Link
-                            </Button>
+                          {reg.registration_status === "pending" && (
+                            <>
+                              {hasMatches && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleShowMatches(reg)}
+                                  className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                                >
+                                  <Link2 className="w-4 h-4 mr-1" />
+                                  Link
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedRegistration(reg);
+                                  setIsRetainDialogOpen(true);
+                                }}
+                                disabled={retainMutation.isPending}
+                                className="border-blue-500/50 text-blue-500 hover:bg-blue-500/10"
+                              >
+                                <Lock className="w-4 h-4 mr-1" />
+                                Retain
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => approveMutation.mutate(reg.id)}
+                                disabled={approveMutation.isPending}
+                                className="border-green-500/50 text-green-500 hover:bg-green-500/10"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => rejectMutation.mutate(reg.id)}
+                                disabled={rejectMutation.isPending}
+                                className="border-red-500/50 text-red-500 hover:bg-red-500/10"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                            </>
                           )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => approveMutation.mutate(reg.id)}
-                            disabled={approveMutation.isPending}
-                            className="border-green-500/50 text-green-500 hover:bg-green-500/10"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => rejectMutation.mutate(reg.id)}
-                            disabled={rejectMutation.isPending}
-                            className="border-red-500/50 text-red-500 hover:bg-red-500/10"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -628,6 +785,61 @@ export default function RegistrationReviewAdmin() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Retain Dialog */}
+      <Dialog open={isRetainDialogOpen} onOpenChange={setIsRetainDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Retain Player</DialogTitle>
+            <DialogDescription>
+              Retain {selectedRegistration?.player.full_name} to their previous team
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Select Team</label>
+              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allTeams?.map((team: any) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label htmlFor="price" className="text-sm font-medium">Retention Price</label>
+              <Input
+                id="price"
+                type="number"
+                placeholder="Enter price"
+                value={retainPrice}
+                onChange={(e) => setRetainPrice(e.target.value)}
+                min="0"
+                step="0.01"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRetainDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => retainMutation.mutate()}
+              disabled={retainMutation.isPending || !selectedTeamId || !retainPrice}
+            >
+              Retain Player
             </Button>
           </DialogFooter>
         </DialogContent>

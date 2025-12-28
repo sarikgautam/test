@@ -1,10 +1,18 @@
 import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   ArrowLeft, 
   Crown, 
@@ -19,6 +27,7 @@ import {
   Building2,
   ExternalLink
 } from "lucide-react";
+import { useActiveSeason } from "@/hooks/useSeason";
 
 interface Owner {
   id: string;
@@ -50,6 +59,7 @@ interface Team {
 interface PlayerRegistration {
   jersey_number: number | null;
   sold_price: number | null;
+  auction_status: string;
   player: {
     id: string;
     full_name: string;
@@ -79,12 +89,33 @@ interface Match {
   match_number: number;
   venue: string;
   match_stage?: string | null;
+  match_summary?: string | null;
   home_team?: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
   away_team?: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
 }
 
 const TeamDetails = () => {
   const { teamId } = useParams();
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string>("");
+  const { activeSeason } = useActiveSeason();
+
+  // Set default season on mount
+  if (activeSeason?.id && !selectedSeasonId) {
+    setSelectedSeasonId(activeSeason.id);
+  }
+
+  // Fetch all seasons for dropdown
+  const { data: allSeasons } = useQuery({
+    queryKey: ["all-seasons"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("id, name")
+        .order("name", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: team, isLoading: teamLoading } = useQuery({
     queryKey: ["team", teamId],
@@ -125,21 +156,28 @@ const TeamDetails = () => {
   });
 
   const { data: playerRegistrations } = useQuery({
-    queryKey: ["team-players", teamId],
+    queryKey: ["team-players", teamId, selectedSeasonId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!selectedSeasonId) return [];
+      let query = supabase
         .from("player_season_registrations")
         .select(`
           jersey_number,
           sold_price,
+          auction_status,
           player:players!inner(id, full_name, photo_url, role, batting_style, bowling_style)
         `)
         .eq("team_id", teamId)
-        .eq("auction_status", "sold");
+        .eq("season_id", selectedSeasonId);
+      
+      // Get both sold and retained players
+      query = query.in("auction_status", ["sold", "retained"]);
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as PlayerRegistration[];
     },
-    enabled: !!teamId,
+    enabled: !!teamId && !!selectedSeasonId,
   });
 
   const { data: playerStats } = useQuery({
@@ -169,6 +207,7 @@ const TeamDetails = () => {
           venue,
           status,
           match_stage,
+          match_summary,
           home_team_id,
           away_team_id,
           home_team_score,
@@ -581,17 +620,31 @@ const TeamDetails = () => {
 
           {/* Full Squad */}
           <div>
-            <div className="flex items-center gap-3 mb-8">
-              <div 
-                className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: `${team.primary_color}20` }}
-              >
-                <Users className="w-6 h-6" style={{ color: team.primary_color }} />
+            <div className="flex items-center justify-between gap-3 mb-8">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: `${team.primary_color}20` }}
+                >
+                  <Users className="w-6 h-6" style={{ color: team.primary_color }} />
+                </div>
+                <div>
+                  <h2 className="font-display text-2xl md:text-3xl">Full Squad</h2>
+                  <p className="text-muted-foreground">{playerRegistrations?.length || 0} players</p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-display text-2xl md:text-3xl">Full Squad</h2>
-                <p className="text-muted-foreground">{playerRegistrations?.length || 0} players</p>
-              </div>
+              <Select value={selectedSeasonId} onValueChange={setSelectedSeasonId}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select season" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allSeasons?.map((season: any) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      {season.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {playerRegistrations?.length ? (
@@ -611,6 +664,14 @@ const TeamDetails = () => {
                           style={{ backgroundColor: team.primary_color, color: 'white' }}
                         >
                           <Crown className="w-3 h-3" /> Captain
+                        </div>
+                      )}
+                      
+                      {reg.auction_status === "retained" && (
+                        <div 
+                          className="absolute top-3 left-3 z-10 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 bg-green-500/20 text-green-400 border border-green-500/50"
+                        >
+                          Retained
                         </div>
                       )}
                       
@@ -789,7 +850,6 @@ const TeamDetails = () => {
                     const isHome = match.home_team_id === teamId;
                     const opponent = isHome ? match.away_team : match.home_team;
                     const result = getMatchResult(match);
-                    const resultDescription = getMatchResultDescription(match, isHome);
                     const teamScore = isHome ? match.home_team_score : match.away_team_score;
                     const opponentScore = isHome ? match.away_team_score : match.home_team_score;
                     
@@ -851,7 +911,7 @@ const TeamDetails = () => {
                               ) : (
                                 <XCircle className="w-4 h-4" />
                               )}
-                              <span>{resultDescription || "Result pending"}</span>
+                              <span>{match.match_summary || "Result pending"}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <Target className="w-3 h-3" />
