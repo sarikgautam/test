@@ -74,7 +74,8 @@ interface PlayerStats {
   player_id: string;
   runs_scored: number;
   wickets: number;
-  matches?: number;
+  match_id: string;
+  season_id: string | null;
 }
 
 interface Match {
@@ -181,18 +182,19 @@ const TeamDetails = () => {
   });
 
   const { data: playerStats } = useQuery({
-    queryKey: ["team-player-stats", teamId],
+    queryKey: ["team-player-stats", teamId, selectedSeasonId],
     queryFn: async () => {
-      if (!playerRegistrations?.length) return [];
+      if (!playerRegistrations?.length || !selectedSeasonId) return [];
       const playerIds = playerRegistrations.map(p => p.player.id);
       const { data, error } = await supabase
         .from("player_stats")
-        .select("player_id, runs_scored, wickets")
-        .in("player_id", playerIds);
+        .select("player_id, runs_scored, wickets, match_id, season_id")
+        .in("player_id", playerIds)
+        .eq("season_id", selectedSeasonId);
       if (error) throw error;
       return data as PlayerStats[];
     },
-    enabled: !!playerRegistrations?.length,
+    enabled: !!playerRegistrations?.length && !!selectedSeasonId,
   });
 
   const { data: matches } = useQuery({
@@ -226,16 +228,25 @@ const TeamDetails = () => {
 
   const captain = playerRegistrations?.find(p => p.player.id === team?.captain_id);
   
-  // Aggregate stats per player
-  const aggregatedStats = playerStats?.reduce((acc, stat) => {
+  // Aggregate stats per player (season-specific) and count unique matches
+  const aggregatedStatsRaw = playerStats?.reduce((acc, stat) => {
     if (!acc[stat.player_id]) {
-      acc[stat.player_id] = { runs: 0, wickets: 0, matches: 0 };
+      acc[stat.player_id] = { runs: 0, wickets: 0, matchesSet: new Set<string>() };
     }
     acc[stat.player_id].runs += stat.runs_scored;
     acc[stat.player_id].wickets += stat.wickets;
-    acc[stat.player_id].matches += 1;
+    acc[stat.player_id].matchesSet.add(stat.match_id);
     return acc;
-  }, {} as Record<string, { runs: number; wickets: number; matches: number }>);
+  }, {} as Record<string, { runs: number; wickets: number; matchesSet: Set<string> }>);
+
+  const aggregatedStats = aggregatedStatsRaw
+    ? Object.fromEntries(
+        Object.entries(aggregatedStatsRaw).map(([pid, val]) => [
+          pid,
+          { runs: val.runs, wickets: val.wickets, matches: val.matchesSet.size },
+        ])
+      )
+    : undefined;
 
   const topRunScorers = playerRegistrations
     ?.map(p => ({
@@ -536,7 +547,7 @@ const TeamDetails = () => {
                 >
                   <Target className="w-5 h-5" style={{ color: team.primary_color }} />
                 </div>
-                <h3 className="font-display text-xl">Top Run Scorers</h3>
+                <h3 className="font-display text-xl">Top Run Scorers (this season)</h3>
               </div>
               <div className="space-y-4">
                 {topRunScorers?.length ? topRunScorers.map((player, index) => (
@@ -581,7 +592,7 @@ const TeamDetails = () => {
                 >
                   <Trophy className="w-5 h-5" style={{ color: team.primary_color }} />
                 </div>
-                <h3 className="font-display text-xl">Top Wicket Takers</h3>
+                <h3 className="font-display text-xl">Top Wicket Takers (this season)</h3>
               </div>
               <div className="space-y-4">
                 {topWicketTakers?.length ? topWicketTakers.map((player, index) => (
@@ -645,6 +656,9 @@ const TeamDetails = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="text-xs text-muted-foreground mt-1 text-right">
+                Stats and squad reflect selected season
+              </div>
             </div>
 
             {playerRegistrations?.length ? (
