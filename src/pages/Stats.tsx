@@ -225,9 +225,6 @@ const Stats = () => {
   const { data: playersWithStats, isLoading } = useQuery({
     queryKey: ["players-with-stats", seasonFilter],
     queryFn: async () => {
-      // Get season ID to filter by
-      const targetSeasonId = seasonFilter !== "all" ? seasonFilter : (activeSeason?.id || null);
-
       // Get all players with team info from player_season_registrations
       const { data: registrations, error: regError } = await supabase
         .from("player_season_registrations")
@@ -238,7 +235,8 @@ const Stats = () => {
           player:players!inner(id, full_name, role, photo_url),
           team:teams!inner(id, name, short_name, primary_color)
         `)
-        .eq("auction_status", "sold")
+        .in("auction_status", ["sold", "retained"]) 
+        .eq("registration_status", "approved")
         .order("player(full_name)");
       
       if (regError) throw regError;
@@ -248,8 +246,6 @@ const Stats = () => {
       
       if (seasonFilter !== "all") {
         statsQuery = statsQuery.eq("season_id", seasonFilter);
-      } else if (targetSeasonId) {
-        statsQuery = statsQuery.eq("season_id", targetSeasonId);
       }
       
       const { data: stats, error: statsError } = await statsQuery;
