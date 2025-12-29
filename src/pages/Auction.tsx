@@ -75,17 +75,16 @@ export default function Auction() {
   });
 
   const { data: playerStats } = useQuery({
-    queryKey: ["auction-player-stats", liveAuction?.current_player_id, activeSeason?.id],
+    queryKey: ["auction-player-stats", liveAuction?.current_player_id],
     queryFn: async () => {
-      if (!liveAuction?.current_player_id || !activeSeason?.id) return null;
+      if (!liveAuction?.current_player_id) return null;
       const { data, error } = await supabase
         .from("player_stats")
         .select("*")
-        .eq("player_id", liveAuction.current_player_id)
-        .eq("season_id", activeSeason.id);
+        .eq("player_id", liveAuction.current_player_id);
       if (error) throw error;
       
-      // Aggregate stats
+      // Aggregate stats across all seasons
       const aggregated = {
         matches: 0,
         runs_scored: 0,
@@ -100,7 +99,7 @@ export default function Auction() {
       
       return aggregated;
     },
-    enabled: !!liveAuction?.current_player_id && !!activeSeason?.id,
+    enabled: !!liveAuction?.current_player_id,
   });
 
   const { data: currentBiddingTeam } = useQuery({
