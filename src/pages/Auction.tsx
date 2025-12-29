@@ -74,6 +74,35 @@ export default function Auction() {
     enabled: !!liveAuction?.current_player_id,
   });
 
+  const { data: playerStats } = useQuery({
+    queryKey: ["auction-player-stats", liveAuction?.current_player_id, activeSeason?.id],
+    queryFn: async () => {
+      if (!liveAuction?.current_player_id || !activeSeason?.id) return null;
+      const { data, error } = await supabase
+        .from("player_stats")
+        .select("*")
+        .eq("player_id", liveAuction.current_player_id)
+        .eq("season_id", activeSeason.id);
+      if (error) throw error;
+      
+      // Aggregate stats
+      const aggregated = {
+        matches: 0,
+        runs_scored: 0,
+        wickets: 0,
+      };
+      
+      data?.forEach((stat) => {
+        aggregated.matches += 1;
+        aggregated.runs_scored += stat.runs_scored;
+        aggregated.wickets += stat.wickets;
+      });
+      
+      return aggregated;
+    },
+    enabled: !!liveAuction?.current_player_id && !!activeSeason?.id,
+  });
+
   const { data: currentBiddingTeam } = useQuery({
     queryKey: ["auction-current-team", liveAuction?.current_bidding_team_id],
     queryFn: async () => {
@@ -281,6 +310,25 @@ export default function Auction() {
                         <p className="text-sm text-muted-foreground mt-2">
                           Base Price: ${liveAuction.base_price.toLocaleString()}
                         </p>
+                        
+                        {playerStats && (
+                          <div className="mt-4 pt-4 border-t border-border space-y-2">
+                            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                              <div>
+                                <p className="font-semibold">{playerStats.matches}</p>
+                                <p className="text-muted-foreground">Matches</p>
+                              </div>
+                              <div>
+                                <p className="font-semibold">{playerStats.runs_scored}</p>
+                                <p className="text-muted-foreground">Runs</p>
+                              </div>
+                              <div>
+                                <p className="font-semibold">{playerStats.wickets}</p>
+                                <p className="text-muted-foreground">Wickets</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="text-center flex-shrink-0">
