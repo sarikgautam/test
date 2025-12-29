@@ -40,7 +40,8 @@ import {
   Search,
   AlertTriangle,
   Eye,
-  Lock
+  Lock,
+  Download
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -336,6 +337,67 @@ export default function RegistrationReviewAdmin() {
     return matches.sort((a, b) => b.similarity - a.similarity);
   };
 
+  // CSV Export function
+  const exportToCSV = () => {
+    if (!registrations || registrations.length === 0) {
+      toast({ title: "No data to export", variant: "destructive" });
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      "Full Name",
+      "Email",
+      "Phone",
+      "Role",
+      "Date of Birth",
+      "Current Team",
+      "Address",
+      "Emergency Contact Name",
+      "Emergency Contact Phone",
+      "Emergency Contact Email",
+      "Registration Status",
+      "Registered Date"
+    ];
+
+    // Convert registrations to CSV rows
+    const rows = registrations.map(reg => [
+      reg.player.full_name || "",
+      reg.player.email || "",
+      reg.player.phone || "",
+      reg.player.role || "",
+      reg.player.date_of_birth || "",
+      reg.player.current_team || "",
+      reg.player.address || "",
+      reg.player.emergency_contact_name || "",
+      reg.player.emergency_contact_phone || "",
+      reg.player.emergency_contact_email || "",
+      reg.registration_status || "",
+      format(new Date(reg.created_at), "yyyy-MM-dd HH:mm:ss")
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.map(h => `"${h}"`).join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `player-registrations-${format(new Date(), "yyyy-MM-dd")}.csv`);
+    link.style.visibility = "hidden";
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({ title: "CSV exported successfully" });
+  };
+
   const handleShowMatches = (registration: PendingRegistration) => {
     setSelectedRegistration(registration);
     const matches = findPotentialMatches(registration);
@@ -444,6 +506,18 @@ export default function RegistrationReviewAdmin() {
           <TabsTrigger value="rejected" className="text-sm">Rejected ({rejectedCount})</TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {/* CSV Export Button */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={exportToCSV}
+          className="gap-2"
+          variant="outline"
+        >
+          <Download className="w-4 h-4" />
+          Export to CSV
+        </Button>
+      </div>
 
       {/* Table */}
       <Card className="border-border/50">

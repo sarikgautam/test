@@ -114,6 +114,28 @@ const Register = () => {
         throw new Error("No active season found");
       }
 
+      // Check for duplicate registrations based on email, phone, and date of birth
+      const { data: existingRegistrations, error: dupCheckError } = await supabase
+        .from("players")
+        .select(`
+          id,
+          email,
+          phone,
+          date_of_birth,
+          player_season_registrations!inner(id, season_id, registration_status)
+        `)
+        .eq("player_season_registrations.season_id", activeSeason.id)
+        .or(`email.eq.${data.email},phone.eq.${data.phone},date_of_birth.eq.${data.date_of_birth}`);
+
+      if (dupCheckError) throw dupCheckError;
+
+      // Count registrations for this season matching any of the criteria
+      if (existingRegistrations && existingRegistrations.length >= 2) {
+        throw new Error(
+          "You have already registered for this season. Please reach out to the GCNPL management team to amend your registration."
+        );
+      }
+
       let receiptUrl: string | null = null;
 
       // Upload payment receipt if provided

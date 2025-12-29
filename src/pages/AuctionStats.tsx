@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -96,13 +103,26 @@ export default function AuctionStats() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [viewMode, setViewMode] = useState<"roles" | "teams">("roles");
+  const [seasonFilter, setSeasonFilter] = useState("active");
+
+  const { data: seasons } = useQuery({
+    queryKey: ["auction-all-seasons"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("*")
+        .order("year", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: soldPlayers, isLoading: playersLoading } = useQuery({
-    queryKey: ["auction-stats-players", activeSeason?.id],
+    queryKey: ["auction-stats-players", seasonFilter],
     queryFn: async () => {
-      if (!activeSeason?.id) return [];
+      const targetSeasonId = seasonFilter === "active" ? activeSeason?.id : seasonFilter === "all" ? undefined : seasonFilter;
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("player_season_registrations")
         .select(`
           id,
@@ -110,38 +130,46 @@ export default function AuctionStats() {
           player:players!inner(id, full_name, role, photo_url),
           team:teams(id, name, short_name, primary_color, logo_url)
         `)
-        .eq("season_id", activeSeason.id)
         .eq("registration_status", "approved")
-        .eq("auction_status", "sold")
-        .order("sold_price", { ascending: false });
+        .eq("auction_status", "sold");
+      
+      if (targetSeasonId) {
+        query = query.eq("season_id", targetSeasonId);
+      }
+      
+      const { data, error } = await query.order("sold_price", { ascending: false });
 
       if (error) throw error;
       return data as unknown as SoldPlayer[];
     },
-    enabled: !!activeSeason?.id,
+    enabled: seasonFilter !== "active" || !!activeSeason?.id,
   });
 
   const { data: unsoldPlayers } = useQuery({
-    queryKey: ["auction-stats-unsold", activeSeason?.id],
+    queryKey: ["auction-stats-unsold", seasonFilter],
     queryFn: async () => {
-      if (!activeSeason?.id) return [];
+      const targetSeasonId = seasonFilter === "active" ? activeSeason?.id : seasonFilter === "all" ? undefined : seasonFilter;
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("player_season_registrations")
         .select(`
           id,
           base_price,
           player:players!inner(id, full_name, role, photo_url)
         `)
-        .eq("season_id", activeSeason.id)
         .eq("registration_status", "approved")
-        .eq("auction_status", "unsold")
-        .order("created_at");
+        .eq("auction_status", "unsold");
+      
+      if (targetSeasonId) {
+        query = query.eq("season_id", targetSeasonId);
+      }
+      
+      const { data, error } = await query.order("created_at");
 
       if (error) throw error;
       return data as unknown as UnsoldPlayer[];
     },
-    enabled: !!activeSeason?.id,
+    enabled: seasonFilter !== "active" || !!activeSeason?.id,
   });
 
   const { data: teams } = useQuery({
@@ -238,9 +266,27 @@ export default function AuctionStats() {
               Auction Statistics
             </h1>
             <p className="text-muted-foreground mt-1">
-              Complete overview of all sold players and team acquisitions
+              {seasonFilter === "all"
+                ? "Complete overview from all seasons"
+                : seasonFilter === "active"
+                ? `Complete overview of all sold players and team acquisitions`
+                : seasons?.find(s => s.id === seasonFilter)?.name || "Season statistics"}
             </p>
           </div>
+          <Select value={seasonFilter} onValueChange={setSeasonFilter}>
+            <SelectTrigger className="w-full max-w-xs">
+              <SelectValue placeholder="Select Season" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active Season</SelectItem>
+              <SelectItem value="all">All Seasons</SelectItem>
+              {seasons?.map((season) => (
+                <SelectItem key={season.id} value={season.id}>
+                  {season.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Stats Overview */}
