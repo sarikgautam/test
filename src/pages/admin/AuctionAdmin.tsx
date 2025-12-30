@@ -34,8 +34,8 @@ interface BidEntry {
 
 export default function AuctionAdmin() {
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
-  const [incrementAmount, setIncrementAmount] = useState("5000");
-  const [basePrice, setBasePrice] = useState("10000");
+  const [incrementAmount, setIncrementAmount] = useState("10");
+  const [basePrice, setBasePrice] = useState("20");
   const [auctionDate, setAuctionDate] = useState("");
   const [auctionTime, setAuctionTime] = useState("");
 

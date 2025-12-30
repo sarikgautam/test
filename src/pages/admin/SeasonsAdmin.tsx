@@ -34,6 +34,7 @@ interface Season {
   is_active: boolean;
   registration_open: boolean;
   auction_date: string | null;
+  countdown_description?: string | null;
   created_at: string;
 }
 
@@ -48,6 +49,7 @@ export default function SeasonsAdmin() {
     auction_date: "",
     is_active: false,
     registration_open: false,
+    countdown_description: "",
   });
 
   const { toast } = useToast();
@@ -75,6 +77,7 @@ export default function SeasonsAdmin() {
         auction_date: data.auction_date || null,
         is_active: data.is_active,
         registration_open: data.registration_open,
+        countdown_description: data.countdown_description || null,
       });
       if (error) throw error;
     },
@@ -101,6 +104,7 @@ export default function SeasonsAdmin() {
           auction_date: data.auction_date || null,
           is_active: data.is_active,
           registration_open: data.registration_open,
+          countdown_description: data.countdown_description || null,
         })
         .eq("id", id);
       if (error) throw error;
@@ -168,6 +172,7 @@ export default function SeasonsAdmin() {
       auction_date: "",
       is_active: false,
       registration_open: false,
+      countdown_description: "",
     });
     setEditingSeason(null);
     setIsOpen(false);
@@ -183,6 +188,7 @@ export default function SeasonsAdmin() {
       auction_date: season.auction_date?.slice(0, 16) || "",
       is_active: season.is_active,
       registration_open: season.registration_open,
+      countdown_description: season.countdown_description || "",
     });
     setIsOpen(true);
   };
@@ -277,6 +283,19 @@ export default function SeasonsAdmin() {
                     setFormData({ ...formData, registration_open: checked })
                   }
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="countdown_description">Countdown Description</Label>
+                <Input
+                  id="countdown_description"
+                  value={formData.countdown_description}
+                  onChange={(e) => setFormData({ ...formData, countdown_description: e.target.value })}
+                  placeholder="Get ready for the most exciting cricket tournament!"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Appears above the homepage countdown; leave blank to use defaults.
+                </p>
               </div>
 
               <div className="flex gap-2 pt-4">

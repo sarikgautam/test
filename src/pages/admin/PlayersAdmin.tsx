@@ -21,8 +21,10 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Trash2, Users, Plus, Eye, User } from "lucide-react";
+import { Search, Trash2, Users, Plus, Eye, User, Edit } from "lucide-react";
 import { useSeason } from "@/hooks/useSeason";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { Database } from "@/integrations/supabase/types";
 import {
   Dialog,
@@ -41,6 +43,7 @@ interface PlayerWithRegistration extends Player {
   registration?: {
     id: string;
     auction_status: string;
+    registration_status: string;
     sold_price: number | null;
     team_id: string | null;
     base_price: number;
@@ -55,6 +58,8 @@ export default function PlayersAdmin() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithRegistration | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Player>>({});
   const { selectedSeasonId } = useSeason();
 
   const { toast } = useToast();
@@ -69,6 +74,7 @@ export default function PlayersAdmin() {
         .select(`
           id,
           auction_status,
+          registration_status,
           sold_price,
           team_id,
           base_price,
@@ -86,6 +92,7 @@ export default function PlayersAdmin() {
         registration: {
           id: reg.id,
           auction_status: reg.auction_status,
+          registration_status: reg.registration_status,
           sold_price: reg.sold_price,
           team_id: reg.team_id,
           base_price: reg.base_price,
@@ -201,6 +208,59 @@ export default function PlayersAdmin() {
     onSettled: () => setIsSubmitting(false),
   });
 
+  const editMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedPlayer) throw new Error("No player selected");
+      
+      const { error } = await supabase
+        .from("players")
+        .update({
+          full_name: editForm.full_name,
+          email: editForm.email,
+          phone: editForm.phone,
+          date_of_birth: editForm.date_of_birth,
+          address: editForm.address,
+          current_team: editForm.current_team,
+          role: editForm.role as "batsman" | "bowler" | "all_rounder" | "wicket_keeper",
+          batting_style: editForm.batting_style,
+          bowling_style: editForm.bowling_style,
+          emergency_contact_name: editForm.emergency_contact_name,
+          emergency_contact_phone: editForm.emergency_contact_phone,
+          emergency_contact_email: editForm.emergency_contact_email,
+        })
+        .eq("id", selectedPlayer.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
+      setIsEditDialogOpen(false);
+      toast({ title: "Player updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to update player", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleEditClick = (player: PlayerWithRegistration) => {
+    setSelectedPlayer(player);
+    setEditForm({
+      full_name: player.full_name,
+      email: player.email,
+      phone: player.phone || "",
+      date_of_birth: player.date_of_birth || "",
+      address: player.address || "",
+      current_team: player.current_team || "",
+      role: player.role,
+      batting_style: player.batting_style || "",
+      bowling_style: player.bowling_style || "",
+      emergency_contact_name: player.emergency_contact_name || "",
+      emergency_contact_phone: player.emergency_contact_phone || "",
+      emergency_contact_email: player.emergency_contact_email || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -282,7 +342,8 @@ export default function PlayersAdmin() {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Base Price</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Registration</TableHead>
+                <TableHead>Auction Status</TableHead>
                 <TableHead>Team</TableHead>
                 <TableHead>Sold Price</TableHead>
                 <TableHead className="w-20">Actions</TableHead>
@@ -295,6 +356,17 @@ export default function PlayersAdmin() {
                   <TableCell className="text-muted-foreground">{player.email}</TableCell>
                   <TableCell>{roleLabels[player.role]}</TableCell>
                   <TableCell>${player.registration?.base_price?.toLocaleString() || player.base_price?.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={
+                        player.registration?.registration_status === "approved" ? "default" :
+                        player.registration?.registration_status === "pending" ? "secondary" :
+                        "destructive"
+                      }
+                    >
+                      {player.registration?.registration_status || "pending"}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <Badge variant={statusVariants[player.registration?.auction_status || "registered"]}>
                       {player.registration?.auction_status || "registered"}
@@ -319,6 +391,13 @@ export default function PlayersAdmin() {
                       <Button
                         size="icon"
                         variant="ghost"
+                        onClick={() => handleEditClick(player)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         className="text-destructive hover:text-destructive"
                         onClick={() => deleteMutation.mutate(player.id)}
                       >
@@ -330,7 +409,7 @@ export default function PlayersAdmin() {
               ))}
               {filteredPlayers?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     No players found
                   </TableCell>
@@ -455,6 +534,150 @@ export default function PlayersAdmin() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Player Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Player</DialogTitle>
+            <DialogDescription>Update player information</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Personal Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label>Full Name *</Label>
+                  <Input
+                    value={editForm.full_name || ""}
+                    onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Email *</Label>
+                  <Input
+                    type="email"
+                    value={editForm.email || ""}
+                    onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Phone</Label>
+                  <Input
+                    value={editForm.phone || ""}
+                    onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Date of Birth</Label>
+                  <Input
+                    type="date"
+                    value={editForm.date_of_birth || ""}
+                    onChange={(e) => setEditForm({...editForm, date_of_birth: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Current Team</Label>
+                  <Input
+                    value={editForm.current_team || ""}
+                    onChange={(e) => setEditForm({...editForm, current_team: e.target.value})}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>Address</Label>
+                  <Textarea
+                    value={editForm.address || ""}
+                    onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Playing Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Playing Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Role *</Label>
+                  <Select 
+                    value={editForm.role || "batsman"} 
+                    onValueChange={(value) => setEditForm({...editForm, role: value as any})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="batsman">Batsman</SelectItem>
+                      <SelectItem value="bowler">Bowler</SelectItem>
+                      <SelectItem value="all_rounder">All-Rounder</SelectItem>
+                      <SelectItem value="wicket_keeper">Wicket Keeper</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Batting Style</Label>
+                  <Input
+                    value={editForm.batting_style || ""}
+                    onChange={(e) => setEditForm({...editForm, batting_style: e.target.value})}
+                    placeholder="e.g., Right-handed"
+                  />
+                </div>
+                <div>
+                  <Label>Bowling Style</Label>
+                  <Input
+                    value={editForm.bowling_style || ""}
+                    onChange={(e) => setEditForm({...editForm, bowling_style: e.target.value})}
+                    placeholder="e.g., Right-arm fast"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Emergency Contact</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Contact Name</Label>
+                  <Input
+                    value={editForm.emergency_contact_name || ""}
+                    onChange={(e) => setEditForm({...editForm, emergency_contact_name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Contact Phone</Label>
+                  <Input
+                    value={editForm.emergency_contact_phone || ""}
+                    onChange={(e) => setEditForm({...editForm, emergency_contact_phone: e.target.value})}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>Contact Email</Label>
+                  <Input
+                    type="email"
+                    value={editForm.emergency_contact_email || ""}
+                    onChange={(e) => setEditForm({...editForm, emergency_contact_email: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => editMutation.mutate()}
+              disabled={editMutation.isPending}
+            >
+              {editMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

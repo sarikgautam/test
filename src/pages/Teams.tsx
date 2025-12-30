@@ -200,8 +200,11 @@ const Teams = () => {
                           {/* Team Name */}
                           <div>
                             <span 
-                              className="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-3"
-                              style={{ backgroundColor: `${team.primary_color}20`, color: team.primary_color }}
+                              className="inline-block px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-gradient-to-r shadow-lg"
+                              style={{ 
+                                backgroundImage: `linear-gradient(90deg, ${team.primary_color}, ${team.secondary_color})`,
+                                color: 'white'
+                              }}
                             >
                               {team.short_name}
                             </span>
@@ -219,26 +222,26 @@ const Teams = () => {
                           <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                               {owner && (
-                                <div className="col-span-2 flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
+                                <div className="col-span-2 flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 shadow-lg shadow-primary/10">
                                   {owner.photo_url ? (
                                     <img 
                                       src={owner.photo_url} 
                                       alt={owner.name}
-                                      className="w-12 h-12 rounded-full object-cover border-2"
+                                      className="w-12 h-12 rounded-full object-cover border-2 shadow-lg"
                                       style={{ borderColor: team.primary_color }}
                                     />
                                   ) : (
                                     <div 
-                                      className="w-12 h-12 rounded-full flex items-center justify-center"
-                                      style={{ backgroundColor: `${team.primary_color}20` }}
+                                      className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
+                                      style={{ backgroundColor: `${team.primary_color}` }}
                                     >
-                                      <User className="w-6 h-6" style={{ color: team.primary_color }} />
+                                      <User className="w-6 h-6 text-white" />
                                     </div>
                                   )}
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                       <Crown className="w-4 h-4 flex-shrink-0" style={{ color: team.primary_color }} />
-                                      <p className="font-medium truncate">{owner.name}</p>
+                                      <p className="font-bold truncate">{owner.name}</p>
                                     </div>
                                     {owner.description && (
                                       <p className="text-sm text-muted-foreground line-clamp-1">{owner.description}</p>
@@ -248,7 +251,7 @@ const Teams = () => {
                                         href={owner.business_website} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="text-xs text-primary hover:underline"
+                                        className="text-xs text-primary hover:underline font-semibold"
                                       >
                                         {owner.business_name || 'Visit Business'}
                                       </a>
@@ -257,16 +260,16 @@ const Teams = () => {
                                 </div>
                               )}
                               
-                              <div className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border">
+                              <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-card/80 to-card border border-primary/20 hover:border-primary/40 transition-all hover:shadow-lg">
                                 <div 
-                                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                                  style={{ backgroundColor: `${team.primary_color}20` }}
+                                  className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
+                                  style={{ backgroundColor: `${team.primary_color}` }}
                                 >
-                                  <Users className="w-5 h-5" style={{ color: team.primary_color }} />
+                                  <Users className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
-                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Squad</p>
-                                  <p className="font-medium">{teamPlayers.length} Players <span className="text-muted-foreground text-xs">(this season)</span></p>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-bold">Squad</p>
+                                  <p className="font-bold text-lg">{teamPlayers.length} <span className="text-muted-foreground text-xs font-normal">(season)</span></p>
                                 </div>
                               </div>
                             </div>

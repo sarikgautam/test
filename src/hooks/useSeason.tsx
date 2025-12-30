@@ -11,6 +11,7 @@ interface Season {
   is_active: boolean;
   registration_open: boolean;
   auction_date: string | null;
+  countdown_description?: string | null;
   created_at: string;
   updated_at: string;
 }

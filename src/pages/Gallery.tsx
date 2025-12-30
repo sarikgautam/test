@@ -209,7 +209,7 @@ const Gallery = () => {
                   <img 
                     src={filteredItems[selectedImageIndex].image_url} 
                     alt={filteredItems[selectedImageIndex].title} 
-                    className="w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+                    className="w-full max-h-[85vh] object-contain rounded-xl shadow-2xl scale-90"
                   />
                 ) : (
                   <div className="aspect-video bg-card rounded-xl flex items-center justify-center">

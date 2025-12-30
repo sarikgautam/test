@@ -6,6 +6,7 @@ import { SeasonSelector } from "./SeasonSelector";
 import { SeasonProvider } from "@/hooks/useSeason";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import gcnplLogo from "@/assets/gcnpl-logo.png";
 
 export function AdminLayout() {
   const { user, isAdmin, isLoading } = useAuth();
@@ -57,7 +58,15 @@ export function AdminLayout() {
       <div className="flex min-h-screen bg-background">
         <AdminSidebar />
         <main className="flex-1 p-8 overflow-auto">
-          <div className="flex justify-end mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <img 
+                src={gcnplLogo} 
+                alt="GCNPL Logo" 
+                className="h-12 w-auto"
+              />
+              <h1 className="font-display text-2xl text-foreground">GCNPL Admin Panel</h1>
+            </div>
             <SeasonSelector />
           </div>
           <Outlet />

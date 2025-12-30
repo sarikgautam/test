@@ -4,12 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { Save, Settings, Clock, CreditCard, Eye, EyeOff } from "lucide-react";
+import { Save, CreditCard, Eye, EyeOff } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type TournamentSettingsRow = Database["public"]["Tables"]["tournament_settings"]["Row"];
@@ -67,29 +65,9 @@ export default function SettingsAdmin() {
     }
   }, [settings]);
 
-  // Fetch active season's registration status
-  const { data: activeSeason } = useQuery({
-    queryKey: ["active-season"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("seasons")
-        .select("*")
-        .eq("is_active", true)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<TournamentSettings>) => {
       const updateData = {
-        tournament_name: data.tournament_name,
-        season: data.season,
-        start_date: data.start_date,
-        end_date: data.end_date,
-        auction_date: data.auction_date,
-        registration_open: data.registration_open,
         min_players_per_team: data.min_players_per_team,
         max_players_per_team: data.max_players_per_team,
         countdown_description: data.countdown_description,
@@ -104,12 +82,6 @@ export default function SettingsAdmin() {
         if (error) throw error;
       } else {
         const { error } = await supabase.from("tournament_settings").insert({
-          tournament_name: data.tournament_name || "Gold Coast Nepalese Premier League",
-          season: data.season || "2025",
-          start_date: data.start_date,
-          end_date: data.end_date,
-          auction_date: data.auction_date,
-          registration_open: data.registration_open ?? true,
           min_players_per_team: data.min_players_per_team || 11,
           max_players_per_team: data.max_players_per_team || 15,
           countdown_description: data.countdown_description,
@@ -155,11 +127,6 @@ export default function SettingsAdmin() {
     },
   });
 
-  const handleToggleRegistration = (checked: boolean) => {
-    setFormData({ ...formData, registration_open: checked });
-    toggleRegistrationMutation.mutate(checked);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     saveMutation.mutate(formData);
@@ -182,95 +149,6 @@ export default function SettingsAdmin() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              General Settings
-            </CardTitle>
-            <CardDescription>Basic tournament information</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="tournament_name">Tournament Name</Label>
-                <Input
-                  id="tournament_name"
-                  value={formData.tournament_name || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, tournament_name: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="season">Season</Label>
-                <Input
-                  id="season"
-                  value={formData.season || ""}
-                  onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="start_date">Start Date</Label>
-                <Input
-                  id="start_date"
-                  type="date"
-                  value={formData.start_date || ""}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="end_date">End Date</Label>
-                <Input
-                  id="end_date"
-                  type="date"
-                  value={formData.end_date || ""}
-                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="auction_date">Auction Date</Label>
-                <Input
-                  id="auction_date"
-                  type="datetime-local"
-                  value={formData.auction_date?.slice(0, 16) || ""}
-                  onChange={(e) => setFormData({ ...formData, auction_date: e.target.value })}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Countdown Settings
-            </CardTitle>
-            <CardDescription>Configure the countdown timer on the home page</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="countdown_description">Countdown Description</Label>
-              <Textarea
-                id="countdown_description"
-                placeholder="Get ready for the most exciting cricket tournament!"
-                value={(formData as any).countdown_description || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, countdown_description: e.target.value })
-                }
-                rows={3}
-              />
-              <p className="text-sm text-muted-foreground">
-                This message will appear above the countdown timer on the home page
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="border-border/50">
           <CardHeader>
             <CardTitle>Team Configuration</CardTitle>
@@ -308,31 +186,6 @@ export default function SettingsAdmin() {
                   min={1}
                 />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle>Registration</CardTitle>
-            <CardDescription>Control player registration</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="registration_open" className="text-base">
-                  Registration Open
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow new players to register for the auction
-                </p>
-              </div>
-              <Switch
-                id="registration_open"
-                checked={activeSeason?.registration_open ?? true}
-                onCheckedChange={handleToggleRegistration}
-                disabled={toggleRegistrationMutation.isPending}
-              />
             </div>
           </CardContent>
         </Card>

@@ -115,25 +115,32 @@ const Register = () => {
       }
 
       // Check for duplicate registrations based on email, phone, and date of birth
-      const { data: existingRegistrations, error: dupCheckError } = await supabase
+      // First, find all players that match any of these criteria
+      const { data: matchingPlayers, error: dupCheckError } = await supabase
         .from("players")
-        .select(`
-          id,
-          email,
-          phone,
-          date_of_birth,
-          player_season_registrations!inner(id, season_id, registration_status)
-        `)
-        .eq("player_season_registrations.season_id", activeSeason.id)
+        .select("id, email, phone, date_of_birth")
         .or(`email.eq.${data.email},phone.eq.${data.phone},date_of_birth.eq.${data.date_of_birth}`);
 
       if (dupCheckError) throw dupCheckError;
 
-      // Count registrations for this season matching any of the criteria
-      if (existingRegistrations && existingRegistrations.length >= 2) {
-        throw new Error(
-          "You have already registered for this season. Please reach out to the GCNPL management team to amend your registration."
-        );
+      // If we found matching players, check how many registrations they have for this season
+      if (matchingPlayers && matchingPlayers.length > 0) {
+        const playerIds = matchingPlayers.map(p => p.id);
+        
+        const { data: seasonRegistrations, error: regCheckError } = await supabase
+          .from("player_season_registrations")
+          .select("id")
+          .eq("season_id", activeSeason.id)
+          .in("player_id", playerIds);
+
+        if (regCheckError) throw regCheckError;
+
+        // If there's already a registration, prevent duplicate
+        if (seasonRegistrations && seasonRegistrations.length >= 1) {
+          throw new Error(
+            "You have already registered for this season. Please reach out to the GCNPL management team to amend your registration."
+          );
+        }
       }
 
       let receiptUrl: string | null = null;
@@ -280,6 +287,10 @@ const Register = () => {
   });
 
   const onSubmit = (data: RegisterFormData) => {
+    if (!profilePhoto) {
+      setUploadErrors((prev) => ({ ...prev, photo: "Profile photo is required" }));
+      return;
+    }
     if (!paymentReceipt) {
       setUploadErrors((prev) => ({ ...prev, receipt: "Payment receipt is required" }));
       return;
@@ -560,9 +571,9 @@ const Register = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="w-5 h-5" />
-                  Profile Photo
+                  Profile Photo *
                 </CardTitle>
-                <CardDescription>Upload a recent photo (recommended)</CardDescription>
+                <CardDescription>Upload a recent photo (required)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">

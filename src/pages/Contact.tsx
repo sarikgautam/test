@@ -45,7 +45,7 @@ const Contact = () => {
           first_name: firstName,
           last_name: lastName,
           email,
-          phone: phone || null,
+          phone,
           subject,
           message
         });
@@ -68,11 +68,11 @@ const Contact = () => {
         <div className="container mx-auto px-4">
           {/* Header */}
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/20 to-vibrant-cyan/20 border border-primary/40 text-primary px-4 py-2 rounded-full text-sm font-bold mb-4 shadow-lg shadow-primary/20">
               <Mail className="w-4 h-4" />
               Get in Touch
             </div>
-            <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground mb-4">
+            <h1 className="text-4xl md:text-5xl font-display font-bold bg-gradient-to-r from-primary to-vibrant-orange bg-clip-text text-transparent mb-4">
               Contact Us
             </h1>
             <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
@@ -82,8 +82,8 @@ const Contact = () => {
 
           <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
             {/* Contact Form */}
-            <div className="bg-card rounded-2xl border border-border/50 p-8">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-6">Send us a Message</h2>
+            <div className="bg-card rounded-2xl border border-primary/20 p-8 shadow-lg shadow-primary/10">
+              <h2 className="text-2xl font-display font-bold bg-gradient-to-r from-primary to-vibrant-orange bg-clip-text text-transparent mb-6">Send us a Message</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -102,8 +102,8 @@ const Contact = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone (Optional)</Label>
-                  <Input id="phone" name="phone" type="tel" placeholder="+61 XXX XXX XXX" />
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" name="phone" type="tel" placeholder="+61 XXX XXX XXX" required />
                 </div>
 
                 <div className="space-y-2">
@@ -134,30 +134,30 @@ const Contact = () => {
               {isLoading ? (
                 <Skeleton className="h-64 rounded-2xl" />
               ) : (
-                <div className="bg-card rounded-2xl border border-border/50 p-8">
-                  <h2 className="text-2xl font-display font-bold text-foreground mb-6">Contact Information</h2>
+                <div className="bg-card rounded-2xl border border-primary/20 p-8 shadow-lg shadow-primary/10">
+                  <h2 className="text-2xl font-display font-bold bg-gradient-to-r from-vibrant-cyan to-vibrant-purple bg-clip-text text-transparent mb-6">Contact Information</h2>
                   
                   <div className="space-y-6">
                     {contactInfo?.address && (
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <MapPin className="w-6 h-6 text-primary" />
+                      <div className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-vibrant-orange/10 border border-primary/20 hover:border-primary/40 transition-all">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-vibrant-orange flex items-center justify-center flex-shrink-0 shadow-lg text-white">
+                          <MapPin className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-foreground mb-1">Address</h4>
+                          <h4 className="font-bold text-foreground mb-1">Address</h4>
                           <p className="text-muted-foreground whitespace-pre-line">{contactInfo.address}</p>
                         </div>
                       </div>
                     )}
 
                     {contactInfo?.email && (
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Mail className="w-6 h-6 text-primary" />
+                      <div className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-r from-vibrant-cyan/10 to-secondary/10 border border-vibrant-cyan/20 hover:border-vibrant-cyan/40 transition-all">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-vibrant-cyan to-secondary flex items-center justify-center flex-shrink-0 shadow-lg text-white">
+                          <Mail className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-foreground mb-1">Email</h4>
-                          <a href={`mailto:${contactInfo.email}`} className="text-primary hover:underline">
+                          <h4 className="font-bold text-foreground mb-1">Email</h4>
+                          <a href={`mailto:${contactInfo.email}`} className="text-primary hover:underline font-semibold">
                             {contactInfo.email}
                           </a>
                         </div>
@@ -165,13 +165,13 @@ const Contact = () => {
                     )}
 
                     {contactInfo?.phone && (
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Phone className="w-6 h-6 text-primary" />
+                      <div className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-r from-vibrant-pink/10 to-vibrant-purple/10 border border-vibrant-pink/20 hover:border-vibrant-pink/40 transition-all">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-vibrant-pink to-vibrant-purple flex items-center justify-center flex-shrink-0 shadow-lg text-white">
+                          <Phone className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-foreground mb-1">Phone</h4>
-                          <a href={`tel:${contactInfo.phone}`} className="text-primary hover:underline">
+                          <h4 className="font-bold text-foreground mb-1">Phone</h4>
+                          <a href={`tel:${contactInfo.phone}`} className="text-primary hover:underline font-semibold">
                             {contactInfo.phone}
                           </a>
                         </div>
@@ -179,12 +179,12 @@ const Contact = () => {
                     )}
 
                     {contactInfo?.office_hours && (
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Clock className="w-6 h-6 text-primary" />
+                      <div className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-r from-vibrant-orange/10 to-primary/10 border border-vibrant-orange/20 hover:border-vibrant-orange/40 transition-all">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-vibrant-orange to-primary flex items-center justify-center flex-shrink-0 shadow-lg text-white">
+                          <Clock className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-foreground mb-1">Office Hours</h4>
+                          <h4 className="font-bold text-foreground mb-1">Office Hours</h4>
                           <p className="text-muted-foreground whitespace-pre-line">{contactInfo.office_hours}</p>
                         </div>
                       </div>

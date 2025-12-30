@@ -49,55 +49,59 @@ const Standings = () => {
         <div className="container mx-auto">
           <div className="text-center mb-12">
             <h1 className="font-display text-4xl md:text-5xl tracking-wide mb-4">Points <span className="text-gradient-gold">Table</span></h1>
-            <p className="text-muted-foreground">Current tournament standings</p>
+            <p className="text-muted-foreground text-lg">Current season standings</p>
+            <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-vibrant-cyan/20 border border-primary/40 shadow-lg shadow-primary/20">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold text-primary">Live Standings</span>
+            </div>
           </div>
 
           {isLoading ? (
             <Skeleton className="h-96 rounded-xl" />
           ) : standings && standings.length > 0 ? (
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="bg-card rounded-xl border border-primary/20 overflow-hidden shadow-lg shadow-primary/10">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-border bg-secondary/50">
-                      <th className="text-left py-4 px-4 text-xs font-semibold text-muted-foreground uppercase">#</th>
-                      <th className="text-left py-4 px-4 text-xs font-semibold text-muted-foreground uppercase">Team</th>
-                      <th className="text-center py-4 px-4 text-xs font-semibold text-muted-foreground uppercase">P</th>
-                      <th className="text-center py-4 px-4 text-xs font-semibold text-muted-foreground uppercase">W</th>
-                      <th className="text-center py-4 px-4 text-xs font-semibold text-muted-foreground uppercase">L</th>
-                      <th className="text-center py-4 px-4 text-xs font-semibold text-muted-foreground uppercase">T</th>
-                      <th className="text-center py-4 px-4 text-xs font-semibold text-muted-foreground uppercase">NRR</th>
-                      <th className="text-center py-4 px-4 text-xs font-semibold text-muted-foreground uppercase">Pts</th>
+                    <tr className="border-b border-primary/20 bg-gradient-to-r from-primary/10 to-vibrant-cyan/10">
+                      <th className="text-left py-4 px-4 text-xs font-bold text-primary uppercase">Position</th>
+                      <th className="text-left py-4 px-4 text-xs font-bold text-primary uppercase">Team</th>
+                      <th className="text-center py-4 px-4 text-xs font-bold text-primary uppercase">Played</th>
+                      <th className="text-center py-4 px-4 text-xs font-bold text-emerald-500 uppercase">Won</th>
+                      <th className="text-center py-4 px-4 text-xs font-bold text-destructive uppercase">Lost</th>
+                      <th className="text-center py-4 px-4 text-xs font-bold text-vibrant-purple uppercase">Tied</th>
+                      <th className="text-center py-4 px-4 text-xs font-bold text-vibrant-cyan uppercase">NRR</th>
+                      <th className="text-center py-4 px-4 text-xs font-bold bg-gradient-to-r from-primary to-vibrant-orange bg-clip-text text-transparent">Points</th>
                     </tr>
                   </thead>
                   <tbody>
                     {standings.map((s, i) => (
-                      <tr key={s.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                      <tr key={s.id} className="border-b border-primary/10 hover:bg-primary/5 transition-colors duration-300">
                         <td className="py-4 px-4">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? "bg-primary text-primary-foreground" : i < 4 ? "bg-secondary" : "bg-muted text-muted-foreground"}`}>{i + 1}</div>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ${i === 0 ? "bg-gradient-to-r from-primary to-vibrant-orange shadow-lg" : i < 3 ? "bg-gradient-to-r from-vibrant-cyan to-vibrant-purple" : "bg-muted text-muted-foreground"}`}>{i + 1}</div>
                         </td>
                         <td className="py-4 px-4">
-                          <Link to={`/teams/${s.team?.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                          <Link to={`/teams/${s.team?.id}`} className="flex items-center gap-3 hover:opacity-90 transition-opacity group">
                             {s.team?.logo_url ? (
                               <img 
                                 src={s.team.logo_url} 
                                 alt={s.team.name} 
-                                className="w-10 h-10 rounded-full object-cover"
+                                className="w-10 h-10 rounded-full object-cover shadow-md group-hover:scale-105 transition-transform"
                               />
                             ) : (
                               <div 
-                                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" 
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md" 
                                 style={{ backgroundColor: s.team?.primary_color || "#1e3a8a" }}
                               >
                                 {s.team?.short_name?.substring(0, 2)}
                               </div>
                             )}
-                            <span className="font-medium hover:text-primary transition-colors">{s.team?.name}</span>
+                            <span className="font-bold text-primary group-hover:text-vibrant-orange transition-colors">{s.team?.name}</span>
                           </Link>
                         </td>
-                        <td className="text-center py-4 px-4">{s.matches_played}</td>
-                        <td className="text-center py-4 px-4 text-emerald-400 font-medium">{s.wins}</td>
-                        <td className="text-center py-4 px-4 text-destructive font-medium">{s.losses}</td>
+                        <td className="text-center py-4 px-4 font-semibold">{s.matches_played}</td>
+                        <td className="text-center py-4 px-4 font-bold text-emerald-500">{s.wins}</td>
+                        <td className="text-center py-4 px-4 font-bold text-destructive">{s.losses}</td>
                         <td className="text-center py-4 px-4">{s.ties}</td>
                         <td className="text-center py-4 px-4 text-muted-foreground">{Number(s.net_run_rate) >= 0 ? "+" : ""}{Number(s.net_run_rate).toFixed(3)}</td>
                         <td className="text-center py-4 px-4"><span className="font-bold text-primary text-lg">{s.points}</span></td>

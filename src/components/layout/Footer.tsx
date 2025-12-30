@@ -19,36 +19,36 @@ export function Footer() {
   });
 
   return (
-    <footer className="bg-card border-t border-border">
+    <footer className="bg-card border-t border-primary/20 shadow-lg shadow-primary/5">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <Link to="/" className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-3 group">
               <img 
                 src={gcnplLogo} 
                 alt="GCNPL Logo" 
-                className="w-12 h-12 object-contain"
+                className="w-12 h-12 object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-lg"
               />
               <div>
-                <h3 className="font-display text-2xl tracking-wide text-foreground">GCNPL</h3>
-                <p className="text-xs text-muted-foreground">Gold Coast Nepalese Premier League</p>
+                <h3 className="font-display text-2xl tracking-wide bg-gradient-to-r from-primary to-vibrant-orange bg-clip-text text-transparent font-bold">GCNPL</h3>
+                <p className="text-xs text-muted-foreground">Gold Coast Cricket</p>
               </div>
             </Link>
             <p className="text-muted-foreground text-sm">
-              Uniting the Nepalese community through the spirit of cricket in Gold Coast, Australia.
+              Uniting the community through the spirit of cricket.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-display text-lg tracking-wide mb-4 text-primary">Quick Links</h4>
+            <h4 className="font-display text-lg tracking-wide mb-4 bg-gradient-to-r from-primary to-vibrant-orange bg-clip-text text-transparent font-bold">Quick Links</h4>
             <ul className="space-y-2">
               {["Teams", "Fixtures", "Standings", "Stats", "Register"].map((link) => (
                 <li key={link}>
                   <Link
                     to={`/${link.toLowerCase()}`}
-                    className="text-muted-foreground hover:text-primary transition-colors text-sm"
+                    className="text-muted-foreground hover:text-primary hover:font-semibold transition-all duration-300 text-sm"
                   >
                     {link}
                   </Link>
@@ -59,14 +59,14 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="font-display text-lg tracking-wide mb-4 text-primary">Contact</h4>
+            <h4 className="font-display text-lg tracking-wide mb-4 bg-gradient-to-r from-vibrant-cyan to-vibrant-purple bg-clip-text text-transparent font-bold">Contact</h4>
             <ul className="space-y-3">
-              <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                <MapPin className="w-4 h-4 text-primary" />
-                Gold Coast, Queensland, Australia
+              <li className="flex items-center gap-2 text-muted-foreground text-sm hover:text-primary transition-colors">
+                <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                Gold Coast, Australia
               </li>
-              <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Mail className="w-4 h-4 text-primary" />
+              <li className="flex items-center gap-2 text-muted-foreground text-sm hover:text-primary transition-colors">
+                <Mail className="w-4 h-4 text-primary flex-shrink-0" />
                 contact@gcnpl.com.au
               </li>
             </ul>
@@ -74,20 +74,24 @@ export function Footer() {
 
           {/* Social */}
           <div>
-            <h4 className="font-display text-lg tracking-wide mb-4 text-primary">Follow Us</h4>
+            <h4 className="font-display text-lg tracking-wide mb-4 bg-gradient-to-r from-vibrant-pink to-vibrant-orange bg-clip-text text-transparent font-bold">Follow Us</h4>
             <div className="flex gap-3">
               {[
-                { icon: Facebook, label: "Facebook" },
-                { icon: Instagram, label: "Instagram" },
-                { icon: Youtube, label: "YouTube" },
-              ].map(({ icon: Icon, label }) => (
+                { icon: Facebook, label: "Facebook", color: "60 100% 50%" },
+                { icon: Instagram, label: "Instagram", color: "330 100% 55%" },
+                { icon: Youtube, label: "YouTube", color: "0 100% 50%" },
+              ].map(({ icon: Icon, label, color }) => (
                 <a
                   key={label}
                   href="#"
-                  className="w-10 h-10 rounded-lg bg-secondary hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-all duration-300"
+                  className="w-10 h-10 rounded-lg bg-secondary/50 hover:shadow-lg hover:scale-110 flex items-center justify-center transition-all duration-300 border border-primary/20 hover:border-primary/50"
+                  style={{ 
+                    backgroundColor: `hsl(${color} / 0.1)`,
+                    borderColor: `hsl(${color} / 0.3)`
+                  }}
                   aria-label={label}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-5 h-5" style={{ color: `hsl(${color})` }} />
                 </a>
               ))}
             </div>

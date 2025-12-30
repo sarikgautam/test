@@ -16,6 +16,7 @@ interface Match {
   winner_team_id?: string | null;
   home_team_score?: string | null;
   away_team_score?: string | null;
+  season?: { id: string; name: string };
   home_team: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
   away_team: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
 }
@@ -36,6 +37,7 @@ export function UpcomingMatches() {
           winner_team_id,
           home_team_score,
           away_team_score,
+          season:seasons(id, name),
           home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, logo_url),
           away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, logo_url)
         `)
@@ -132,10 +134,11 @@ export function UpcomingMatches() {
                     <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
                       {getMatchLabel(match)}
                     </span>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {formatLocalTime(match.match_date, "MMM d, yyyy")}
-                    </span>
+                    {(match as any).season?.name && (
+                      <span className="text-xs font-medium text-accent bg-accent/10 px-3 py-1 rounded-full">
+                        {(match as any).season.name}
+                      </span>
+                    )}
                   </div>
 
                   {/* Teams */}
@@ -231,10 +234,11 @@ export function UpcomingMatches() {
                             <span className="text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: `${resultColor}22`, color: resultColor }}>
                               {getMatchLabel(match)}
                             </span>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {formatLocalTime(match.match_date, "MMM d, yyyy")}
-                            </span>
+                            {(match as any).season?.name && (
+                              <span className="text-xs font-medium text-accent bg-accent/10 px-3 py-1 rounded-full">
+                                {(match as any).season.name}
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex items-center justify-between gap-4 mb-3">

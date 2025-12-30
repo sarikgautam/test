@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/select";
 import { Calendar, MapPin, Clock, ChevronRight, Trophy } from "lucide-react";
 import { formatLocalTime } from "@/lib/utils";
+import { useActiveSeason } from "@/hooks/useSeason";
 
 const Fixtures = () => {
   const navigate = useNavigate();
+  const { activeSeason } = useActiveSeason();
   const [teamFilter, setTeamFilter] = useState<string>("all");
-  const [seasonFilter, setSeasonFilter] = useState<string>("all");
+  const [seasonFilter, setSeasonFilter] = useState<string>("");
   
   const { data: seasons } = useQuery({
     queryKey: ["seasons-list"],
@@ -31,6 +33,13 @@ const Fixtures = () => {
       return data;
     },
   });
+
+  // Set default season filter to active season
+  useEffect(() => {
+    if (seasonFilter === "" && activeSeason) {
+      setSeasonFilter(activeSeason.id);
+    }
+  }, [activeSeason, seasonFilter]);
   
   const { data: teams } = useQuery({
     queryKey: ["teams-list"],
@@ -49,7 +58,7 @@ const Fixtures = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("matches")
-        .select(`*, season_id, match_stage, match_summary, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*), winner:teams!matches_winner_team_id_fkey(*)`)
+        .select(`*, season_id, match_stage, match_summary, season:seasons(id, name), home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*), winner:teams!matches_winner_team_id_fkey(*)`)
         .order("match_date", { ascending: false });
       if (error) throw error;
       return data;
@@ -176,6 +185,11 @@ const Fixtures = () => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">{getMatchLabel(match)}</span>
+                        {(match as any).season?.name && (
+                          <span className="text-sm font-medium text-accent bg-accent/10 px-3 py-1 rounded-full">
+                            {(match as any).season.name}
+                          </span>
+                        )}
                         {(match as any).overs_per_side && (
                           <span className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">
                             {(match as any).overs_per_side} Overs

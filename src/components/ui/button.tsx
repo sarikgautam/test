@@ -9,15 +9,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl hover:scale-[1.02]",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg",
-        outline: "border-2 border-primary/50 bg-transparent text-primary hover:bg-primary hover:text-primary-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "text-foreground hover:bg-secondary hover:text-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        hero: "gradient-gold text-primary-foreground font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] border-0",
-        accent: "bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-xl",
-        glass: "bg-secondary/50 backdrop-blur-md border border-border/50 text-foreground hover:bg-secondary/70",
+        default: "bg-gradient-to-r from-primary to-vibrant-orange text-primary-foreground hover:shadow-xl hover:scale-[1.02] shadow-lg hover:shadow-primary/50",
+        destructive: "bg-gradient-to-r from-destructive to-nepal-red text-destructive-foreground hover:bg-destructive/90 shadow-lg hover:shadow-destructive/50",
+        outline: "border-2 border-primary/60 bg-transparent text-primary hover:bg-primary hover:text-primary-foreground hover:shadow-lg",
+        secondary: "bg-gradient-to-r from-secondary to-vibrant-purple text-secondary-foreground hover:shadow-lg hover:shadow-secondary/50",
+        ghost: "text-foreground hover:bg-secondary/20 hover:text-foreground transition-all",
+        link: "text-primary underline-offset-4 hover:underline font-semibold",
+        hero: "bg-gradient-to-r from-primary via-vibrant-orange to-vibrant-pink text-primary-foreground font-bold shadow-lg hover:shadow-2xl hover:scale-[1.02] border-0 hover:shadow-primary/50",
+        accent: "bg-gradient-to-r from-accent to-vibrant-cyan text-accent-foreground hover:shadow-xl hover:scale-[1.02] shadow-lg hover:shadow-accent/50",
+        glass: "bg-secondary/50 backdrop-blur-md border border-border/50 text-foreground hover:bg-secondary/70 hover:shadow-lg",
       },
       size: {
         default: "h-10 px-5 py-2",
