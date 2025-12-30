@@ -9,7 +9,6 @@ import { SponsorsSection } from "@/components/home/SponsorsSection";
 import { GalleryPreview } from "@/components/home/GalleryPreview";
 import { NewsSection } from "@/components/home/NewsSection";
 import { ContactSection } from "@/components/home/ContactSection";
-import { RegistrationCTA } from "@/components/home/RegistrationCTA";
 
 const Index = () => {
   return (
@@ -24,7 +23,6 @@ const Index = () => {
       <GalleryPreview />
       <NewsSection />
       <ContactSection />
-      <RegistrationCTA />
     </Layout>
   );
 };
