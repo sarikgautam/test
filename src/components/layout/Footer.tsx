@@ -77,7 +77,7 @@ export function Footer() {
             <h4 className="font-display text-lg tracking-wide mb-4 bg-gradient-to-r from-vibrant-pink to-vibrant-orange bg-clip-text text-transparent font-bold">Follow Us</h4>
             <div className="flex gap-3">
               {[
-                { icon: Facebook, label: "Facebook", color: "60 100% 50%" },
+                { icon: Facebook, label: "Facebook", color: "221 83% 53%" },
                 { icon: Instagram, label: "Instagram", color: "330 100% 55%" },
                 { icon: Youtube, label: "YouTube", color: "0 100% 50%" },
               ].map(({ icon: Icon, label, color }) => (
