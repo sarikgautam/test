@@ -26,11 +26,13 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <img 
-              src={gcnplLogo} 
-              alt="GCNPL Logo" 
-              className="w-10 h-10 md:w-12 md:h-12 object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-lg"
-            />
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-lg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <img 
+                src={gcnplLogo} 
+                alt="GCNPL Logo" 
+                className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-md"
+              />
+            </div>
             <div className="hidden sm:block">
               <h1 className="font-display text-xl md:text-2xl tracking-wide bg-gradient-to-r from-primary to-vibrant-orange bg-clip-text text-transparent font-bold">GCNPL</h1>
               <p className="text-[10px] md:text-xs text-muted-foreground -mt-1">Gold Coast Cricket</p>

@@ -25,11 +25,13 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-3 group">
-              <img 
-                src={gcnplLogo} 
-                alt="GCNPL Logo" 
-                className="w-12 h-12 object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-lg"
-              />
+              <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <img 
+                  src={gcnplLogo} 
+                  alt="GCNPL Logo" 
+                  className="w-10 h-10 object-contain drop-shadow-md"
+                />
+              </div>
               <div>
                 <h3 className="font-display text-2xl tracking-wide bg-gradient-to-r from-primary to-vibrant-orange bg-clip-text text-transparent font-bold">GCNPL</h3>
                 <p className="text-xs text-muted-foreground">Gold Coast Cricket</p>
