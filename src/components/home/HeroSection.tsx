@@ -140,12 +140,12 @@ export function HeroSection() {
                 ].map(({ value, label, color }) => (
                   <div
                     key={label}
-                    className={`bg-gradient-to-br ${color} opacity-10 backdrop-blur-md border border-white/20 rounded-xl p-3 md:p-4 shadow-lg`}
+                    className={`bg-card/80 backdrop-blur-md border-2 border-primary/30 rounded-xl p-3 md:p-4 shadow-lg hover:border-primary/50 transition-colors`}
                   >
-                    <div className="font-display text-2xl md:text-4xl font-bold bg-gradient-to-r from-primary via-vibrant-cyan to-vibrant-purple bg-clip-text text-transparent">
+                    <div className="font-display text-2xl md:text-4xl font-bold text-primary">
                       {String(value).padStart(2, "0")}
                     </div>
-                    <div className="text-xs text-muted-foreground/80 uppercase tracking-wider font-semibold">
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                       {label}
                     </div>
                   </div>
