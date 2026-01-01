@@ -799,117 +799,7 @@ const TeamDetails = () => {
           </div>
 
           {/* Matches Section */}
-          <div className="space-y-12">
-            {/* Last 5 Matches Grid */}
-            <div>
-              <div className="flex items-center gap-3 mb-8">
-                <div 
-                  className="w-12 h-12 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${team.primary_color}20` }}
-                >
-                  <Trophy className="w-6 h-6" style={{ color: team.primary_color }} />
-                </div>
-                <div>
-                  <h3 className="font-display text-2xl">Last 5 Matches</h3>
-                  <p className="text-sm text-muted-foreground">{completedMatches.length} completed matches</p>
-                </div>
-              </div>
-              
-              {completedMatches.length ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                  {completedMatches.map((match, index) => {
-                    const isHome = match.home_team_id === teamId;
-                    const opponent = isHome ? match.away_team : match.home_team;
-                    const result = getMatchResult(match);
-                    const teamScore = isHome ? match.home_team_score : match.away_team_score;
-                    const opponentScore = isHome ? match.away_team_score : match.home_team_score;
-                    
-                    const resultColor = result === 'win' ? '#22c55e' : result === 'loss' ? '#ef4444' : '#8b5cf6';
-                    const resultLabel = result === 'win' ? 'W' : result === 'loss' ? 'L' : 'D';
-                    
-                    return (
-                      <Link
-                        key={match.id}
-                        to={`/fixtures/${match.id}`}
-                        className="group relative bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                      >
-                        {/* Result Badge - Top Right */}
-                        <div className="absolute top-3 right-3 z-10">
-                          <div 
-                            className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-lg"
-                            style={{ backgroundColor: resultColor }}
-                          >
-                            {resultLabel}
-                          </div>
-                        </div>
-
-                        {/* Top accent bar */}
-                        <div 
-                          className="absolute top-0 left-0 right-0 h-1.5"
-                          style={{ backgroundColor: resultColor }}
-                        />
-                        
-                        <div className="p-4 md:p-5 h-full flex flex-col">
-                          {/* Match Label */}
-                          <div className="mb-4">
-                            <span className="text-xs font-semibold px-2 py-1 rounded-full inline-block" style={{ backgroundColor: `${team.primary_color}20`, color: team.primary_color }}>
-                              {getMatchLabel(match)}
-                            </span>
-                          </div>
-
-                          {/* Teams */}
-                          <div className="flex-1 space-y-3">
-                            {/* Team Card */}
-                            <div className="text-center">
-                              {team.logo_url ? (
-                                <img src={team.logo_url} alt={team.name} className="w-10 h-10 mx-auto rounded-lg object-cover mb-2" />
-                              ) : (
-                                <div className="w-10 h-10 mx-auto rounded-lg flex items-center justify-center text-xs font-bold text-white mb-2" style={{ backgroundColor: team.primary_color }}>
-                                  {team.short_name.substring(0, 2)}
-                                </div>
-                              )}
-                              <p className="text-xs font-semibold text-foreground truncate">{team.short_name}</p>
-                              <p className="text-sm font-bold" style={{ color: team.primary_color }}>{teamScore || "-"}</p>
-                            </div>
-
-                            {/* Divider */}
-                            <div className="text-center">
-                              <span className="text-xs text-muted-foreground font-medium">vs</span>
-                            </div>
-
-                            {/* Opponent Card */}
-                            <div className="text-center">
-                              {opponent?.logo_url ? (
-                                <img src={opponent.logo_url} alt={opponent.name} className="w-10 h-10 mx-auto rounded-lg object-cover mb-2" />
-                              ) : (
-                                <div className="w-10 h-10 mx-auto rounded-lg flex items-center justify-center text-xs font-bold text-white mb-2" style={{ backgroundColor: opponent?.primary_color }}>
-                                  {opponent?.short_name?.substring(0, 2) || "TBA"}
-                                </div>
-                              )}
-                              <p className="text-xs font-semibold text-foreground truncate">{opponent?.short_name || "TBA"}</p>
-                              <p className="text-sm font-bold text-muted-foreground">{opponentScore || "-"}</p>
-                            </div>
-                          </div>
-
-                          {/* Date Footer */}
-                          <div className="mt-4 pt-4 border-t border-border/50">
-                            <p className="text-xs text-muted-foreground text-center">
-                              {new Date(match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-card rounded-2xl border border-border">
-                  <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">No completed matches yet</p>
-                </div>
-              )}
-            </div>
-
+          <div className="grid md:grid-cols-2 gap-8">
             {/* Upcoming Matches */}
             <div>
               <div className="flex items-center gap-3 mb-6">
@@ -999,6 +889,119 @@ const TeamDetails = () => {
                 <div className="text-center py-12 bg-card rounded-2xl border border-border">
                   <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-muted-foreground">No upcoming matches scheduled</p>
+                </div>
+              )}
+            </div>
+
+            {/* Recent Results */}
+            <div>
+              <div className="flex items-center gap-3 mb-8">
+                <div 
+                  className="w-12 h-12 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: `${team.primary_color}20` }}
+                >
+                  <Trophy className="w-6 h-6" style={{ color: team.primary_color }} />
+                </div>
+                <div>
+                  <h3 className="font-display text-2xl">Last 5 Results</h3>
+                  <p className="text-sm text-muted-foreground">{completedMatches.length} completed matches</p>
+                </div>
+              </div>
+              
+              {completedMatches.length ? (
+                <div className="grid grid-cols-1 gap-6">
+                  {completedMatches.map((match, index) => {
+                    const isHome = match.home_team_id === teamId;
+                    const opponent = isHome ? match.away_team : match.home_team;
+                    const result = getMatchResult(match);
+                    const teamScore = isHome ? match.home_team_score : match.away_team_score;
+                    const opponentScore = isHome ? match.away_team_score : match.home_team_score;
+                    
+                    const resultColor = result === 'win' ? '#22c55e' : result === 'loss' ? '#ef4444' : '#8b5cf6';
+                    const resultLabel = result === 'win' ? 'W' : result === 'loss' ? 'L' : 'D';
+                    
+                    return (
+                      <Link
+                        key={match.id}
+                        to={`/fixtures/${match.id}`}
+                        className="group relative bg-card rounded-xl border border-border overflow-hidden card-hover animate-fade-in-up block"
+                        style={{ animationDelay: `${index * 120}ms` }}
+                      >
+                        {/* W/L Badge */}
+                        <div className="absolute top-3 right-3 z-10">
+                          <div 
+                            className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-lg"
+                            style={{ backgroundColor: resultColor }}
+                          >
+                            {resultLabel}
+                          </div>
+                        </div>
+
+                        <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: resultColor }} />
+                        <div className="p-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: `${resultColor}22`, color: resultColor }}>
+                              {getMatchLabel(match)}
+                            </span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-4 mb-3">
+                            <div className="flex-1 text-center">
+                              {team.logo_url ? (
+                                <img src={team.logo_url} alt={team.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
+                              ) : (
+                                <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-sm font-bold text-white mb-1" style={{ backgroundColor: team.primary_color }}>
+                                  {team.short_name.substring(0, 2)}
+                                </div>
+                              )}
+                              <p className="text-sm font-medium text-foreground truncate">{team.short_name}</p>
+                              <p className="text-xs text-muted-foreground">{teamScore || "-"}</p>
+                            </div>
+
+                            <div className="text-lg font-display text-muted-foreground">vs</div>
+
+                            <div className="flex-1 text-center">
+                              {opponent?.logo_url ? (
+                                <img src={opponent.logo_url} alt={opponent.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
+                              ) : (
+                                <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-sm font-bold text-white mb-1" style={{ backgroundColor: opponent?.primary_color }}>
+                                  {opponent?.short_name?.substring(0, 2) || "TBA"}
+                                </div>
+                              )}
+                              <p className="text-sm font-medium text-foreground truncate">{opponent?.short_name || "TBA"}</p>
+                              <p className="text-xs text-muted-foreground">{opponentScore || "-"}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: resultColor }}>
+                              {result === 'draw' ? (
+                                <Minus className="w-4 h-4" />
+                              ) : result === 'win' ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                              ) : (
+                                <XCircle className="w-4 h-4" />
+                              )}
+                              <span>{match.match_summary || "Result pending"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Target className="w-3 h-3" />
+                              {match.venue}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                  <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground">No completed matches yet</p>
                 </div>
               )}
             </div>
