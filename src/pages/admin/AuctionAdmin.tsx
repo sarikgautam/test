@@ -585,23 +585,49 @@ export default function AuctionAdmin() {
       {/* Team Budgets */}
       <div className="flex flex-wrap justify-center gap-4">
         {teamsLoading
-          ? Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-24 w-32 rounded-lg" />)
-          : teams?.map((team) => (
-              <Card key={team.id} className="border-border/50 w-32">
-                <CardContent className="p-4 text-center">
-                  <div
-                    className="w-10 h-10 mx-auto rounded-full flex items-center justify-center text-xs font-bold mb-2"
-                    style={{ backgroundColor: team.primary_color, color: team.secondary_color }}
-                  >
-                    {team.short_name}
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">Remaining</p>
-                  <p className="font-bold text-sm">
-                    ${(team.remaining_budget / 1000).toFixed(0)}K
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+          ? Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-32 w-36 rounded-lg" />)
+          : teams?.map((team) => {
+              const spent = team.budget - team.remaining_budget;
+              const spentPercentage = (spent / team.budget) * 100;
+              return (
+                <Card key={team.id} className="border-border/50 w-36">
+                  <CardContent className="p-4 text-center">
+                    <div
+                      className="w-10 h-10 mx-auto rounded-full flex items-center justify-center text-xs font-bold mb-2"
+                      style={{ backgroundColor: team.primary_color, color: team.secondary_color }}
+                    >
+                      {team.short_name}
+                    </div>
+                    <div className="space-y-1">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground">Budget</p>
+                        <p className="text-xs font-medium">
+                          ${(team.budget / 1000).toFixed(0)}K
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground">Spent</p>
+                        <p className="text-xs font-medium text-destructive">
+                          -${(spent / 1000).toFixed(0)}K
+                        </p>
+                      </div>
+                      <div className="pt-1 border-t">
+                        <p className="text-[10px] text-muted-foreground">Remaining</p>
+                        <p className="font-bold text-sm text-primary">
+                          ${(team.remaining_budget / 1000).toFixed(0)}K
+                        </p>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5 mt-2">
+                        <div
+                          className="bg-primary h-1.5 rounded-full transition-all"
+                          style={{ width: `${Math.min(100 - spentPercentage, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
       </div>
 
       {/* Current Auction */}
