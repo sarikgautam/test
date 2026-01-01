@@ -180,30 +180,13 @@ export default function RegistrationReviewAdmin() {
   // Approve mutation
   const approveMutation = useMutation({
     mutationFn: async (registrationId: string) => {
-      // Get the registration to find the player_id
-      const { data: registration, error: fetchError } = await supabase
-        .from("player_season_registrations")
-        .select("player_id")
-        .eq("id", registrationId)
-        .single();
-      
-      if (fetchError) throw fetchError;
-
-      // Update registration status
+      // Update registration status to approved
       const { error: regError } = await supabase
         .from("player_season_registrations")
         .update({ registration_status: "approved" })
         .eq("id", registrationId);
       
       if (regError) throw regError;
-
-      // Update player status to approved
-      const { error: playerError } = await supabase
-        .from("players")
-        .update({ status: "approved" })
-        .eq("id", registration.player_id);
-      
-      if (playerError) throw playerError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-registrations"] });
