@@ -514,6 +514,14 @@ export default function AuctionAdmin() {
     wicket_keeper: "Wicket Keeper",
   };
 
+  const getTeamBudgetInfo = (id: string | null | undefined) => {
+    if (!id) return null;
+    const team = teams?.find((t) => t.id === id);
+    if (!team) return null;
+    const spent = team.budget - team.remaining_budget;
+    return { budget: team.budget, remaining: team.remaining_budget, spent };
+  };
+
   const isLoading = playersLoading || teamsLoading;
   const isAuctionActive = liveAuction?.is_live && liveAuction?.current_player_id;
   const currentBiddingTeam = teams?.find((t) => t.id === liveAuction?.current_bidding_team_id);
@@ -687,6 +695,29 @@ export default function AuctionAdmin() {
                 </p>
                 {currentBiddingTeam && (
                   <p className="text-sm mt-1">by {currentBiddingTeam.name}</p>
+                )}
+                {currentBiddingTeam && getTeamBudgetInfo(currentBiddingTeam.id) && (
+                  <div className="mt-3 text-xs text-muted-foreground space-y-1">
+                    <p className="font-semibold text-foreground">Budget Snapshot</p>
+                    {(() => {
+                      const info = getTeamBudgetInfo(currentBiddingTeam.id)!;
+                      return (
+                        <>
+                          <div className="flex items-center justify-center gap-3">
+                            <span>Budget: ${info.budget.toLocaleString()}</span>
+                            <span className="text-destructive">Spent: ${info.spent.toLocaleString()}</span>
+                            <span className="text-primary font-semibold">Remaining: ${info.remaining.toLocaleString()}</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-1.5">
+                            <div
+                              className="bg-primary h-1.5 rounded-full transition-all"
+                              style={{ width: `${Math.max(0, Math.min(100, (info.remaining / info.budget) * 100))}%` }}
+                            />
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
                 )}
               </div>
             </div>
