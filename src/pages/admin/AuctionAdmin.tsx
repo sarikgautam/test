@@ -485,6 +485,27 @@ export default function AuctionAdmin() {
     },
   });
 
+  const moveAllUnsoldToHoldMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedSeasonId) throw new Error("No season selected");
+
+      const { error } = await supabase
+        .from("player_season_registrations")
+        .update({ auction_status: "hold" })
+        .eq("season_id", selectedSeasonId)
+        .eq("auction_status", "unsold");
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auction-hold-players", selectedSeasonId] });
+      toast({ title: "All unsold players moved to hold!", description: "Players are now available for post-auction acquisition." });
+    },
+    onError: (error) => {
+      toast({ title: "Error moving players", description: error.message, variant: "destructive" });
+    },
+  });
+
   const roleLabels: Record<string, string> = {
     batsman: "Batsman",
     bowler: "Bowler",
@@ -826,13 +847,27 @@ export default function AuctionAdmin() {
       {/* Hold Players - Available for Reactivation */}
       <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-orange-500" />
-            Players on Hold ({holdPlayers?.length || 0})
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            These players can be reactivated for auction
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-orange-500" />
+                Players on Hold ({holdPlayers?.length || 0})
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                These players can be reactivated for auction
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-orange-500/50 hover:bg-orange-500/10"
+              onClick={() => moveAllUnsoldToHoldMutation.mutate()}
+              disabled={moveAllUnsoldToHoldMutation.isPending}
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              Move All Unsold to Hold
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {holdPlayersLoading ? (

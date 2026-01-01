@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Trash2, Users, Plus, Eye, User, Edit } from "lucide-react";
+import { Search, Trash2, Users, Plus, Eye, User, Edit, RotateCcw } from "lucide-react";
 import { useSeason } from "@/hooks/useSeason";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -242,6 +242,31 @@ export default function PlayersAdmin() {
     },
   });
 
+  const reAuctionMutation = useMutation({
+    mutationFn: async (registrationId: string) => {
+      const { error } = await supabase
+        .from("player_season_registrations")
+        .update({
+          auction_status: "registered",
+          sold_price: null,
+          team_id: null,
+        })
+        .eq("id", registrationId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
+      queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
+      queryClient.invalidateQueries({ queryKey: ["auction-sold-players", selectedSeasonId] });
+      queryClient.invalidateQueries({ queryKey: ["auction-hold-players", selectedSeasonId] });
+      toast({ title: "Player sent to re-auction", description: "Player is now available for auction again." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to re-auction player", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleEditClick = (player: PlayerWithRegistration) => {
     setSelectedPlayer(player);
     setEditForm({
@@ -395,6 +420,17 @@ export default function PlayersAdmin() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
+                      {player.registration && ["sold", "unsold", "hold"].includes(player.registration.auction_status) && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-blue-500 hover:text-blue-600"
+                          onClick={() => reAuctionMutation.mutate(player.registration!.id)}
+                          title="Send to re-auction"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         size="icon"
                         variant="ghost"
