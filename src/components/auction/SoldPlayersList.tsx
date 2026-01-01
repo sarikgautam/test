@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ interface SoldPlayersListProps {
 }
 
 export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
@@ -35,6 +36,32 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
     },
     enabled: !!seasonId,
   });
+
+  // Subscribe to realtime updates for sold players list
+  useEffect(() => {
+    if (!seasonId) return;
+
+    const channel = supabase
+      .channel("sold-players-list-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "player_season_registrations",
+          filter: `season_id=eq.${seasonId}`,
+        },
+        () => {
+          // Invalidate and refetch when any changes occur
+          queryClient.invalidateQueries({ queryKey: ["sold-players", seasonId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [seasonId, queryClient]);
 
   const { data: teams } = useQuery({
     queryKey: ["auction-teams-filter"],

@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,8 @@ interface RecentSoldPlayersProps {
 }
 
 export function RecentSoldPlayers({ seasonId, limit = 3 }: RecentSoldPlayersProps) {
+  const queryClient = useQueryClient();
+  
   const { data: soldPlayers, isLoading } = useQuery({
     queryKey: ["recent-sold-players", seasonId, limit],
     queryFn: async () => {
@@ -30,6 +33,32 @@ export function RecentSoldPlayers({ seasonId, limit = 3 }: RecentSoldPlayersProp
     },
     enabled: !!seasonId,
   });
+
+  // Subscribe to realtime updates for sold players
+  useEffect(() => {
+    if (!seasonId) return;
+
+    const channel = supabase
+      .channel("recent-sold-players-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "player_season_registrations",
+          filter: `season_id=eq.${seasonId}`,
+        },
+        () => {
+          // Invalidate and refetch when any changes occur
+          queryClient.invalidateQueries({ queryKey: ["recent-sold-players", seasonId, limit] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [seasonId, limit, queryClient]);
 
   const roleLabels: Record<string, string> = {
     batsman: "Batsman",
