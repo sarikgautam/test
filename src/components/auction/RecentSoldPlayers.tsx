@@ -32,6 +32,7 @@ export function RecentSoldPlayers({ seasonId, limit = 3 }: RecentSoldPlayersProp
       return data;
     },
     enabled: !!seasonId,
+    refetchInterval: 2000, // Poll every 2 seconds
   });
 
   // Subscribe to realtime updates for sold players

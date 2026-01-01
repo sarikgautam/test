@@ -58,6 +58,7 @@ export default function Auction() {
       return data;
     },
     enabled: !!activeSeason?.id,
+    refetchInterval: 2000, // Poll every 2 seconds as backup
   });
 
   const { data: currentPlayer } = useQuery({
@@ -145,6 +146,11 @@ export default function Auction() {
           filter: `season_id=eq.${activeSeason.id}`,
         },
         () => {
+          // Invalidate all auction related queries
+          queryClient.invalidateQueries({ queryKey: ["live-auction"] });
+          queryClient.invalidateQueries({ queryKey: ["auction-current-player"] });
+          queryClient.invalidateQueries({ queryKey: ["auction-player-stats"] });
+          queryClient.invalidateQueries({ queryKey: ["current-bidding-team"] });
           refetch();
         }
       )
@@ -153,7 +159,7 @@ export default function Auction() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeSeason?.id, refetch]);
+  }, [activeSeason?.id, refetch, queryClient]);
 
   // Parse bid history
   useEffect(() => {
@@ -229,9 +235,22 @@ export default function Auction() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="font-display text-4xl md:text-5xl text-gradient-gold mb-2">
-            Live Auction
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <img src="/gcnpl-logo.png" alt="GCNPL" className="w-16 h-16 md:w-20 md:h-20" />
+            <h1 className="font-display text-4xl md:text-5xl text-gradient-gold">
+              Live Auction
+            </h1>
+            <img src="/gcnpl-logo.png" alt="GCNPL" className="w-16 h-16 md:w-20 md:h-20" />
+          </div>
+          {liveAuction?.is_live && (
+            <div className="inline-flex items-center gap-2 bg-red-500/20 text-red-500 px-4 py-2 rounded-full border border-red-500/30 mb-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+              <span className="font-semibold">LIVE NOW</span>
+            </div>
+          )}
           <p className="text-muted-foreground">
             Watch the bidding action in real-time
           </p>

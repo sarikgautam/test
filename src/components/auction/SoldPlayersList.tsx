@@ -35,6 +35,7 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
       return data;
     },
     enabled: !!seasonId,
+    refetchInterval: 3000, // Poll every 3 seconds
   });
 
   // Subscribe to realtime updates for sold players list
