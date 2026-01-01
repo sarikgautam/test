@@ -66,7 +66,7 @@ export function Navbar() {
           <div className="hidden lg:flex items-center gap-2">
             <ThemeToggle />
             <Button variant="hero" size="lg" asChild>
-              <Link to="/register">Join Auction</Link>
+              <Link to="/register">Register</Link>
             </Button>
           </div>
 
