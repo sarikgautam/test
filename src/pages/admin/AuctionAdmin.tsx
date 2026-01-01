@@ -514,6 +514,12 @@ export default function AuctionAdmin() {
     wicket_keeper: "Wicket Keeper",
   };
 
+  const formatBudget = (value: number) => {
+    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+    return `$${value.toLocaleString()}`;
+  };
+
   const getTeamBudgetInfo = (id: string | null | undefined) => {
     if (!id) return null;
     const team = teams?.find((t) => t.id === id);
@@ -609,20 +615,18 @@ export default function AuctionAdmin() {
                     <div className="space-y-1">
                       <div>
                         <p className="text-[10px] text-muted-foreground">Budget</p>
-                        <p className="text-xs font-medium">
-                          ${(team.budget / 1000).toFixed(0)}K
-                        </p>
+                        <p className="text-xs font-medium">{formatBudget(team.budget)}</p>
                       </div>
                       <div>
                         <p className="text-[10px] text-muted-foreground">Spent</p>
                         <p className="text-xs font-medium text-destructive">
-                          -${(spent / 1000).toFixed(0)}K
+                          -{formatBudget(spent)}
                         </p>
                       </div>
                       <div className="pt-1 border-t">
                         <p className="text-[10px] text-muted-foreground">Remaining</p>
                         <p className="font-bold text-sm text-primary">
-                          ${(team.remaining_budget / 1000).toFixed(0)}K
+                          {formatBudget(team.remaining_budget)}
                         </p>
                       </div>
                       <div className="w-full bg-muted rounded-full h-1.5 mt-2">
@@ -704,9 +708,9 @@ export default function AuctionAdmin() {
                       return (
                         <>
                           <div className="flex items-center justify-center gap-3">
-                            <span>Budget: ${info.budget.toLocaleString()}</span>
-                            <span className="text-destructive">Spent: ${info.spent.toLocaleString()}</span>
-                            <span className="text-primary font-semibold">Remaining: ${info.remaining.toLocaleString()}</span>
+                            <span>Budget: {formatBudget(info.budget)}</span>
+                            <span className="text-destructive">Spent: {formatBudget(info.spent)}</span>
+                            <span className="text-primary font-semibold">Remaining: {formatBudget(info.remaining)}</span>
                           </div>
                           <div className="w-full bg-muted rounded-full h-1.5">
                             <div
