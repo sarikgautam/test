@@ -105,7 +105,6 @@ export function SoldPlayerCelebration({ player, team, soldPrice, onClose }: Sold
                   </div>
                   <div>
                     <p className="font-display font-bold text-lg">{team.name}</p>
-                    <p className="text-sm text-muted-foreground">{team.owner_name || "Team Owner"}</p>
                   </div>
                 </div>
               </div>
