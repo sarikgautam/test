@@ -78,56 +78,52 @@ interface PlayerStats {
   season_id: string | null;
 }
 
-interface Match {
-  id: string;
-  home_team_id: string;
-  away_team_id: string;
-  home_team_score: string | null;
-  away_team_score: string | null;
-  winner_team_id: string | null;
-  match_date: string;
-  status: string;
-  match_number: number;
-  venue: string;
-  match_stage?: string | null;
-  match_summary?: string | null;
-  home_team?: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
-  away_team?: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
-}
-
-const TeamDetails = () => {
-  const { teamId } = useParams();
-  const [selectedSeasonId, setSelectedSeasonId] = useState<string>("");
-  const { activeSeason } = useActiveSeason();
-
-  // Set default season on mount
-  if (activeSeason?.id && !selectedSeasonId) {
-    setSelectedSeasonId(activeSeason.id);
-  }
-
-  // Fetch all seasons for dropdown
-  const { data: allSeasons } = useQuery({
-    queryKey: ["all-seasons"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("seasons")
-        .select("id, name")
-        .order("name", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: team, isLoading: teamLoading } = useQuery({
-    queryKey: ["team", teamId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("teams")
-        .select("*")
-        .eq("id", teamId)
-        .single();
-      if (error) throw error;
-      return data as Team;
+          {/* Upcoming Matches */}
+          {upcomingMatches.length > 0 && (
+            <Card className="border-border/50">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  <h3 className="font-display text-xl">Upcoming Matches</h3>
+                </div>
+                <div className="space-y-3">
+                  {upcomingMatches.map((match, index) => {
+                    const isHome = match.home_team_id === team?.id;
+                    const opponent = isHome ? match.away_team : match.home_team;
+                    return (
+                      <div
+                        key={match.id}
+                        className="p-4 rounded-lg border border-border/60 bg-card/70 hover:bg-card/90 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="secondary" className="text-xs">
+                              Match {match.match_number || index + 1}
+                            </Badge>
+                            <p className="font-medium">
+                              vs {opponent?.short_name || opponent?.name || "TBD"}
+                            </p>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(match.match_date).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                        {match.match_stage && (
+                          <p className="text-xs text-muted-foreground mt-2">{match.match_stage}</p>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-1">{match.venue}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
     },
     enabled: !!teamId,
   });
