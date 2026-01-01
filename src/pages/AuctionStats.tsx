@@ -173,15 +173,46 @@ export default function AuctionStats() {
   });
 
   const { data: teams } = useQuery({
-    queryKey: ["auction-stats-teams"],
+    queryKey: ["auction-stats-teams", seasonFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const targetSeasonId = seasonFilter === "active" ? activeSeason?.id : seasonFilter === "all" ? undefined : seasonFilter;
+      
+      // Get teams
+      const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
-        .select("id, name, short_name, primary_color, logo_url, remaining_budget, budget")
+        .select("id, name, short_name, primary_color, logo_url, budget")
         .order("name");
 
-      if (error) throw error;
-      return data;
+      if (teamsError) throw teamsError;
+      
+      // Get sold players for the season(s) to calculate spent budget
+      let soldQuery = supabase
+        .from("player_season_registrations")
+        .select("team_id, sold_price")
+        .eq("auction_status", "sold")
+        .not("team_id", "is", null);
+      
+      if (targetSeasonId) {
+        soldQuery = soldQuery.eq("season_id", targetSeasonId);
+      }
+      
+      const { data: soldPlayers, error: soldError } = await soldQuery;
+      if (soldError) throw soldError;
+
+      // Calculate remaining budget for each team
+      const teamsWithBudget = teamsData.map(team => {
+        const teamSpent = soldPlayers
+          ?.filter(p => p.team_id === team.id)
+          .reduce((sum, p) => sum + (p.sold_price || 0), 0) || 0;
+        
+        return {
+          ...team,
+          remaining_budget: team.budget - teamSpent,
+        };
+      });
+
+      return teamsWithBudget;
+      enabled: seasonFilter !== "active" || !!activeSeason?.id,
     },
   });
 
@@ -443,8 +474,9 @@ export default function AuctionStats() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Budget: {formatPrice(team.remaining_budget)} / {formatPrice(team.budget)}
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Remaining</p>
+                      <p className="font-semibold text-primary">{formatPrice(team.remaining_budget)}</p>
                     </div>
                   </div>
                 ))}
