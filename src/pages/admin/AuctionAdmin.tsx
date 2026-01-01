@@ -115,15 +115,41 @@ export default function AuctionAdmin() {
   });
 
   const { data: teams, isLoading: teamsLoading } = useQuery({
-    queryKey: ["auction-teams"],
+    queryKey: ["auction-teams", selectedSeasonId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!selectedSeasonId) return [];
+      
+      // Get teams
+      const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
         .select("*")
         .order("name");
-      if (error) throw error;
-      return data as Team[];
+      if (teamsError) throw teamsError;
+
+      // Get sold players for this season to calculate spent budget
+      const { data: soldPlayers, error: soldError } = await supabase
+        .from("player_season_registrations")
+        .select("team_id, sold_price")
+        .eq("season_id", selectedSeasonId)
+        .eq("auction_status", "sold")
+        .not("team_id", "is", null);
+      if (soldError) throw soldError;
+
+      // Calculate remaining budget for each team
+      const teamsWithBudget = teamsData.map(team => {
+        const teamSpent = soldPlayers
+          ?.filter(p => p.team_id === team.id)
+          .reduce((sum, p) => sum + (p.sold_price || 0), 0) || 0;
+        
+        return {
+          ...team,
+          remaining_budget: team.total_budget - teamSpent,
+        };
+      });
+
+      return teamsWithBudget as Team[];
     },
+    enabled: !!selectedSeasonId,
   });
 
   const { data: liveAuction, refetch: refetchAuction } = useQuery({
@@ -270,7 +296,7 @@ export default function AuctionAdmin() {
     },
     onSuccess: () => {
       refetchAuction();
-      queryClient.invalidateQueries({ queryKey: ["auction-teams"] });
+      queryClient.invalidateQueries({ queryKey: ["auction-teams", selectedSeasonId] });
     },
     onError: (error) => {
       toast({ title: "Error placing bid", description: error.message, variant: "destructive" });
@@ -320,7 +346,7 @@ export default function AuctionAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
-      queryClient.invalidateQueries({ queryKey: ["auction-teams"] });
+      queryClient.invalidateQueries({ queryKey: ["auction-teams", selectedSeasonId] });
       refetchAuction();
       setSelectedPlayerId("");
       toast({ title: "Player sold successfully!" });
@@ -453,7 +479,7 @@ export default function AuctionAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
-      queryClient.invalidateQueries({ queryKey: ["auction-teams"] });
+      queryClient.invalidateQueries({ queryKey: ["auction-teams", selectedSeasonId] });
       queryClient.invalidateQueries({ queryKey: ["last-sold-player", selectedSeasonId] });
       toast({ title: "Sale undone successfully!", description: "Player returned to auction pool and budget refunded." });
     },
