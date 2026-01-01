@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp, Calendar, Save, Undo2 } from "lucide-react";
+import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp, Calendar, Save, Undo2, Clock, RotateCcw } from "lucide-react";
 import { useSeason } from "@/hooks/useSeason";
 import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
@@ -80,6 +80,34 @@ export default function AuctionAdmin() {
       return data as unknown as Array<{
         id: string;
         base_price: number;
+        player: { id: string; full_name: string; role: string; photo_url: string | null };
+      }>;
+    },
+    enabled: !!selectedSeasonId,
+  });
+
+  const { data: holdPlayers, isLoading: holdPlayersLoading } = useQuery({
+    queryKey: ["auction-hold-players", selectedSeasonId],
+    queryFn: async () => {
+      if (!selectedSeasonId) return [];
+      const { data, error } = await supabase
+        .from("player_season_registrations")
+        .select(`
+          id,
+          base_price,
+          sold_price,
+          player:players!inner(id, full_name, role, photo_url)
+        `)
+        .eq("season_id", selectedSeasonId)
+        .eq("registration_status", "approved")
+        .eq("auction_status", "hold")
+        .order("updated_at", { ascending: false });
+
+      if (error) throw error;
+      return data as unknown as Array<{
+        id: string;
+        base_price: number;
+        sold_price: number | null;
         player: { id: string; full_name: string; role: string; photo_url: string | null };
       }>;
     },
@@ -434,6 +462,29 @@ export default function AuctionAdmin() {
     },
   });
 
+  const reactivateHoldPlayerMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      if (!selectedSeasonId) throw new Error("No season selected");
+
+      const { error } = await supabase
+        .from("player_season_registrations")
+        .update({
+          auction_status: "registered",
+        })
+        .eq("player_id", playerId)
+        .eq("season_id", selectedSeasonId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
+      queryClient.invalidateQueries({ queryKey: ["auction-hold-players", selectedSeasonId] });
+      toast({ title: "Player reactivated!", description: "Player moved back to auction pool." });
+    },
+    onError: (error) => {
+      toast({ title: "Error reactivating player", description: error.message, variant: "destructive" });
+    },
+  });
+
   const roleLabels: Record<string, string> = {
     batsman: "Batsman",
     bowler: "Bowler",
@@ -767,6 +818,96 @@ export default function AuctionAdmin() {
             <div className="text-center py-12">
               <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">No players available for auction</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Hold Players - Available for Reactivation */}
+      <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-orange-500" />
+            Players on Hold ({holdPlayers?.length || 0})
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            These players can be reactivated for auction
+          </p>
+        </CardHeader>
+        <CardContent>
+          {holdPlayersLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-32 rounded-lg" />
+              ))}
+            </div>
+          ) : holdPlayers && holdPlayers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {holdPlayers.map((reg) => (
+                <div
+                  key={reg.player.id}
+                  className="p-4 rounded-lg border border-orange-500/30 bg-card hover:bg-card/80 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                        {reg.player.photo_url ? (
+                          <img
+                            src={reg.player.photo_url}
+                            alt={reg.player.full_name}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-6 h-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{reg.player.full_name}</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {roleLabels[reg.player.role]}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Badge className="bg-orange-500/20 text-orange-500 border-orange-500/30">
+                      Hold
+                    </Badge>
+                  </div>
+                  <div className="space-y-2 text-sm mb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Base Price</span>
+                      <span className="font-bold">
+                        ${reg.base_price.toLocaleString()}
+                      </span>
+                    </div>
+                    {reg.sold_price && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Last Bid</span>
+                        <span className="font-semibold text-orange-500">
+                          ${reg.sold_price.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-orange-500/50 hover:bg-orange-500/10"
+                    onClick={() => reactivateHoldPlayerMutation.mutate(reg.player.id)}
+                    disabled={reactivateHoldPlayerMutation.isPending}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Reactivate for Auction
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">No players on hold</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Players marked as "hold" during auction will appear here
+              </p>
             </div>
           )}
         </CardContent>
