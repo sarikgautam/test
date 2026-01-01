@@ -35,7 +35,7 @@ export function Navbar() {
             </div>
             <div className="hidden sm:block">
               <h1 className="font-display text-xl md:text-2xl tracking-wide bg-gradient-to-r from-primary to-vibrant-orange bg-clip-text text-transparent font-bold">GCNPL</h1>
-              <p className="text-[10px] md:text-xs text-muted-foreground -mt-1">Gold Coast Cricket</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground -mt-1">Uniting Community</p>
             </div>
           </Link>
 
@@ -108,7 +108,7 @@ export function Navbar() {
               })}
               <div className="pt-4 mt-2 border-t border-border/50">
                 <Button variant="hero" size="lg" className="w-full" asChild>
-                  <Link to="/register" onClick={() => setIsOpen(false)}>Join Auction</Link>
+                  <Link to="/register" onClick={() => setIsOpen(false)}>Register</Link>
                 </Button>
               </div>
             </div>

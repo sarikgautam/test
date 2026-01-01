@@ -15,14 +15,14 @@ const Index = () => {
     <Layout>
       <HeroSection />
       <ChampionsSection />
-      <UpcomingMatches />
       <TeamsShowcase />
+      <UpcomingMatches />
       <StandingsPreview />
       <StatsPreview />
-      <SponsorsSection />
       <GalleryPreview />
       <NewsSection />
       <ContactSection />
+      <SponsorsSection />
     </Layout>
   );
 };
