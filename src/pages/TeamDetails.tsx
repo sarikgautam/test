@@ -927,22 +927,21 @@ const TeamDetails = () => {
                         className="group relative bg-card rounded-xl border border-border overflow-hidden card-hover animate-fade-in-up block"
                         style={{ animationDelay: `${index * 120}ms` }}
                       >
-                        {/* W/L Badge */}
-                        <div className="absolute top-3 right-3 z-10">
-                          <div 
-                            className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-lg"
-                            style={{ backgroundColor: resultColor }}
-                          >
-                            {resultLabel}
-                          </div>
-                        </div>
-
                         <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: resultColor }} />
                         <div className="p-6">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: `${resultColor}22`, color: resultColor }}>
-                              {getMatchLabel(match)}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {/* W/L Badge */}
+                              <div 
+                                className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-lg"
+                                style={{ backgroundColor: resultColor }}
+                              >
+                                {resultLabel}
+                              </div>
+                              <span className="text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: `${resultColor}22`, color: resultColor }}>
+                                {getMatchLabel(match)}
+                              </span>
+                            </div>
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
                               {new Date(match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
