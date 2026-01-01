@@ -120,15 +120,40 @@ export default function Auction() {
   });
 
   const { data: teams } = useQuery({
-    queryKey: ["auction-teams"],
+    queryKey: ["auction-teams", activeSeason?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!activeSeason?.id) return [];
+
+      // Get teams
+      const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
-        .select("*")
+        .select("id, name, short_name, primary_color, secondary_color, remaining_budget, budget")
         .order("name");
-      if (error) throw error;
-      return data;
+      if (teamsError) throw teamsError;
+
+      // Get sold players for this season to calculate spent budget
+      const { data: soldPlayers, error: soldError } = await supabase
+        .from("player_season_registrations")
+        .select("team_id, sold_price")
+        .eq("season_id", activeSeason.id)
+        .eq("auction_status", "sold")
+        .not("team_id", "is", null);
+      if (soldError) throw soldError;
+
+      // Calculate remaining budget dynamically
+      return teamsData.map((team) => {
+        const teamSpent = soldPlayers
+          ?.filter((p) => p.team_id === team.id)
+          .reduce((sum, p) => sum + (p.sold_price || 0), 0) || 0;
+
+        return {
+          ...team,
+          remaining_budget: team.budget - teamSpent,
+        };
+      });
     },
+    enabled: !!activeSeason?.id,
+    refetchInterval: 3000,
   });
 
   // Subscribe to realtime updates
@@ -151,6 +176,7 @@ export default function Auction() {
           queryClient.invalidateQueries({ queryKey: ["auction-current-player"] });
           queryClient.invalidateQueries({ queryKey: ["auction-player-stats"] });
           queryClient.invalidateQueries({ queryKey: ["current-bidding-team"] });
+          queryClient.invalidateQueries({ queryKey: ["auction-teams", activeSeason.id] });
           refetch();
         }
       )
