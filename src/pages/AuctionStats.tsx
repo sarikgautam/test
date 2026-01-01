@@ -212,8 +212,8 @@ export default function AuctionStats() {
       });
 
       return teamsWithBudget;
-      enabled: seasonFilter !== "active" || !!activeSeason?.id,
     },
+    enabled: seasonFilter !== "active" || !!activeSeason?.id,
   });
 
   // Calculate team stats
