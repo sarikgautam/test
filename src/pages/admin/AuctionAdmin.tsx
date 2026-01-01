@@ -143,7 +143,7 @@ export default function AuctionAdmin() {
         
         return {
           ...team,
-          remaining_budget: team.total_budget - teamSpent,
+          remaining_budget: team.budget - teamSpent,
         };
       });
 
