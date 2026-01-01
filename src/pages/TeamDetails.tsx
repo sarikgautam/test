@@ -797,19 +797,19 @@ interface PlayerStats {
           {/* Matches Section */}
           <div className="grid md:grid-cols-2 gap-8">
             {/* Upcoming Matches */}
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${team.primary_color}20` }}
-                >
-                  <Calendar className="w-5 h-5" style={{ color: team.primary_color }} />
-                </div>
-                <h3 className="font-display text-xl">Upcoming Matches</h3>
+            {upcomingMatches.length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div 
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: `${team.primary_color}20` }}
+                  >
+                    <Calendar className="w-5 h-5" style={{ color: team.primary_color }} />
+                  </div>
+                  <h3 className="font-display text-xl">Upcoming Matches</h3>
 
-              </div>
-              
-              {upcomingMatches.length ? (
+                </div>
+                
                 <div className="space-y-4">
                   {upcomingMatches.map((match, index) => {
                     const opponent = getOpponentTeam(match);
@@ -850,13 +850,8 @@ interface PlayerStats {
                               
                               <div className="flex items-center gap-3">
                                 {opponent?.logo_url ? (
-                                  <img src={opponent.logo_url} alt={opponent.name} className="w-12 h-12 object-contain flex-shrink-0" />
-                                ) : (
-                                  <div 
-                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
-                                    style={{ backgroundColor: opponent?.primary_color || '#666', color: 'white' }}
-                                  >
-                                    {opponent?.short_name?.substring(0, 2)}
+                      </div>
+                    )}
                                   </div>
                                 )}
                                 <div className="min-w-0">
