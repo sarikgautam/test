@@ -321,16 +321,6 @@ export default function AuctionAdmin() {
         .eq("season_id", selectedSeasonId);
       if (regError) throw regError;
 
-      // Update team budget
-      const team = teams?.find((t) => t.id === liveAuction.current_bidding_team_id);
-      if (team) {
-        const { error: teamError } = await supabase
-          .from("teams")
-          .update({ remaining_budget: team.remaining_budget - liveAuction.current_bid })
-          .eq("id", team.id);
-        if (teamError) throw teamError;
-      }
-
       // Reset auction state
       const { error: auctionError } = await supabase
         .from("live_auction")
@@ -450,9 +440,6 @@ export default function AuctionAdmin() {
     mutationFn: async () => {
       if (!lastSoldPlayer || !selectedSeasonId) throw new Error("No sold player to undo");
 
-      const soldPrice = lastSoldPlayer.sold_price || 0;
-      const teamId = lastSoldPlayer.team_id;
-
       // Reset registration to registered status
       const { error: regError } = await supabase
         .from("player_season_registrations")
@@ -464,18 +451,6 @@ export default function AuctionAdmin() {
         .eq("player_id", lastSoldPlayer.player.id)
         .eq("season_id", selectedSeasonId);
       if (regError) throw regError;
-
-      // Refund team budget
-      if (teamId) {
-        const team = teams?.find((t) => t.id === teamId);
-        if (team) {
-          const { error: teamError } = await supabase
-            .from("teams")
-            .update({ remaining_budget: team.remaining_budget + soldPrice })
-            .eq("id", teamId);
-          if (teamError) throw teamError;
-        }
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-players", selectedSeasonId] });
