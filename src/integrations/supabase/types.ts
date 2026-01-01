@@ -1132,7 +1132,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       match_status: "upcoming" | "live" | "completed" | "cancelled"
       match_type: "group" | "eliminator" | "qualifier" | "final"
-      player_auction_status: "registered" | "sold" | "unsold"
+      player_auction_status: "registered" | "sold" | "unsold" | "hold" | "retained"
       player_role: "batsman" | "bowler" | "all_rounder" | "wicket_keeper"
     }
     CompositeTypes: {
@@ -1264,7 +1264,7 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       match_status: ["upcoming", "live", "completed", "cancelled"],
       match_type: ["group", "eliminator", "qualifier", "final"],
-      player_auction_status: ["registered", "sold", "unsold"],
+      player_auction_status: ["registered", "sold", "unsold", "hold", "retained"],
       player_role: ["batsman", "bowler", "all_rounder", "wicket_keeper"],
     },
   },

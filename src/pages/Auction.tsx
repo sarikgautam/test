@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { useActiveSeason } from "@/hooks/useSeason";
 import { AuctionCountdown } from "@/components/auction/AuctionCountdown";
 import { SoldPlayersList } from "@/components/auction/SoldPlayersList";
+import { HoldPlayersList } from "@/components/auction/HoldPlayersList";
 import { RecentSoldPlayers } from "@/components/auction/RecentSoldPlayers";
 import { SoldPlayerCelebration } from "@/components/auction/SoldPlayerCelebration";
 import type { Database } from "@/integrations/supabase/types";
@@ -448,6 +449,9 @@ export default function Auction() {
 
             {/* Recent Sold Players */}
             <RecentSoldPlayers seasonId={activeSeason?.id} limit={5} />
+
+            {/* Hold Players Section */}
+            <HoldPlayersList seasonId={activeSeason?.id} />
 
             {/* Sold Players Section during live auction */}
             <SoldPlayersList seasonId={activeSeason?.id} />
