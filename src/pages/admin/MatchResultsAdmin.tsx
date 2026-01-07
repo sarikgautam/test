@@ -332,13 +332,13 @@ export default function MatchResultsAdmin() {
 
       // Upload PDF to storage
       const { error: uploadError } = await supabase.storage
-        .from("match-scorecards")
+        .from("scorecards")
         .upload(fileName, pdfFile, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       // Get public URL
-      const { data } = supabase.storage.from("match-scorecards").getPublicUrl(fileName);
+      const { data } = supabase.storage.from("scorecards").getPublicUrl(fileName);
       const pdfUrl = data.publicUrl;
 
       // Update match record with PDF URL
