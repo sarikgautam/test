@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,7 +8,53 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import gcnplLogo from "@/assets/gcnpl-logo.png";
 
-type SlideType = "intro" | "support" | "team" | "sponsors" | "owner" | "all-teams";
+type SlideType =
+  | "intro"
+  | "support"
+  | "all-teams"
+  | "team"
+  | "acquisition"
+  | "sponsors"
+  | "owner"
+  | "top-bids";
+
+type Acquisition = {
+  id: string;
+  team_id: string | null;
+  auction_status: string | null;
+  sold_price: number | null;
+  base_price: number | null;
+  team: {
+    id: string;
+    name: string;
+    short_name: string | null;
+    logo_url: string | null;
+    primary_color?: string | null;
+  } | null;
+  player: {
+    id: string;
+    full_name: string;
+    role: string;
+    photo_url: string | null;
+  } | null;
+};
+
+type TopBid = {
+  id: string;
+  sold_price: number | null;
+  auction_status: string | null;
+  team: {
+    id: string;
+    name: string;
+    logo_url: string | null;
+  } | null;
+  player: {
+    id: string;
+    full_name: string;
+    role: string;
+    photo_url: string | null;
+  } | null;
+};
 
 export default function AuctionDayBanner() {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -75,7 +122,7 @@ export default function AuctionDayBanner() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("seasons")
-        .select("name")
+        .select("id, name")
         .eq("is_active", true)
         .single();
       if (error) throw error;
@@ -83,9 +130,75 @@ export default function AuctionDayBanner() {
     },
   });
 
-  // Calculate total slides: intro + support + teams + sponsors + individual owners + all-teams slide
+  const { data: acquisitions } = useQuery<{ data: Acquisition[] | null }>({
+    queryKey: ["auction-acquisitions", activeSeason?.id],
+    enabled: !!activeSeason?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("player_season_registrations")
+        .select(
+          `id, team_id, auction_status, sold_price, base_price,
+           team:teams(id, name, short_name, logo_url, primary_color),
+           player:players(id, full_name, role, photo_url)`
+        )
+        .eq("season_id", activeSeason!.id)
+        .in("auction_status", ["sold", "retained"]);
+      if (error) throw error;
+      return { data };
+    },
+  });
+
+  const { data: topBids } = useQuery<{ data: TopBid[] | null }>({
+    queryKey: ["auction-top-bids", activeSeason?.id],
+    enabled: !!activeSeason?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("player_season_registrations")
+        .select(
+          `id, sold_price, auction_status,
+           team:teams(id, name, logo_url),
+           player:players(id, full_name, role, photo_url)`
+        )
+        .eq("season_id", activeSeason!.id)
+        .not("sold_price", "is", null)
+        .order("sold_price", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return { data };
+    },
+  });
+
+  const teamsWithAcquisitions = useMemo(() => {
+    if (!acquisitions?.data) return [] as {
+      team: Acquisition["team"];
+      retained: Acquisition[];
+      acquired: Acquisition[];
+    }[];
+
+    const grouped: Record<string, { team: Acquisition["team"]; retained: Acquisition[]; acquired: Acquisition[] }> = {};
+
+    for (const entry of acquisitions.data) {
+      if (!entry.team || !entry.team.id) continue;
+      if (!grouped[entry.team.id]) {
+        grouped[entry.team.id] = { team: entry.team, retained: [], acquired: [] };
+      }
+
+      if (entry.auction_status === "retained") {
+        grouped[entry.team.id].retained.push(entry);
+      } else {
+        grouped[entry.team.id].acquired.push(entry);
+      }
+    }
+
+    return Object.values(grouped).sort((a, b) => (a.team?.name || "").localeCompare(b.team?.name || ""));
+  }, [acquisitions?.data]);
+
+  // Calculate total slides: intro + support + all-teams + team slides + acquisition slides + sponsors + owners + top-bids
   const ownersCount = teams?.filter(t => t.owner_id).length || 0;
-  const totalSlides = 2 + (teams?.length || 0) + (sponsors?.length || 0) + ownersCount + 1;
+  const teamsCount = teams?.length || 0;
+  const acquisitionsCount = teamsWithAcquisitions.length;
+  const sponsorsCount = sponsors?.length || 0;
+  const totalSlides = 3 + teamsCount + acquisitionsCount + sponsorsCount + ownersCount + 1;
 
   // Auto-rotate through teams, sponsors, and owners
   useEffect(() => {
@@ -138,6 +251,13 @@ export default function AuctionDayBanner() {
     const sponsorsCount = sponsors?.length || 0;
     const ownersWithIds = teams?.filter(t => t.owner_id) || [];
     const ownersCount = ownersWithIds.length;
+    const acquisitionsCount = teamsWithAcquisitions.length;
+
+    const teamStart = 3;
+    const acquisitionStart = teamStart + teamsCount;
+    const sponsorsStart = acquisitionStart + acquisitionsCount;
+    const ownersStart = sponsorsStart + sponsorsCount;
+    const topBidStart = ownersStart + ownersCount;
     
     if (index === 0) {
       setSlideType("intro");
@@ -145,14 +265,25 @@ export default function AuctionDayBanner() {
       setSlideType("support");
     } else if (index === 2) {
       setSlideType("all-teams");
-    } else if (index <= 2 + teamsCount) {
+    } else if (index >= teamStart && index < acquisitionStart) {
       setSlideType("team");
-    } else if (index <= 2 + teamsCount + sponsorsCount) {
+    } else if (index >= acquisitionStart && index < sponsorsStart) {
+      setSlideType("acquisition");
+    } else if (index >= sponsorsStart && index < ownersStart) {
       setSlideType("sponsors");
-    } else {
+    } else if (index >= ownersStart && index < topBidStart) {
       setSlideType("owner");
+    } else {
+      setSlideType("top-bids");
     }
   };
+
+  const teamsWithOwners = teams?.filter((t) => t.owner_id) || [];
+
+  const teamStartIndex = 3;
+  const acquisitionStartIndex = teamStartIndex + teamsCount;
+  const sponsorsStartIndex = acquisitionStartIndex + acquisitionsCount;
+  const ownersStartIndex = sponsorsStartIndex + sponsorsCount;
 
   return (
     <div className="h-screen relative overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col">
@@ -185,7 +316,7 @@ export default function AuctionDayBanner() {
             <img 
               src={gcnplLogo} 
               alt="GCNPL Logo" 
-              className="relative w-16 h-16 md:w-20 md:h-20 object-contain rounded-full ring-2 ring-primary/30 bg-card/50 backdrop-blur-sm p-2"
+              className="relative w-16 h-16 md:w-20 md:h-20 object-contain bg-white p-2"
             />
           </div>
           
@@ -218,7 +349,7 @@ export default function AuctionDayBanner() {
               <img 
                 src={gcnplLogo} 
                 alt="GCNPL Logo"
-                className="relative w-64 h-64 object-contain drop-shadow-2xl"
+                className="relative w-64 h-64 object-contain drop-shadow-2xl bg-white p-6"
               />
             </div>
             
@@ -296,15 +427,14 @@ export default function AuctionDayBanner() {
                   >
                     <div className="relative mb-6">
                       <div 
-                        className="absolute -inset-4 rounded-full blur-xl opacity-50 animate-pulse"
+                        className="absolute -inset-4 blur-xl opacity-50 animate-pulse"
                         style={{ backgroundColor: team.primary_color }}
                       />
                       {team.logo_url ? (
                         <img
                           src={team.logo_url}
                           alt={team.name}
-                          className="relative w-32 h-32 rounded-full object-cover ring-4 shadow-xl"
-                          style={{ boxShadow: `0 0 0 4px ${team.primary_color}` }}
+                          className="relative w-32 h-32 object-contain shadow-xl"
                         />
                       ) : (
                         <div
@@ -345,10 +475,211 @@ export default function AuctionDayBanner() {
               </div>
             </div>
           </div>
+        ) : slideType === "team" && teams && teams.length > 0 ? (
+          // Team Slide
+          (() => {
+            const teamIndex = currentSlideIndex - teamStartIndex;
+            const team = teams[teamIndex];
+            if (!team) return null;
+
+            return (
+              <div className="flex items-center justify-center gap-12 w-full max-w-7xl animate-fade-in">
+                {/* Left - Team Logo */}
+                <div className="w-96 flex items-center justify-center">
+                  <div className="relative">
+                    {/* Glow effects */}
+                    <div 
+                      className="absolute -inset-12 rounded-full blur-3xl opacity-70 animate-pulse"
+                      style={{ 
+                        backgroundColor: team.primary_color,
+                      }}
+                    />
+                    
+                    <div 
+                      className="absolute -inset-8 rounded-full blur-xl opacity-40 animate-pulse"
+                      style={{ 
+                        backgroundColor: team.secondary_color,
+                        animationDelay: '1s',
+                      }}
+                    />
+                    
+                    {team.logo_url ? (
+                      <img 
+                        src={team.logo_url} 
+                        alt={team.name}
+                        className="relative w-96 h-96 mx-auto object-contain shadow-2xl"
+                      />
+                    ) : (
+                      <div
+                        className="relative w-96 h-96 mx-auto rounded-3xl flex items-center justify-center text-9xl font-bold text-white shadow-2xl backdrop-blur-sm"
+                        style={{ 
+                          background: `linear-gradient(135deg, ${team.primary_color}, ${team.secondary_color})`,
+                        }}
+                      >
+                        {team.short_name?.substring(0, 2)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right - Team Details */}
+                <div className="flex-1">
+                  <div 
+                    className="inline-flex items-center justify-center px-6 py-2 rounded-full text-lg font-semibold shadow-lg mb-4"
+                    style={{ 
+                      backgroundColor: `${team.primary_color}25`,
+                      color: team.primary_color,
+                      border: `2px solid ${team.primary_color}60`
+                    }}
+                  >
+                    {team.short_name}
+                  </div>
+
+                  <h3 className="font-display font-bold text-5xl md:text-6xl text-primary mb-6 leading-tight">
+                    {team.name}
+                  </h3>
+
+                  <div className="space-y-6 text-muted-foreground">
+                    <p className="text-lg leading-relaxed">
+                      {team.description || 
+                        `${team.name} is one of the four competing franchises in the Gold Coast Nepalese Premier League Season 2. With a talented roster and passionate fanbase, they're ready to compete for the championship.`
+                      }
+                    </p>
+                    
+                    <div className="pt-4 border-t border-border/50 space-y-4">
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-semibold text-foreground w-32">Team Colors</span>
+                        <div className="flex gap-3">
+                          <div 
+                            className="w-12 h-12 rounded-full ring-2 ring-border shadow-lg"
+                            style={{ backgroundColor: team.primary_color }}
+                          />
+                          <div 
+                            className="w-12 h-12 rounded-full ring-2 ring-border shadow-lg"
+                            style={{ backgroundColor: team.secondary_color }}
+                          />
+                        </div>
+                      </div>
+                      
+                      {team.owner_name && (
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-semibold text-foreground w-32">Owner</span>
+                          <span className="text-lg text-foreground font-medium">{team.owner_name}</span>
+                        </div>
+                      )}
+                      
+                      {team.manager_name && (
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-semibold text-foreground w-32">Manager</span>
+                          <span className="text-lg text-foreground font-medium">{team.manager_name}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()
+        ) : slideType === "acquisition" && teamsWithAcquisitions.length > 0 ? (
+          // Player acquisitions per team (retained + auction wins)
+          (() => {
+            const acquisitionIndex = currentSlideIndex - acquisitionStartIndex;
+            const group = teamsWithAcquisitions[acquisitionIndex];
+            if (!group || !group.team) return null;
+
+            return (
+              <div className="w-full max-w-6xl mx-auto animate-fade-in">
+                <div className="text-center mb-10">
+                  <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Player Acquisition</p>
+                  <h3 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-2">
+                    {group.team.name}
+                  </h3>
+                </div>
+
+                <div className="flex flex-col lg:flex-row gap-8">
+                  {/* Team card */}
+                  <div className="lg:w-1/3 bg-card/80 border border-border rounded-3xl p-6 shadow-xl backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="relative">
+                        <div 
+                          className="absolute -inset-4 blur-xl opacity-40"
+                          style={{ backgroundColor: group.team.primary_color || '#f59e0b' }}
+                        />
+                        {group.team.logo_url ? (
+                          <img
+                            src={group.team.logo_url}
+                            alt={group.team.name}
+                            className="relative w-32 h-32 object-contain"
+                          />
+                        ) : (
+                          <div
+                            className="relative w-32 h-32 rounded-full flex items-center justify-center text-3xl font-bold text-white ring-4 ring-border"
+                            style={{ background: `linear-gradient(135deg, ${group.team.primary_color || '#f59e0b'}, ${group.team.primary_color || '#fbbf24'})` }}
+                          >
+                            {group.team.short_name?.substring(0, 2)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Short name</p>
+                        <p className="text-xl font-semibold" style={{ color: group.team.primary_color || '#f59e0b' }}>
+                          {group.team.short_name || ""}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Players list */}
+                  <div className="lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[{ title: "Retained", items: group.retained, badge: "Retained", tone: "#22c55e" }, { title: "Auctioned", items: group.acquired, badge: "Sold", tone: "#f59e0b" }].map(section => (
+                      <div key={section.title} className="bg-card/80 border border-border rounded-2xl p-5 shadow">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-semibold text-lg text-foreground">{section.title}</h4>
+                          <span className="text-xs uppercase tracking-wide px-3 py-1 rounded-full" style={{ backgroundColor: `${section.tone}1A`, color: section.tone, border: `1px solid ${section.tone}55` }}>
+                            {section.items.length} players
+                          </span>
+                        </div>
+
+                        {section.items.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Waiting for updates…</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {section.items.map((acq) => (
+                              <div key={acq.id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 border border-border/70">
+                                <div className="w-12 h-12 rounded-full bg-white overflow-hidden ring-2 ring-border">
+                                  {acq.player?.photo_url ? (
+                                    <img src={acq.player.photo_url} alt={acq.player.full_name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-muted-foreground bg-muted">{acq.player?.full_name?.[0]}</div>
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-semibold text-foreground leading-tight">{acq.player?.full_name}</p>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{acq.player?.role?.replace("_", " ")}</p>
+                                </div>
+                                <div className="text-right">
+                                  {acq.sold_price ? (
+                                    <p className="text-sm font-semibold">${acq.sold_price.toLocaleString()}</p>
+                                  ) : acq.base_price ? (
+                                    <p className="text-sm text-muted-foreground">Base ${acq.base_price.toLocaleString()}</p>
+                                  ) : null}
+                                  <span className="text-[10px] px-2 py-1 rounded-full inline-block mt-1" style={{ backgroundColor: `${section.tone}1A`, color: section.tone, border: `1px solid ${section.tone}40` }}>{section.badge}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()
         ) : slideType === "sponsors" && sponsors && sponsors.length > 0 ? (
           // Sponsor Slide (individual)
           (() => {
-            const sponsorIndex = currentSlideIndex - (teams?.length || 0) - 3; // Adjusted for intro, support, and all-teams slides
+            const sponsorIndex = currentSlideIndex - sponsorsStartIndex;
             const currentSponsor = sponsors[sponsorIndex];
             
             if (!currentSponsor) return null;
@@ -442,11 +773,10 @@ export default function AuctionDayBanner() {
               </div>
             );
           })()
-        ) : slideType === "owner" && teams && teams.length > 0 ? (
+        ) : slideType === "owner" && teamsWithOwners.length > 0 ? (
           // Individual Owner Slide
           (() => {
-            const teamsWithOwners = teams.filter(t => t.owner_id);
-            const ownerIndex = currentSlideIndex - (teams?.length || 0) - (sponsors?.length || 0) - 3; // Adjusted for intro, support, and all-teams slides
+            const ownerIndex = currentSlideIndex - ownersStartIndex;
             const currentTeam = teamsWithOwners[ownerIndex];
             const ownerData = owners?.find(o => o.id === currentTeam?.owner_id);
             
@@ -576,176 +906,50 @@ export default function AuctionDayBanner() {
               </div>
             );
           })()
-        ) : slideType === "all-teams" && teams && teams.length > 0 ? (
-          // All Teams Summary Slide
-          <div className="flex items-center justify-center w-full max-w-7xl animate-fade-in">
-            <div className="w-full">
-              <div className="text-center mb-12">
-                <h3 className="font-display text-5xl md:text-6xl font-bold text-foreground mb-4">
-                  All <span className="text-gradient-gold">Teams</span>
-                </h3>
-                <p className="text-muted-foreground text-xl md:text-2xl">
-                  Four powerhouse franchises ready to compete
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                {teams.map((team, index) => (
-                  <div
-                    key={team.id}
-                    className="flex flex-col items-center p-6 bg-gradient-to-b from-card via-card to-card/95 backdrop-blur-xl border-2 rounded-3xl transition-all duration-500"
-                    style={{ 
-                      borderColor: `${team.primary_color}40`,
-                      animation: 'float 3s ease-in-out infinite',
-                      animationDelay: `${index * 0.2}s`,
-                    }}
-                  >
-                    <div className="relative mb-6">
-                      <div 
-                        className="absolute -inset-4 rounded-full blur-xl opacity-50 animate-pulse"
-                        style={{ backgroundColor: team.primary_color }}
-                      />
-                      {team.logo_url ? (
-                        <img
-                          src={team.logo_url}
-                          alt={team.name}
-                          className="relative w-32 h-32 rounded-full object-cover ring-4 shadow-xl"
-                          style={{ boxShadow: `0 0 0 4px ${team.primary_color}` }}
-                        />
+        ) : slideType === "top-bids" && topBids?.data && topBids.data.length > 0 ? (
+          // Top bid players live slide
+          <div className="w-full max-w-6xl mx-auto animate-fade-in">
+            <div className="text-center mb-8">
+              <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Live Auction Stats</p>
+              <h3 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-2">Top 5 Bids</h3>
+              <p className="text-muted-foreground mt-2">Updates as players get sold</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {topBids.data.map((bid, idx) => (
+                <div key={bid.id} className="relative overflow-hidden rounded-2xl border border-border bg-card/85 shadow-lg p-4">
+                  <div className="absolute inset-0 opacity-5" style={{ background: "radial-gradient(circle at 30% 20%, #f59e0b, transparent 45%)" }} />
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-white overflow-hidden ring-2 ring-border">
+                      {bid.player?.photo_url ? (
+                        <img src={bid.player.photo_url} alt={bid.player.full_name} className="w-full h-full object-cover" />
                       ) : (
-                        <div
-                          className="relative w-32 h-32 rounded-full flex items-center justify-center text-3xl font-bold text-white ring-4 shadow-xl"
-                          style={{ 
-                            background: `linear-gradient(135deg, ${team.primary_color}, ${team.secondary_color})`,
-                            boxShadow: `0 0 0 4px ${team.primary_color}`
-                          }}
-                        >
-                          {team.short_name?.substring(0, 2)}
-                        </div>
+                        <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-muted-foreground bg-muted">{bid.player?.full_name?.[0]}</div>
                       )}
                     </div>
-                    
-                    <h4 className="font-display font-bold text-xl text-center text-foreground mb-2 leading-tight">
-                      {team.name}
-                    </h4>
-                    
-                    <div 
-                      className="px-4 py-1.5 rounded-full text-sm font-semibold mb-3"
-                      style={{ 
-                        backgroundColor: `${team.primary_color}20`,
-                        color: team.primary_color,
-                        border: `1.5px solid ${team.primary_color}40`
-                      }}
-                    >
-                      {team.short_name}
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground leading-tight">{bid.player?.full_name}</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{bid.player?.role?.replace("_", " ")}</p>
                     </div>
-
-                    {team.owner_name && (
-                      <div className="text-center mt-2">
-                        <p className="text-xs text-muted-foreground">Owner</p>
-                        <p className="text-sm font-semibold text-foreground">{team.owner_name}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : teams && teams.length > 0 && currentSlideIndex > 2 && teams[currentSlideIndex - 3] ? (
-          // Team Slide
-          <div className="flex items-center justify-center gap-12 w-full max-w-7xl animate-fade-in">
-            {/* Left - Team Logo */}
-            <div className="w-96 flex items-center justify-center">
-              <div className="relative">
-                {/* Glow effects */}
-                <div 
-                  className="absolute -inset-12 rounded-full blur-3xl opacity-70 animate-pulse"
-                  style={{ 
-                    backgroundColor: teams[currentSlideIndex - 3].primary_color,
-                  }}
-                />
-                
-                <div 
-                  className="absolute -inset-8 rounded-full blur-xl opacity-40 animate-pulse"
-                  style={{ 
-                    backgroundColor: teams[currentSlideIndex - 3].secondary_color,
-                    animationDelay: '1s',
-                  }}
-                />
-                
-                {teams[currentSlideIndex - 3].logo_url ? (
-                  <img 
-                    src={teams[currentSlideIndex - 3].logo_url} 
-                    alt={teams[currentSlideIndex - 3].name}
-                    className="relative w-96 h-96 mx-auto rounded-3xl object-cover shadow-2xl backdrop-blur-sm"
-                  />
-                ) : (
-                  <div
-                    className="relative w-96 h-96 mx-auto rounded-3xl flex items-center justify-center text-9xl font-bold text-white shadow-2xl backdrop-blur-sm"
-                    style={{ 
-                      background: `linear-gradient(135deg, ${teams[currentSlideIndex - 3].primary_color}, ${teams[currentSlideIndex - 3].secondary_color})`,
-                    }}
-                  >
-                    {teams[currentSlideIndex - 3].short_name?.substring(0, 2)}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right - Team Details */}
-            <div className="flex-1">
-              <div 
-                className="inline-flex items-center justify-center px-6 py-2 rounded-full text-lg font-semibold shadow-lg mb-4"
-                style={{ 
-                  backgroundColor: `${teams[currentSlideIndex - 3].primary_color}25`,
-                  color: teams[currentSlideIndex - 3].primary_color,
-                  border: `2px solid ${teams[currentSlideIndex - 3].primary_color}60`
-                }}
-              >
-                {teams[currentSlideIndex - 3].short_name}
-              </div>
-
-              <h3 className="font-display font-bold text-5xl md:text-6xl text-primary mb-6 leading-tight">
-                {teams[currentSlideIndex - 3].name}
-              </h3>
-
-              <div className="space-y-6 text-muted-foreground">
-                <p className="text-lg leading-relaxed">
-                  {teams[currentSlideIndex - 3].description || 
-                    `${teams[currentSlideIndex - 3].name} is one of the four competing franchises in the Gold Coast Nepalese Premier League Season 2. With a talented roster and passionate fanbase, they're ready to compete for the championship.`
-                  }
-                </p>
-                
-                <div className="pt-4 border-t border-border/50 space-y-4">
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-semibold text-foreground w-32">Team Colors</span>
-                    <div className="flex gap-3">
-                      <div 
-                        className="w-12 h-12 rounded-full ring-2 ring-border shadow-lg"
-                        style={{ backgroundColor: teams[currentSlideIndex - 3].primary_color }}
-                      />
-                      <div 
-                        className="w-12 h-12 rounded-full ring-2 ring-border shadow-lg"
-                        style={{ backgroundColor: teams[currentSlideIndex - 3].secondary_color }}
-                      />
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm font-semibold text-primary">${bid.sold_price?.toLocaleString() || "-"}</span>
+                      <span className="text-[10px] px-2 py-1 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/40 mt-1">Rank #{idx + 1}</span>
                     </div>
                   </div>
-                  
-                  {teams[currentSlideIndex - 3].owner_name && (
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-semibold text-foreground w-32">Owner</span>
-                      <span className="text-lg text-foreground font-medium">{teams[currentSlideIndex - 3].owner_name}</span>
+
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      {bid.team?.logo_url ? (
+                        <img src={bid.team.logo_url} alt={bid.team.name} className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold">{bid.team?.name?.[0]}</div>
+                      )}
+                      <span className="font-medium text-foreground">{bid.team?.name}</span>
                     </div>
-                  )}
-                  
-                  {teams[currentSlideIndex - 3].manager_name && (
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-semibold text-foreground w-32">Manager</span>
-                      <span className="text-lg text-foreground font-medium">{teams[currentSlideIndex - 3].manager_name}</span>
-                    </div>
-                  )}
+                    <span className="text-xs uppercase tracking-wide px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30">{bid.auction_status}</span>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         ) : (

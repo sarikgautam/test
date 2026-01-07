@@ -105,7 +105,7 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
       .sort((a, b) => (b.sold_price || 0) - (a.sold_price || 0));
   };
 
-  const topExpensivePlayers = [...(soldPlayers || [])]
+  const topHighestBidPlayers = [...(soldPlayers || [])]
     .sort((a, b) => (b.sold_price || 0) - (a.sold_price || 0))
     .slice(0, 5);
 
@@ -140,17 +140,17 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
 
   return (
     <div className="space-y-8">
-      {/* Top Expensive Players */}
+      {/* Top Highest Bids */}
       <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-lg">
             <TrendingUp className="w-5 h-5 text-primary" />
-            Top Expensive Players
+            Top Highest Bids
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-            {topExpensivePlayers.map((reg, index) => {
+            {topHighestBidPlayers.map((reg, index) => {
               const player = reg.players as any;
               const team = reg.teams as any;
               
@@ -223,7 +223,7 @@ export function SoldPlayersList({ seasonId }: SoldPlayersListProps) {
           <CardContent className="p-4 text-center">
             <TrendingUp className="w-6 h-6 text-primary mx-auto mb-1" />
             <p className="text-2xl font-bold">
-              ${topExpensivePlayers[0]?.sold_price?.toLocaleString() || 0}
+              ${topHighestBidPlayers[0]?.sold_price?.toLocaleString() || 0}
             </p>
             <p className="text-xs text-muted-foreground">Highest Bid</p>
           </CardContent>

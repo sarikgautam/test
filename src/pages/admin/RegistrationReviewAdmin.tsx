@@ -191,6 +191,7 @@ export default function RegistrationReviewAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-registrations"] });
       queryClient.invalidateQueries({ queryKey: ["registrations"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
       toast({ title: "Registration approved" });
     },
     onError: (error: any) => {
@@ -274,6 +275,7 @@ export default function RegistrationReviewAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-registrations"] });
       queryClient.invalidateQueries({ queryKey: ["all-players-for-matching"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
       setIsMatchDialogOpen(false);
       toast({ title: "Player linked successfully", description: "Registration merged with existing player" });
     },
@@ -308,6 +310,7 @@ export default function RegistrationReviewAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["registrations"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
       setIsRetainDialogOpen(false);
       setRetainPrice("");
       setSelectedTeamId("");
