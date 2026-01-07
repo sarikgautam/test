@@ -12,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, UserPlus, Loader2, Upload, AlertCircle, CreditCard, User, Phone, XCircle } from "lucide-react";
+import { CheckCircle, UserPlus, Loader2, Upload, AlertCircle, CreditCard, User, Phone, XCircle, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { useActiveSeason } from "@/hooks/useSeason";
+import { cn } from "@/lib/utils";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -35,7 +36,16 @@ const registerSchema = z.object({
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
+const STEPS = [
+  { id: 1, title: "Personal Info", icon: User },
+  { id: 2, title: "Emergency", icon: Phone },
+  { id: 3, title: "Cricket Details", icon: UserPlus },
+  { id: 4, title: "Documents", icon: Upload },
+  { id: 5, title: "Payment", icon: CreditCard },
+];
+
 const Register = () => {
+  const [currentStep, setCurrentStep] = useState(1);
   const [isSuccess, setIsSuccess] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null);
@@ -289,13 +299,53 @@ const Register = () => {
   const onSubmit = (data: RegisterFormData) => {
     if (!profilePhoto) {
       setUploadErrors((prev) => ({ ...prev, photo: "Profile photo is required" }));
+      setCurrentStep(4);
       return;
     }
     if (!paymentReceipt) {
       setUploadErrors((prev) => ({ ...prev, receipt: "Payment receipt is required" }));
+      setCurrentStep(5);
       return;
     }
     mutation.mutate(data);
+  };
+
+  const validateStep = async (step: number): Promise<boolean> => {
+    const fieldsToValidate: Record<number, (keyof RegisterFormData)[]> = {
+      1: ["full_name", "date_of_birth", "email", "phone", "address"],
+      2: ["emergency_contact_name", "emergency_contact_phone"],
+      3: ["role"],
+      4: [],
+      5: [],
+    };
+
+    const fields = fieldsToValidate[step];
+    const result = await trigger(fields as any);
+    
+    if (step === 4 && !profilePhoto) {
+      setUploadErrors((prev) => ({ ...prev, photo: "Profile photo is required" }));
+      return false;
+    }
+    
+    if (step === 5 && !paymentReceipt) {
+      setUploadErrors((prev) => ({ ...prev, receipt: "Payment receipt is required" }));
+      return false;
+    }
+    
+    return result;
+  };
+
+  const nextStep = async () => {
+    const isValid = await validateStep(currentStep);
+    if (isValid && currentStep < 5) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   if (isSuccess) {
@@ -426,218 +476,295 @@ const Register = () => {
             </Card>
           )}
 
+          {/* Progress Stepper */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between relative">
+              {/* Progress Line */}
+              <div className="absolute top-5 left-0 right-0 h-1 bg-muted -z-10">
+                <div
+                  className="h-full bg-primary transition-all duration-500"
+                  style={{ width: `${((currentStep - 1) / 4) * 100}%` }}
+                />
+              </div>
+
+              {/* Step Circles */}
+              {STEPS.map((step, index) => {
+                const StepIcon = step.icon;
+                const isCompleted = currentStep > step.id;
+                const isCurrent = currentStep === step.id;
+                
+                return (
+                  <div key={step.id} className="flex flex-col items-center gap-2 relative bg-background px-2">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(step.id)}
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
+                        isCompleted && "bg-primary border-primary text-primary-foreground",
+                        isCurrent && "bg-primary/10 border-primary text-primary scale-110",
+                        !isCompleted && !isCurrent && "bg-muted border-muted-foreground/30 text-muted-foreground"
+                      )}
+                    >
+                      {isCompleted ? <Check className="w-5 h-5" /> : <StepIcon className="w-5 h-5" />}
+                    </button>
+                    <span
+                      className={cn(
+                        "text-xs font-medium text-center hidden sm:block",
+                        (isCompleted || isCurrent) ? "text-foreground" : "text-muted-foreground"
+                      )}
+                    >
+                      {step.title}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Personal Information */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Personal Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="full_name">Full Name *</Label>
-                    <Input id="full_name" {...register("full_name")} placeholder="Enter your full name" />
-                    {errors.full_name && <p className="text-sm text-destructive">{errors.full_name.message}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="date_of_birth">Date of Birth *</Label>
-                    <Input id="date_of_birth" type="date" {...register("date_of_birth")} />
-                    {errors.date_of_birth && <p className="text-sm text-destructive">{errors.date_of_birth.message}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input id="email" type="email" {...register("email")} placeholder="your@email.com" />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input id="phone" {...register("phone")} placeholder="+61 XXX XXX XXX" />
-                    {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="address">Address *</Label>
-                    <Textarea id="address" {...register("address")} placeholder="Your full address" rows={2} />
-                    {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="current_team">Current Team (if any)</Label>
-                    <Input id="current_team" {...register("current_team")} placeholder="e.g., Local Cricket Club" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Emergency Contact */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="w-5 h-5" />
-                  Emergency Contact
-                </CardTitle>
-                <CardDescription>Contact person in case of emergency</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="emergency_contact_name">Contact Name *</Label>
-                    <Input id="emergency_contact_name" {...register("emergency_contact_name")} placeholder="Full name" />
-                    {errors.emergency_contact_name && (
-                      <p className="text-sm text-destructive">{errors.emergency_contact_name.message}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="emergency_contact_phone">Contact Phone *</Label>
-                    <Input id="emergency_contact_phone" {...register("emergency_contact_phone")} placeholder="+61 XXX XXX XXX" />
-                    {errors.emergency_contact_phone && (
-                      <p className="text-sm text-destructive">{errors.emergency_contact_phone.message}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="emergency_contact_email">Contact Email (optional)</Label>
-                    <Input
-                      id="emergency_contact_email"
-                      type="email"
-                      {...register("emergency_contact_email")}
-                      placeholder="contact@email.com"
-                    />
-                    {errors.emergency_contact_email && (
-                      <p className="text-sm text-destructive">{errors.emergency_contact_email.message}</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Cricket Details */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle>Cricket Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Primary Role *</Label>
-                    <Select defaultValue="batsman" onValueChange={(v) => setValue("role", v as any)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="batsman">Batsman</SelectItem>
-                        <SelectItem value="bowler">Bowler</SelectItem>
-                        <SelectItem value="all_rounder">All-Rounder</SelectItem>
-                        <SelectItem value="wicket_keeper">Wicket Keeper</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="batting_style">Batting Style</Label>
-                    <Select onValueChange={(v) => setValue("batting_style", v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select style" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Right-handed">Right-handed</SelectItem>
-                        <SelectItem value="Left-handed">Left-handed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bowling_style">Bowling Style</Label>
-                    <Select onValueChange={(v) => setValue("bowling_style", v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select style" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Right-arm Fast">Right-arm Fast</SelectItem>
-                        <SelectItem value="Right-arm Medium">Right-arm Medium</SelectItem>
-                        <SelectItem value="Right-arm Off-spin">Right-arm Off-spin</SelectItem>
-                        <SelectItem value="Right-arm Leg-spin">Right-arm Leg-spin</SelectItem>
-                        <SelectItem value="Left-arm Fast">Left-arm Fast</SelectItem>
-                        <SelectItem value="Left-arm Medium">Left-arm Medium</SelectItem>
-                        <SelectItem value="Left-arm Orthodox">Left-arm Orthodox</SelectItem>
-                        <SelectItem value="Left-arm Chinaman">Left-arm Chinaman</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Photo Upload */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="w-5 h-5" />
-                  Profile Photo *
-                </CardTitle>
-                <CardDescription>Upload a recent photo (required)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  {photoPreview ? (
-                    <img src={photoPreview} alt="Preview" className="w-24 h-24 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
-                      <User className="w-10 h-10 text-muted-foreground" />
+            {/* Step 1: Personal Information */}
+            {currentStep === 1 && (
+              <Card className="border-border/50 animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Personal Information
+                  </CardTitle>
+                  <CardDescription>Tell us about yourself</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name">Full Name *</Label>
+                      <Input id="full_name" {...register("full_name")} placeholder="Enter your full name" />
+                      {errors.full_name && <p className="text-sm text-destructive">{errors.full_name.message}</p>}
                     </div>
-                  )}
-                  <div className="flex-1">
-                    <Input type="file" accept="image/*" onChange={handlePhotoChange} className="cursor-pointer" />
-                    {uploadErrors.photo && (
-                      <p className="text-sm text-destructive mt-1 flex items-center gap-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="date_of_birth">Date of Birth *</Label>
+                      <Input id="date_of_birth" type="date" {...register("date_of_birth")} />
+                      {errors.date_of_birth && <p className="text-sm text-destructive">{errors.date_of_birth.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input id="email" type="email" {...register("email")} placeholder="your@email.com" />
+                      {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Input id="phone" {...register("phone")} placeholder="+61 XXX XXX XXX" />
+                      {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="address">Address *</Label>
+                      <Textarea id="address" {...register("address")} placeholder="Your full address" rows={2} />
+                      {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="current_team">Current Team (if any)</Label>
+                      <Input id="current_team" {...register("current_team")} placeholder="e.g., Local Cricket Club" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 2: Emergency Contact */}
+            {currentStep === 2 && (
+              <Card className="border-border/50 animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="w-5 h-5" />
+                    Emergency Contact
+                  </CardTitle>
+                  <CardDescription>Contact person in case of emergency</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="emergency_contact_name">Contact Name *</Label>
+                      <Input id="emergency_contact_name" {...register("emergency_contact_name")} placeholder="Full name" />
+                      {errors.emergency_contact_name && (
+                        <p className="text-sm text-destructive">{errors.emergency_contact_name.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="emergency_contact_phone">Contact Phone *</Label>
+                      <Input id="emergency_contact_phone" {...register("emergency_contact_phone")} placeholder="+61 XXX XXX XXX" />
+                      {errors.emergency_contact_phone && (
+                        <p className="text-sm text-destructive">{errors.emergency_contact_phone.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="emergency_contact_email">Contact Email (optional)</Label>
+                      <Input
+                        id="emergency_contact_email"
+                        type="email"
+                        {...register("emergency_contact_email")}
+                        placeholder="contact@email.com"
+                      />
+                      {errors.emergency_contact_email && (
+                        <p className="text-sm text-destructive">{errors.emergency_contact_email.message}</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 3: Cricket Details */}
+            {currentStep === 3 && (
+              <Card className="border-border/50 animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5" />
+                    Cricket Details
+                  </CardTitle>
+                  <CardDescription>Share your cricket profile</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Primary Role *</Label>
+                      <Select defaultValue="batsman" onValueChange={(v) => setValue("role", v as any)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="batsman">Batsman</SelectItem>
+                          <SelectItem value="bowler">Bowler</SelectItem>
+                          <SelectItem value="all_rounder">All-Rounder</SelectItem>
+                          <SelectItem value="wicket_keeper">Wicket Keeper</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="batting_style">Batting Style</Label>
+                      <Select onValueChange={(v) => setValue("batting_style", v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Right-handed">Right-handed</SelectItem>
+                          <SelectItem value="Left-handed">Left-handed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bowling_style">Bowling Style</Label>
+                      <Select onValueChange={(v) => setValue("bowling_style", v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Right-arm Fast">Right-arm Fast</SelectItem>
+                          <SelectItem value="Right-arm Medium">Right-arm Medium</SelectItem>
+                          <SelectItem value="Right-arm Off-spin">Right-arm Off-spin</SelectItem>
+                          <SelectItem value="Right-arm Leg-spin">Right-arm Leg-spin</SelectItem>
+                          <SelectItem value="Left-arm Fast">Left-arm Fast</SelectItem>
+                          <SelectItem value="Left-arm Medium">Left-arm Medium</SelectItem>
+                          <SelectItem value="Left-arm Orthodox">Left-arm Orthodox</SelectItem>
+                          <SelectItem value="Left-arm Chinaman">Left-arm Chinaman</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 4: Profile Photo */}
+            {currentStep === 4 && (
+              <Card className="border-border/50 animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="w-5 h-5" />
+                    Profile Photo *
+                  </CardTitle>
+                  <CardDescription>Upload a recent photo (required)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center gap-6">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Preview" className="w-32 h-32 rounded-full object-cover ring-4 ring-primary/20" />
+                    ) : (
+                      <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center">
+                        <User className="w-16 h-16 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="w-full">
+                      <Input type="file" accept="image/*" onChange={handlePhotoChange} className="cursor-pointer" />
+                      {uploadErrors.photo && (
+                        <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {uploadErrors.photo}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2">Max 5MB. JPG, PNG, or WEBP.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 5: Payment Receipt */}
+            {currentStep === 5 && (
+              <Card className="border-border/50 border-primary/30 animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                    Payment Receipt *
+                  </CardTitle>
+                  <CardDescription>Upload your payment receipt (required)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {receiptPreview && (
+                      <div className="rounded-lg border border-primary/30 p-4 bg-primary/5">
+                        <img src={receiptPreview} alt="Receipt Preview" className="max-h-64 mx-auto rounded-lg object-contain" />
+                      </div>
+                    )}
+                    <Input type="file" accept="image/*,.pdf" onChange={handleReceiptChange} className="cursor-pointer" />
+                    {uploadErrors.receipt && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
                         <AlertCircle className="w-4 h-4" />
-                        {uploadErrors.photo}
+                        {uploadErrors.receipt}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1">Max 5MB. JPG, PNG, or WEBP.</p>
+                    <p className="text-xs text-muted-foreground">Max 5MB. Image or PDF.</p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
-            {/* Payment Receipt */}
-            <Card className="border-border/50 border-primary/30">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-primary" />
-                  Payment Receipt *
-                </CardTitle>
-                <CardDescription>Upload your payment receipt (required)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {receiptPreview && (
-                    <img src={receiptPreview} alt="Receipt Preview" className="max-h-40 rounded-lg object-contain" />
-                  )}
-                  <Input type="file" accept="image/*,.pdf" onChange={handleReceiptChange} className="cursor-pointer" />
-                  {uploadErrors.receipt && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {uploadErrors.receipt}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground">Max 5MB. Image or PDF.</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Submit Button */}
-            <Button type="submit" size="lg" className="w-full" disabled={mutation.isPending}>
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Registering...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Complete Registration
-                </>
+            {/* Navigation Buttons */}
+            <div className="flex gap-4 pt-4">
+              {currentStep > 1 && (
+                <Button type="button" variant="outline" size="lg" onClick={prevStep} className="flex-1">
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
               )}
-            </Button>
+              {currentStep < 5 ? (
+                <Button type="button" size="lg" onClick={nextStep} className="flex-1">
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              ) : (
+                <Button type="submit" size="lg" className="flex-1" disabled={mutation.isPending}>
+                  {mutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Registering...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Complete Registration
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </form>
         </div>
       </div>
