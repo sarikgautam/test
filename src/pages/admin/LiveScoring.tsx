@@ -972,32 +972,34 @@ export default function LiveScoring() {
                 <h2 className="text-2xl font-bold text-white">Innings {currentInnings.innings_number}</h2>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-slate-900/50 rounded-lg p-6 text-center space-y-3">
-                  <div className="flex items-center justify-center gap-3">
-                    {battingTeam?.logo_url && <img src={battingTeam.logo_url} alt="logo" className="h-12 w-12 rounded-full border border-slate-700 object-contain" />}
+                <div className="bg-slate-900/50 rounded-lg p-4 md:p-6 text-center space-y-2 md:space-y-3">
+                  <div className="flex items-center justify-center gap-2 md:gap-3">
+                    {battingTeam?.logo_url && <img src={battingTeam.logo_url} alt="logo" className="h-10 w-10 md:h-12 md:w-12 rounded-full border border-slate-700 object-contain" />}
                     <div className="text-left">
-                      <div className="text-sm text-slate-400">Batting</div>
-                      <div className="text-lg font-semibold text-white">{battingTeam?.name}</div>
+                      <div className="text-xs md:text-sm text-slate-400">Batting</div>
+                      <div className="text-base md:text-lg font-semibold text-white">{battingTeam?.name}</div>
                     </div>
                   </div>
-                  <div className="text-5xl font-bold text-white mb-2">{currentInnings.total_runs}/{currentInnings.total_wickets}</div>
-                  <div className="text-2xl text-slate-400">{overNumber}.{ballCount} overs</div>
-                  <div className="mt-4 text-sm text-slate-400">
+                  <div className="space-y-1">
+                    <div className="text-4xl md:text-5xl font-bold text-white">{currentInnings.total_runs}/{currentInnings.total_wickets}</div>
+                    <div className="text-xl md:text-2xl text-slate-400">({currentInnings.total_overs?.toFixed(1) || `${overNumber}.${ballCount}`} ov)</div>
+                  </div>
+                  <div className="mt-3 md:mt-4 text-xs md:text-sm text-slate-400">
                     Extras: {currentInnings.extras_wides}wd {currentInnings.extras_noballs}nb {currentInnings.extras_byes}b {currentInnings.extras_legbyes}lb
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="bg-emerald-900/30 rounded p-3 border border-emerald-500/30">
+                <div className="space-y-2 md:space-y-3">
+                  <div className="bg-emerald-900/30 rounded p-2 md:p-3 border border-emerald-500/30">
                     <p className="text-xs text-emerald-400">STRIKER</p>
-                    <p className="font-bold text-white">{striker?.full_name} <span className="text-sm text-emerald-200">{strikerStat?.runs_scored || 0} ({strikerStat?.balls_faced || 0})</span></p>
+                    <p className="font-bold text-white text-sm md:text-base">{striker?.full_name} <span className="text-xs md:text-sm text-emerald-200">{strikerStat?.runs_scored || 0} ({strikerStat?.balls_faced || 0})</span></p>
                   </div>
-                  <div className="bg-slate-900/50 rounded p-3">
+                  <div className="bg-slate-900/50 rounded p-2 md:p-3">
                     <p className="text-xs text-slate-400">NON-STRIKER</p>
-                    <p className="font-bold text-white">{nonStriker?.full_name} <span className="text-sm text-slate-300">{nonStrikerStat?.runs_scored || 0} ({nonStrikerStat?.balls_faced || 0})</span></p>
+                    <p className="font-bold text-white text-sm md:text-base">{nonStriker?.full_name} <span className="text-xs md:text-sm text-slate-300">{nonStrikerStat?.runs_scored || 0} ({nonStrikerStat?.balls_faced || 0})</span></p>
                   </div>
-                  <div className="bg-red-900/30 rounded p-3 border border-red-500/30">
+                  <div className="bg-red-900/30 rounded p-2 md:p-3 border border-red-500/30">
                     <p className="text-xs text-red-400">BOWLER</p>
-                    <p className="font-bold text-white">{bowler?.full_name} <span className="text-sm text-red-200">{bowlerStat?.wickets || 0}/{bowlerStat?.runs_conceded || 0}</span></p>
+                    <p className="font-bold text-white text-sm md:text-base">{bowler?.full_name} <span className="text-xs md:text-sm text-red-200">{bowlerStat?.wickets || 0}/{bowlerStat?.runs_conceded || 0}</span></p>
                   </div>
                   <div className="flex gap-1">
                     {[0,1,2,3,4,5].map(i => (
