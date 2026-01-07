@@ -285,6 +285,7 @@ export default function LiveScoring() {
       await loadInnings();
       await loadStats();
       await loadRecentBalls(currentInnings.id);
+      await syncScoresToMatch();
       await ensureInningsProgression();
     } catch (error) {
       console.error(error);
@@ -402,7 +403,42 @@ export default function LiveScoring() {
     setBallCount(ballNum);
     setOverNumber(overNum);
     await loadRecentBalls(inningsRef.id);
+    await syncScoresToMatch();
     await ensureInningsProgression();
+  };
+
+  const syncScoresToMatch = async () => {
+    if (!selectedMatch) return;
+
+    // Get all innings for this match
+    const { data: innings } = await supabase
+      .from('match_innings')
+      .select('*')
+      .eq('match_id', selectedMatch.id)
+      .order('innings_number', { ascending: true });
+
+    if (!innings || innings.length === 0) return;
+
+    // Format scores as "runs/wickets"
+    const homeTeamInnings = innings.find(i => i.batting_team_id === selectedMatch.home_team_id);
+    const awayTeamInnings = innings.find(i => i.batting_team_id === selectedMatch.away_team_id);
+
+    const homeScore = homeTeamInnings 
+      ? `${homeTeamInnings.total_runs}/${homeTeamInnings.total_wickets}`
+      : null;
+    
+    const awayScore = awayTeamInnings 
+      ? `${awayTeamInnings.total_runs}/${awayTeamInnings.total_wickets}`
+      : null;
+
+    // Update matches table with current scores
+    await supabase
+      .from('matches')
+      .update({
+        home_team_score: homeScore,
+        away_team_score: awayScore
+      })
+      .eq('id', selectedMatch.id);
   };
 
   const finishMatch = async (winnerTeamId: string | null, summary: string) => {
@@ -554,6 +590,7 @@ export default function LiveScoring() {
       await loadInnings();
       await loadStats();
       await loadRecentBalls(currentInnings.id);
+      await syncScoresToMatch();
       await ensureInningsProgression();
       toast({ title: "Last ball undone", description: "Scores recalculated" });
     } catch (error) {
@@ -566,6 +603,7 @@ export default function LiveScoring() {
     if (!currentInnings) return;
     await recomputeInningsData();
     await supabase.from('match_innings').update({ is_completed: true }).eq('id', currentInnings.id);
+    await syncScoresToMatch();
     await ensureInningsProgression();
     toast({ title: "Innings ended", description: "Innings closed manually" });
   };
@@ -761,6 +799,7 @@ export default function LiveScoring() {
       await loadInnings();
       await loadStats();
       await loadRecentBalls(currentInnings.id);
+      await syncScoresToMatch();
       await ensureInningsProgression();
       toast({ title: "Wicket!", description: "Select new batsman" });
     } catch (error) {
