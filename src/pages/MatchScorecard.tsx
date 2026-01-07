@@ -28,6 +28,8 @@ interface PlayerStat {
   fielder_id: string | null;
   runout_by_id: string | null;
   dismissal_other_text: string | null;
+  batting_order: number | null;
+  created_at: string;
   player: {
     id: string;
     full_name: string;
@@ -214,6 +216,7 @@ const MatchScorecard = () => {
           fielder_id,
           runout_by_id,
           dismissal_other_text,
+          batting_order,
           created_at,
           player:players!player_stats_player_id_fkey(id, full_name, role)
         `)
@@ -443,9 +446,28 @@ const MatchScorecard = () => {
   const homeInnings = inningsList.find((i: any) => i.batting_team_id === match.home_team_id);
   const awayInnings = inningsList.find((i: any) => i.batting_team_id === match.away_team_id);
 
-  // Separate stats by team
-  const homeTeamStats = playerStats?.filter((s) => s.player?.team_id === match.home_team_id) || [];
-  const awayTeamStats = playerStats?.filter((s) => s.player?.team_id === match.away_team_id) || [];
+  // Separate stats by team and sort by batting order
+  const homeTeamStats = (playerStats?.filter((s) => s.player?.team_id === match.home_team_id) || [])
+    .sort((a, b) => {
+      // Sort by batting_order if available, otherwise by created_at
+      if (a.batting_order !== null && b.batting_order !== null) {
+        return a.batting_order - b.batting_order;
+      }
+      if (a.batting_order !== null) return -1;
+      if (b.batting_order !== null) return 1;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+  
+  const awayTeamStats = (playerStats?.filter((s) => s.player?.team_id === match.away_team_id) || [])
+    .sort((a, b) => {
+      // Sort by batting_order if available, otherwise by created_at
+      if (a.batting_order !== null && b.batting_order !== null) {
+        return a.batting_order - b.batting_order;
+      }
+      if (a.batting_order !== null) return -1;
+      if (b.batting_order !== null) return 1;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
 
   const calculateStrikeRate = (runs: number, balls: number) => {
     if (balls === 0) return "-";
