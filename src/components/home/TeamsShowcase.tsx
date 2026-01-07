@@ -74,15 +74,15 @@ export function TeamsShowcase() {
                 className="group relative animate-fade-in flex-shrink-0"
                 style={{ animationDelay: `${index * 80 + 300}ms` }}
               >
-                {/* Enhanced card with better depth */}
-                <div className="relative w-48 md:w-56 h-auto rounded-3xl overflow-hidden transition-all duration-700 ease-out group-hover:scale-110 group-hover:-translate-y-2">
+                {/* Enhanced card with better depth and bigger size */}
+                <div className="relative w-64 h-auto sm:w-72 md:w-80 rounded-3xl overflow-hidden transition-all duration-700 ease-out group-hover:scale-110 group-hover:-translate-y-2 animate-float" style={{ animationDelay: `${index * 200}ms` }}>
                   
                   {/* Layered background */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-card via-card to-card/95 backdrop-blur-xl border border-border/80 group-hover:border-primary/50 transition-all duration-700 rounded-3xl" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-card via-card to-card/95 backdrop-blur-xl border-2 border-border/80 group-hover:border-primary/50 transition-all duration-700 rounded-3xl" />
                   
-                  {/* Dynamic gradient based on team colors */}
+                  {/* Dynamic gradient based on team colors - always visible on mobile */}
                   <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-3xl"
+                    className="absolute inset-0 opacity-30 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-700 rounded-3xl"
                     style={{
                       background: `linear-gradient(135deg, ${team.primary_color}15 0%, ${team.secondary_color}15 100%)`,
                     }}
@@ -90,29 +90,29 @@ export function TeamsShowcase() {
                   
                   {/* Enhanced top accent - larger */}
                   <div 
-                    className="absolute top-0 left-0 right-0 h-1.5 transition-all duration-700 group-hover:h-2"
+                    className="absolute top-0 left-0 right-0 h-2 transition-all duration-700 group-hover:h-3"
                     style={{ background: `linear-gradient(90deg, ${team.primary_color}, ${team.secondary_color})` }}
                   />
                   
                   {/* Side accent line */}
                   <div 
-                    className="absolute top-0 right-0 w-1 h-0 transition-all duration-700 group-hover:h-full"
+                    className="absolute top-0 right-0 w-1.5 h-0 transition-all duration-700 group-hover:h-full"
                     style={{ background: `linear-gradient(180deg, ${team.primary_color}, ${team.secondary_color})` }}
                   />
                   
                   {/* Content with enhanced padding */}
-                  <div className="relative px-6 pt-8 pb-8 text-center flex flex-col items-center">
+                  <div className="relative px-6 sm:px-8 pt-10 pb-10 text-center flex flex-col items-center">
                     {/* Enhanced logo container with larger size and glow */}
                     <div className="relative mb-8 group/logo">
-                      {/* Glow effect - more prominent */}
+                      {/* Glow effect - always visible on mobile, more on hover */}
                       <div 
-                        className="absolute -inset-6 rounded-full blur-2xl opacity-0 group-hover/logo:opacity-70 transition-opacity duration-700 group-hover/logo:animate-pulse"
+                        className="absolute -inset-8 rounded-full blur-2xl opacity-40 md:opacity-0 md:group-hover/logo:opacity-70 transition-opacity duration-700 animate-pulse"
                         style={{ backgroundColor: team.primary_color }}
                       />
                       
                       {/* Secondary glow */}
                       <div 
-                        className="absolute -inset-4 rounded-full blur-lg opacity-0 group-hover/logo:opacity-40 transition-opacity duration-700"
+                        className="absolute -inset-6 rounded-full blur-lg opacity-20 md:opacity-0 md:group-hover/logo:opacity-40 transition-opacity duration-700"
                         style={{ backgroundColor: team.secondary_color }}
                       />
                       
@@ -120,11 +120,11 @@ export function TeamsShowcase() {
                         <img 
                           src={team.logo_url} 
                           alt={team.name}
-                          className="relative w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full object-cover shadow-2xl ring-4 ring-border/60 group-hover/logo:ring-primary/60 transition-all duration-700 group-hover/logo:scale-125 group-hover/logo:-rotate-6 backdrop-blur-sm"
+                          className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-44 md:h-44 mx-auto rounded-full object-cover shadow-2xl ring-4 ring-border/60 group-hover/logo:ring-primary/60 transition-all duration-700 md:group-hover/logo:scale-125 md:group-hover/logo:-rotate-6 backdrop-blur-sm"
                         />
                       ) : (
                         <div
-                          className="relative w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full flex items-center justify-center text-4xl md:text-5xl font-bold text-white shadow-2xl ring-4 ring-border/60 group-hover/logo:ring-primary/60 transition-all duration-700 group-hover/logo:scale-125 group-hover/logo:-rotate-6 backdrop-blur-sm"
+                          className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-44 md:h-44 mx-auto rounded-full flex items-center justify-center text-5xl sm:text-6xl md:text-5xl font-bold text-white shadow-2xl ring-4 ring-border/60 group-hover/logo:ring-primary/60 transition-all duration-700 md:group-hover/logo:scale-125 md:group-hover/logo:-rotate-6 backdrop-blur-sm"
                           style={{ 
                             background: `linear-gradient(135deg, ${team.primary_color}, ${team.secondary_color})` 
                           }}
@@ -135,26 +135,26 @@ export function TeamsShowcase() {
                     </div>
                     
                     {/* Team name - larger and bolder */}
-                    <h3 className="font-display font-bold text-xl md:text-2xl text-foreground tracking-wide group-hover:text-primary transition-colors duration-500 leading-tight mb-3">
+                    <h3 className="font-display font-bold text-2xl sm:text-3xl md:text-2xl text-foreground tracking-wide group-hover:text-primary transition-colors duration-500 leading-tight mb-4">
                       {team.name}
                     </h3>
                     
                     {/* Enhanced short name badge */}
                     <div 
-                      className="inline-flex items-center justify-center px-4 py-2 rounded-full text-sm font-semibold transition-all duration-500 group-hover:scale-110 shadow-lg"
+                      className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-base font-semibold transition-all duration-500 group-hover:scale-110 shadow-lg"
                       style={{ 
                         backgroundColor: `${team.primary_color}25`,
                         color: team.primary_color,
-                        border: `1.5px solid ${team.primary_color}40`
+                        border: `2px solid ${team.primary_color}40`
                       }}
                     >
                       {team.short_name}
                     </div>
                     
-                    {/* Enhanced view team indicator with better animation */}
-                    <div className="flex items-center justify-center gap-2 mt-6 text-sm font-semibold text-foreground opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-3 group-hover:translate-y-0">
+                    {/* Enhanced view team indicator - visible on mobile */}
+                    <div className="flex items-center justify-center gap-2 mt-6 text-base font-semibold text-foreground opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-all duration-500 translate-y-0 md:translate-y-3 md:group-hover:translate-y-0">
                       <span className="text-primary">View Team</span>
-                      <ChevronRight className="w-4 h-4 text-primary transition-transform group-hover:translate-x-1" />
+                      <ChevronRight className="w-5 h-5 text-primary transition-transform group-hover:translate-x-1" />
                     </div>
                   </div>
                 </div>
