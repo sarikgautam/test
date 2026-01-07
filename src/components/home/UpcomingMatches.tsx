@@ -43,9 +43,9 @@ export function UpcomingMatches() {
           home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, logo_url),
           away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, logo_url)
         `)
-        .in("status", ["upcoming", "completed"])
+        .in("status", ["upcoming", "completed", "live"])
         .order("match_date", { ascending: true })
-        .limit(10);
+        .limit(12);
 
       if (error) {
         console.error("[UpcomingMatches] Query error:", error);
@@ -60,6 +60,7 @@ export function UpcomingMatches() {
     console.error("[UpcomingMatches] Query error from hook:", queryError);
   }
 
+  const live = matches?.filter((m) => m.status === "live") || [];
   const upcoming = matches?.filter((m) => m.status === "upcoming").slice(0, 3) || [];
   const completed = matches?.filter((m) => m.status === "completed").reverse().slice(0, 3) || [];
 
@@ -107,6 +108,91 @@ export function UpcomingMatches() {
   return (
     <section className="py-16 md:py-24">
       <div className="container mx-auto px-4">
+            {/* Live Matches Highlight */}
+            {live.length > 0 && (
+              <div className="mb-12">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="font-display text-2xl md:text-3xl text-foreground">Live <span className="text-gradient-gold">Now</span></h3>
+                    <p className="text-muted-foreground text-sm mt-1">Tap to view live scorecard</p>
+                  </div>
+                  <Button variant="ghost" asChild className="hidden sm:flex">
+                    <Link to="/fixtures">Go to fixtures</Link>
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {live.map((match, index) => {
+                    const resultColor = match.home_team.primary_color || "#dc2626";
+                    return (
+                      <Link
+                        key={match.id}
+                        to={`/fixtures/${match.id}`}
+                        className="group relative bg-card rounded-xl border border-border overflow-hidden card-hover animate-fade-in-up block"
+                        style={{ animationDelay: `${index * 120}ms` }}
+                      >
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 via-primary to-red-500 animate-pulse" />
+                        <div className="p-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-medium px-3 py-1 rounded-full bg-red-500/15 text-red-600 border border-red-500/30 flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                              Live
+                            </span>
+                            {(match as any).season?.name && (
+                              <span className="text-xs font-medium text-accent bg-accent/10 px-3 py-1 rounded-full">
+                                {(match as any).season.name}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between gap-4 mb-3">
+                            <div className="flex-1 text-center">
+                              {match.home_team?.logo_url ? (
+                                <img src={match.home_team.logo_url} alt={match.home_team.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
+                              ) : (
+                                <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-sm font-bold text-white mb-1" style={{ backgroundColor: match.home_team?.primary_color }}>
+                                  {match.home_team?.short_name?.substring(0, 2) || "TBA"}
+                                </div>
+                              )}
+                              <p className="text-sm font-medium text-foreground truncate">{match.home_team?.short_name}</p>
+                              <p className="text-xs font-semibold text-foreground">{match.home_team_score || "-"}</p>
+                            </div>
+
+                            <div className="text-lg font-display text-red-500 flex flex-col items-center gap-1">
+                              <span>vs</span>
+                              <span className="text-xs font-semibold text-muted-foreground">Live</span>
+                            </div>
+
+                            <div className="flex-1 text-center">
+                              {match.away_team?.logo_url ? (
+                                <img src={match.away_team.logo_url} alt={match.away_team.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
+                              ) : (
+                                <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-sm font-bold text-white mb-1" style={{ backgroundColor: match.away_team?.primary_color }}>
+                                  {match.away_team?.short_name?.substring(0, 2) || "TBA"}
+                                </div>
+                              )}
+                              <p className="text-sm font-medium text-foreground truncate">{match.away_team?.short_name}</p>
+                              <p className="text-xs font-semibold text-foreground">{match.away_team_score || "-"}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: resultColor }}>
+                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                              <span>Live scoring</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <MapPin className="w-3 h-3" />
+                              {match.venue}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
         <div className="flex items-center justify-between mb-10">
           <div>
             <h2 className="font-display text-3xl md:text-4xl tracking-wide text-foreground">
