@@ -1169,27 +1169,6 @@ const MatchScorecard = () => {
             )}
           </div>
 
-          {match.status === 'completed' && (match as any).scorecard_pdf_url && (
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
-              <div className="bg-primary/10 px-6 py-3 border-b border-border flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Official Scorecard (PDF)</h3>
-                <a
-                  className="text-sm text-primary hover:underline"
-                  href={(match as any).scorecard_pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Download
-                </a>
-              </div>
-              <div className="p-4">
-                <object data={(match as any).scorecard_pdf_url} type="application/pdf" className="w-full h-[80vh] rounded">
-                  <iframe src={(match as any).scorecard_pdf_url} className="w-full h-[80vh] rounded" />
-                </object>
-              </div>
-            </div>
-          )}
-
           <>
             {/* Detailed Live Scorecard */}
             {renderLiveScorecard()}
@@ -1239,6 +1218,28 @@ const MatchScorecard = () => {
                   </Tabs>
                 </div>
               )}
+
+            {/* Official PDF Scorecard (below the live scorecard) */}
+            {match.status === 'completed' && (match as any).scorecard_pdf_url && (
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="bg-primary/10 px-6 py-3 border-b border-border flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Official Scorecard (PDF)</h3>
+                  <a
+                    className="text-sm text-primary hover:underline"
+                    href={(match as any).scorecard_pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Download
+                  </a>
+                </div>
+                <div className="p-4">
+                  <object data={(match as any).scorecard_pdf_url} type="application/pdf" className="w-full h-[80vh] rounded">
+                    <iframe src={(match as any).scorecard_pdf_url} className="w-full h-[80vh] rounded" />
+                  </object>
+                </div>
+              </div>
+            )}
             </>
         </div>
       </div>
