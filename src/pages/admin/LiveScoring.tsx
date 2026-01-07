@@ -282,6 +282,7 @@ export default function LiveScoring() {
         }
       }
 
+      await recomputeInningsData();
       await loadInnings();
       await loadStats();
       await loadRecentBalls(currentInnings.id);
@@ -801,6 +802,7 @@ export default function LiveScoring() {
       setStriker(null);
       setShowWicketDialog(false);
       setScoringStarted(false);
+      await recomputeInningsData();
       await loadInnings();
       await loadStats();
       await loadRecentBalls(currentInnings.id);
