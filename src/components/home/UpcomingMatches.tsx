@@ -16,6 +16,7 @@ interface Match {
   winner_team_id?: string | null;
   home_team_score?: string | null;
   away_team_score?: string | null;
+  match_summary?: string | null;
   season?: { id: string; name: string };
   home_team: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
   away_team: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
@@ -37,6 +38,7 @@ export function UpcomingMatches() {
           winner_team_id,
           home_team_score,
           away_team_score,
+          match_summary,
           season:seasons(id, name),
           home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, logo_url),
           away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, logo_url)
@@ -62,6 +64,12 @@ export function UpcomingMatches() {
   const completed = matches?.filter((m) => m.status === "completed").reverse().slice(0, 3) || [];
 
   const getResult = (match: Match) => {
+    // Use match_summary if available (set by admins)
+    if (match.match_summary) {
+      return match.match_summary;
+    }
+
+    // Fallback to dynamic calculation if match_summary is not set
     if (!match.home_team_score || !match.away_team_score || !match.winner_team_id) return null;
 
     const parseScore = (score: string) => {
