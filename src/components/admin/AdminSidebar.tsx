@@ -36,6 +36,7 @@ const navItems = [
   { href: "/admin/season-migration", label: "Season Migration", icon: ArrowRightLeft },
   { href: "/admin/matches", label: "Matches", icon: Calendar },
   { href: "/admin/results", label: "Match Results", icon: FileSpreadsheet },
+  { href: "/admin/live-scoring", label: "Live Scoring", icon: Trophy },
   { href: "/admin/awards", label: "Awards", icon: Award },
   { href: "/admin/standings", label: "Standings", icon: Table },
   { href: "/admin/stats", label: "Player Stats", icon: BarChart3 },

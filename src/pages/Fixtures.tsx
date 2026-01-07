@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, MapPin, Clock, ChevronRight, Trophy } from "lucide-react";
+import { Calendar, MapPin, Clock, ChevronRight, Trophy, Activity } from "lucide-react";
 import { formatLocalTime } from "@/lib/utils";
 import { useActiveSeason } from "@/hooks/useSeason";
 
@@ -63,7 +63,33 @@ const Fixtures = () => {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 3000, // Poll every 3s to detect new live matches
   });
+
+  // Fetch innings for live matches and completed matches that may lack stored scores
+  const liveMatchIds = matches?.filter(m => m.status === 'live').map(m => m.id) || [];
+  const completedWithoutScores = matches?.filter(m => m.status === 'completed' && (!m.home_team_score || !m.away_team_score)).map(m => m.id) || [];
+  const inningsMatchIds = Array.from(new Set([...liveMatchIds, ...completedWithoutScores]));
+
+  const { data: activeInnings } = useQuery({
+    queryKey: ["match-innings-active", inningsMatchIds],
+    queryFn: async () => {
+      if (inningsMatchIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("match_innings")
+        .select("*")
+        .in("match_id", inningsMatchIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: inningsMatchIds.length > 0,
+    refetchInterval: 2000,
+  });
+
+  // Helper to get innings for a specific match
+  const getMatchInnings = (matchId: string) => {
+    return activeInnings?.filter(i => i.match_id === matchId) || [];
+  };
 
   const filteredMatches = useMemo(() => {
     if (!matches) return [];
@@ -103,7 +129,7 @@ const Fixtures = () => {
   };
 
   const handleMatchClick = (matchId: string, status: string) => {
-    if (status === "completed") {
+    if (status === "completed" || status === "live") {
       navigate(`/fixtures/${matchId}`);
     }
   };
@@ -175,10 +201,40 @@ const Fixtures = () => {
             <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-xl" />)}</div>
           ) : filteredMatches && filteredMatches.length > 0 ? (
             <div className="space-y-4">
-              {filteredMatches.map((match) => (
+              {filteredMatches.map((match) => {
+                const matchInnings = match.status === 'live' || match.status === 'completed' ? getMatchInnings(match.id) : [];
+                const homeInnings = matchInnings.find(i => i.batting_team_id === match.home_team_id);
+                const awayInnings = matchInnings.find(i => i.batting_team_id === match.away_team_id);
+
+                const firstInnings = matchInnings.find(i => i.innings_number === 1);
+                const secondInnings = matchInnings.find(i => i.innings_number === 2);
+                const chaseInfo = (() => {
+                  if (!firstInnings || !secondInnings || secondInnings.status !== 'in_progress') return null;
+                  const target = (firstInnings.total_runs || 0) + 1;
+                  const oversLimit = match?.overs_per_side || 20;
+                  const oversVal = secondInnings.total_overs || 0;
+                  const ballsBowled = Math.floor(oversVal) * 6 + Math.round((oversVal % 1) * 10);
+                  const totalBalls = oversLimit * 6;
+                  const remainingBalls = Math.max(totalBalls - ballsBowled, 0);
+                  const runsNeeded = target - (secondInnings.total_runs || 0);
+                  return { target, remainingBalls, runsNeeded };
+                })();
+
+                const formatOvers = (val?: number | null) => {
+                  if (val === null || val === undefined) return "";
+                  return typeof val === 'number' && val.toFixed ? val.toFixed(1) : val;
+                };
+
+                const runRate = (innings: any) => {
+                  const overs = innings?.total_overs ?? innings?.overs_float;
+                  if (!overs || overs <= 0) return null;
+                  return ((innings?.total_runs || innings?.runs || 0) / overs).toFixed(2);
+                };
+                
+                return (
                 <div 
                   key={match.id} 
-                  className={`bg-card rounded-xl border border-border overflow-hidden card-hover ${match.status === "completed" ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
+                  className={`bg-card rounded-xl border border-border overflow-hidden card-hover ${match.status === "completed" || match.status === "live" ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
                   onClick={() => handleMatchClick(match.id, match.status)}
                 >
                   <div className="p-6">
@@ -202,6 +258,12 @@ const Fixtures = () => {
                             View Scorecard
                           </span>
                         )}
+                        {match.status === "live" && (
+                          <span className="text-xs text-green-400 flex items-center gap-1">
+                            <ChevronRight className="w-4 h-4" />
+                            View Live
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{formatLocalTime(match.match_date, "MMM d, yyyy")}</span>
@@ -223,11 +285,24 @@ const Fixtures = () => {
                           )}
                         </div>
                         <p className="font-medium">{match.home_team?.name}</p>
-                        {match.home_team_score && (
+                        {(match.status === 'live' || match.status === 'completed') && homeInnings ? (
+                          <div className="mt-1">
+                            <span className="text-xl font-bold text-green-500 flex items-center justify-center gap-1">
+                              {homeInnings.total_runs}/{homeInnings.total_wickets ?? homeInnings.wickets}
+                              {homeInnings.status === 'in_progress' && <Activity className="w-4 h-4 animate-pulse" />}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              ({formatOvers(homeInnings.total_overs ?? homeInnings.overs_float)} ov)
+                              {runRate(homeInnings) && ` • RR ${runRate(homeInnings)}`}
+                            </span>
+                          </div>
+                        ) : match.home_team_score ? (
                           <div className="mt-1">
                             <span className="text-xl font-bold text-primary">{match.home_team_score}</span>
                             {match.home_team_overs && <span className="text-sm text-muted-foreground ml-1">({match.home_team_overs} ov)</span>}
                           </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground mt-1">Yet to bat</div>
                         )}
                       </div>
 
@@ -246,14 +321,32 @@ const Fixtures = () => {
                           )}
                         </div>
                         <p className="font-medium">{match.away_team?.name}</p>
-                        {match.away_team_score && (
+                        {(match.status === 'live' || match.status === 'completed') && awayInnings ? (
+                          <div className="mt-1">
+                            <span className="text-xl font-bold text-green-500 flex items-center justify-center gap-1">
+                              {awayInnings.total_runs}/{awayInnings.total_wickets ?? awayInnings.wickets}
+                              {awayInnings.status === 'in_progress' && <Activity className="w-4 h-4 animate-pulse" />}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              ({formatOvers(awayInnings.total_overs ?? awayInnings.overs_float)} ov)
+                              {runRate(awayInnings) && ` • RR ${runRate(awayInnings)}`}
+                            </span>
+                          </div>
+                        ) : match.away_team_score ? (
                           <div className="mt-1">
                             <span className="text-xl font-bold text-primary">{match.away_team_score}</span>
                             {match.away_team_overs && <span className="text-sm text-muted-foreground ml-1">({match.away_team_overs} ov)</span>}
                           </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground mt-1">Yet to bat</div>
                         )}
                       </div>
                     </div>
+                    {match.status === 'live' && chaseInfo && (
+                      <div className="text-center mt-4 text-sm text-muted-foreground">
+                        Need <span className="font-semibold text-foreground">{chaseInfo.runsNeeded > 0 ? chaseInfo.runsNeeded : 0} runs</span> from <span className="font-semibold text-foreground">{chaseInfo.remainingBalls}</span> balls
+                      </div>
+                    )}
                     {match.winner && (
                       <div className="text-center mt-4">
                         <span className="inline-flex items-center gap-2 text-sm text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full">
@@ -269,7 +362,8 @@ const Fixtures = () => {
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           ) : (
             <div className="text-center py-12 bg-card rounded-xl border border-border">

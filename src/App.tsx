@@ -45,6 +45,7 @@ import FooterAdmin from "./pages/admin/FooterAdmin";
 import NewsAdmin from "./pages/admin/NewsAdmin";
 import OwnersAdmin from "./pages/admin/OwnersAdmin";
 import SettingsAdmin from "./pages/admin/SettingsAdmin";
+import LiveScoring from "./pages/admin/LiveScoring";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,7 @@ const App = () => (
               <Route path="/news" element={<News />} />
               <Route path="/news/:id" element={<NewsDetail />} />
               <Route path="/contact" element={<Contact />} />
+              
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="seasons" element={<SeasonsAdmin />} />
@@ -89,6 +91,7 @@ const App = () => (
                 <Route path="standings" element={<StandingsAdmin />} />
                 <Route path="stats" element={<StatsAdmin />} />
                 <Route path="auction" element={<AuctionAdmin />} />
+                <Route path="live-scoring" element={<LiveScoring />} />
                 <Route path="sponsors" element={<SponsorsAdmin />} />
                 <Route path="gallery" element={<GalleryAdmin />} />
                 <Route path="news" element={<NewsAdmin />} />

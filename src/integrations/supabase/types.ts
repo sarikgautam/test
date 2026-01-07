@@ -305,12 +305,17 @@ export type Database = {
           home_team_score: string | null
           home_team_wickets: number | null
           id: string
+          dls_applied: boolean
           man_of_match_id: string | null
           match_date: string
           match_number: number
           match_stage: Database["public"]["Enums"]["match_type"] | null
           match_summary: string | null
+          result_text: string | null
           overs_per_side: number | null
+          super_over_played: boolean
+          target_overs: number | null
+          target_runs: number | null
           season_id: string | null
           status: Database["public"]["Enums"]["match_status"]
           toss_decision: string | null
@@ -332,12 +337,17 @@ export type Database = {
           home_team_score?: string | null
           home_team_wickets?: number | null
           id?: string
+          dls_applied?: boolean
           man_of_match_id?: string | null
           match_date: string
           match_number: number
           match_stage?: Database["public"]["Enums"]["match_type"] | null
           match_summary?: string | null
+          result_text?: string | null
           overs_per_side?: number | null
+          super_over_played?: boolean
+          target_overs?: number | null
+          target_runs?: number | null
           season_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           toss_decision?: string | null
@@ -359,12 +369,17 @@ export type Database = {
           home_team_score?: string | null
           home_team_wickets?: number | null
           id?: string
+          dls_applied?: boolean
           man_of_match_id?: string | null
           match_date?: string
           match_number?: number
           match_stage?: Database["public"]["Enums"]["match_type"] | null
           match_summary?: string | null
+          result_text?: string | null
           overs_per_side?: number | null
+          super_over_played?: boolean
+          target_overs?: number | null
+          target_runs?: number | null
           season_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           toss_decision?: string | null
@@ -414,6 +429,393 @@ export type Database = {
             columns: ["winner_team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_innings: {
+        Row: {
+          id: string
+          match_id: string
+          innings_number: number
+          batting_team_id: string
+          bowling_team_id: string
+          total_runs: number
+          wickets: number
+          legal_balls: number
+          overs_float: number | null
+          run_rate: number | null
+          target_runs: number | null
+          target_overs: number | null
+          powerplay_overs: Json | null
+          super_over: boolean
+          dls_applied: boolean
+          dls_par_score: number | null
+          dls_target_runs: number | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          match_id: string
+          innings_number: number
+          batting_team_id: string
+          bowling_team_id: string
+          total_runs?: number
+          wickets?: number
+          legal_balls?: number
+          overs_float?: number | null
+          run_rate?: number | null
+          target_runs?: number | null
+          target_overs?: number | null
+          powerplay_overs?: Json | null
+          super_over?: boolean
+          dls_applied?: boolean
+          dls_par_score?: number | null
+          dls_target_runs?: number | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          match_id?: string
+          innings_number?: number
+          batting_team_id?: string
+          bowling_team_id?: string
+          total_runs?: number
+          wickets?: number
+          legal_balls?: number
+          overs_float?: number | null
+          run_rate?: number | null
+          target_runs?: number | null
+          target_overs?: number | null
+          powerplay_overs?: Json | null
+          super_over?: boolean
+          dls_applied?: boolean
+          dls_par_score?: number | null
+          dls_target_runs?: number | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_innings_batting_team_id_fkey"
+            columns: ["batting_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_innings_bowling_team_id_fkey"
+            columns: ["bowling_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_innings_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      overs_summary: {
+        Row: {
+          id: string
+          innings_id: string
+          over_number: number
+          bowler_id: string | null
+          runs_over: number
+          wides: number
+          no_balls: number
+          byes: number
+          leg_byes: number
+          wickets_in_over: number
+          maiden: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          innings_id: string
+          over_number: number
+          bowler_id?: string | null
+          runs_over?: number
+          wides?: number
+          no_balls?: number
+          byes?: number
+          leg_byes?: number
+          wickets_in_over?: number
+          maiden?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          innings_id?: string
+          over_number?: number
+          bowler_id?: string | null
+          runs_over?: number
+          wides?: number
+          no_balls?: number
+          byes?: number
+          leg_byes?: number
+          wickets_in_over?: number
+          maiden?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overs_summary_bowler_id_fkey"
+            columns: ["bowler_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overs_summary_innings_id_fkey"
+            columns: ["innings_id"]
+            isOneToOne: false
+            referencedRelation: "match_innings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      balls: {
+        Row: {
+          id: string
+          match_id: string
+          innings_id: string
+          over_number: number
+          ball_number: number
+          sequence: number
+          batter_id: string | null
+          non_striker_id: string | null
+          bowler_id: string | null
+          runs_batter: number
+          runs_extras: number
+          extras_type: string | null
+          is_legal: boolean
+          wicket_type: string | null
+          dismissed_batter_id: string | null
+          fielder_id: string | null
+          runs_off_bat_on_nb: number | null
+          commentary: string | null
+          is_super_over: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          match_id: string
+          innings_id: string
+          over_number: number
+          ball_number: number
+          sequence?: number
+          batter_id?: string | null
+          non_striker_id?: string | null
+          bowler_id?: string | null
+          runs_batter?: number
+          runs_extras?: number
+          extras_type?: string | null
+          is_legal?: boolean
+          wicket_type?: string | null
+          dismissed_batter_id?: string | null
+          fielder_id?: string | null
+          runs_off_bat_on_nb?: number | null
+          commentary?: string | null
+          is_super_over?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          match_id?: string
+          innings_id?: string
+          over_number?: number
+          ball_number?: number
+          sequence?: number
+          batter_id?: string | null
+          non_striker_id?: string | null
+          bowler_id?: string | null
+          runs_batter?: number
+          runs_extras?: number
+          extras_type?: string | null
+          is_legal?: boolean
+          wicket_type?: string | null
+          dismissed_batter_id?: string | null
+          fielder_id?: string | null
+          runs_off_bat_on_nb?: number | null
+          commentary?: string | null
+          is_super_over?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "balls_batter_id_fkey"
+            columns: ["batter_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balls_bowler_id_fkey"
+            columns: ["bowler_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balls_dismissed_batter_id_fkey"
+            columns: ["dismissed_batter_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balls_fielder_id_fkey"
+            columns: ["fielder_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balls_innings_id_fkey"
+            columns: ["innings_id"]
+            isOneToOne: false
+            referencedRelation: "match_innings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balls_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_lineups: {
+        Row: {
+          match_id: string
+          team_id: string
+          player_id: string
+          role: string | null
+          is_sub: boolean
+        }
+        Insert: {
+          match_id: string
+          team_id: string
+          player_id: string
+          role?: string | null
+          is_sub?: boolean
+        }
+        Update: {
+          match_id?: string
+          team_id?: string
+          player_id?: string
+          role?: string | null
+          is_sub?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_lineups_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_lineups_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_lineups_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorer_locks: {
+        Row: {
+          match_id: string
+          locked_by: string
+          locked_at: string
+          released: boolean
+        }
+        Insert: {
+          match_id: string
+          locked_by: string
+          locked_at?: string
+          released?: boolean
+        }
+        Update: {
+          match_id?: string
+          locked_by?: string
+          locked_at?: string
+          released?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorer_locks_locked_by_fkey"
+            columns: ["locked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scorer_locks_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ball_revisions: {
+        Row: {
+          id: string
+          ball_id: string
+          revised_by: string | null
+          revised_at: string
+          payload: Json | null
+          reason: string | null
+        }
+        Insert: {
+          id?: string
+          ball_id: string
+          revised_by?: string | null
+          revised_at?: string
+          payload?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          id?: string
+          ball_id?: string
+          revised_by?: string | null
+          revised_at?: string
+          payload?: Json | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ball_revisions_ball_id_fkey"
+            columns: ["ball_id"]
+            isOneToOne: false
+            referencedRelation: "balls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ball_revisions_revised_by_fkey"
+            columns: ["revised_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1127,10 +1529,34 @@ export type Database = {
         Args: { p_season_id: string }
         Returns: undefined
       }
+      claim_scorer_lock: {
+        Args: { p_match_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      release_scorer_lock: {
+        Args: { p_match_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      append_ball: {
+        Args: { p_match_id: string; p_innings_id: string; p_payload: Json }
+        Returns: string
+      }
+      undo_last_ball: {
+        Args: { p_match_id: string; p_innings_id: string }
+        Returns: undefined
+      }
+      finalize_innings: {
+        Args: { p_match_id: string; p_innings_id: string }
+        Returns: undefined
+      }
+      finalize_match: {
+        Args: { p_match_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
-      match_status: "upcoming" | "live" | "completed" | "cancelled"
+      match_status: "scheduled" | "upcoming" | "live" | "completed" | "cancelled" | "abandoned"
       match_type: "group" | "eliminator" | "qualifier" | "final"
       player_auction_status: "registered" | "sold" | "unsold" | "hold" | "retained"
       player_role: "batsman" | "bowler" | "all_rounder" | "wicket_keeper"
@@ -1262,7 +1688,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
-      match_status: ["upcoming", "live", "completed", "cancelled"],
+      match_status: ["scheduled", "upcoming", "live", "completed", "cancelled", "abandoned"],
       match_type: ["group", "eliminator", "qualifier", "final"],
       player_auction_status: ["registered", "sold", "unsold", "hold", "retained"],
       player_role: ["batsman", "bowler", "all_rounder", "wicket_keeper"],

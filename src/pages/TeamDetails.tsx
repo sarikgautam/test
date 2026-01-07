@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
@@ -78,52 +78,68 @@ interface PlayerStats {
   season_id: string | null;
 }
 
-          {/* Upcoming Matches */}
-          {upcomingMatches.length > 0 && (
-            <Card className="border-border/50">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  <h3 className="font-display text-xl">Upcoming Matches</h3>
-                </div>
-                <div className="space-y-3">
-                  {upcomingMatches.map((match, index) => {
-                    const isHome = match.home_team_id === team?.id;
-                    const opponent = isHome ? match.away_team : match.home_team;
-                    return (
-                      <div
-                        key={match.id}
-                        className="p-4 rounded-lg border border-border/60 bg-card/70 hover:bg-card/90 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Badge variant="secondary" className="text-xs">
-                              Match {match.match_number || index + 1}
-                            </Badge>
-                            <p className="font-medium">
-                              vs {opponent?.short_name || opponent?.name || "TBD"}
-                            </p>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(match.match_date).toLocaleDateString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                        {match.match_stage && (
-                          <p className="text-xs text-muted-foreground mt-2">{match.match_stage}</p>
-                        )}
-                        <p className="text-sm text-muted-foreground mt-1">{match.venue}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+interface Match {
+  id: string;
+  match_number: number | null;
+  match_date: string;
+  venue: string;
+  status: string;
+  match_stage: string | null;
+  match_summary: string | null;
+  home_team_id: string;
+  away_team_id: string;
+  home_team_score: string | null;
+  away_team_score: string | null;
+  winner_team_id: string | null;
+  home_team: {
+    id: string;
+    name: string;
+    short_name: string;
+    primary_color: string;
+    logo_url: string | null;
+  };
+  away_team: {
+    id: string;
+    name: string;
+    short_name: string;
+    primary_color: string;
+    logo_url: string | null;
+  };
+}
+
+const TeamDetails = () => {
+  const { teamId } = useParams<{ teamId: string }>();
+  const { activeSeason } = useActiveSeason();
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(activeSeason?.id ?? null);
+
+  useEffect(() => {
+    if (activeSeason?.id && !selectedSeasonId) {
+      setSelectedSeasonId(activeSeason.id);
+    }
+  }, [activeSeason?.id, selectedSeasonId]);
+
+  const { data: allSeasons } = useQuery({
+    queryKey: ["seasons"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("*")
+        .order("year", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: team, isLoading: teamLoading } = useQuery({
+    queryKey: ["team", teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teams")
+        .select("*")
+        .eq("id", teamId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Team | null;
     },
     enabled: !!teamId,
   });
@@ -797,44 +813,41 @@ interface PlayerStats {
           {/* Matches Section */}
           <div className="grid md:grid-cols-2 gap-8">
             {/* Upcoming Matches */}
-            {upcomingMatches.length > 0 && (
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: `${team.primary_color}20` }}
-                  >
-                    <Calendar className="w-5 h-5" style={{ color: team.primary_color }} />
-                  </div>
-                  <h3 className="font-display text-xl">Upcoming Matches</h3>
-
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: `${team.primary_color}20` }}
+                >
+                  <Calendar className="w-5 h-5" style={{ color: team.primary_color }} />
                 </div>
-                
+                <h3 className="font-display text-xl">Upcoming Matches</h3>
+              </div>
+
+              {upcomingMatches.length > 0 ? (
                 <div className="space-y-4">
                   {upcomingMatches.map((match, index) => {
                     const opponent = getOpponentTeam(match);
                     const isHome = match.home_team_id === teamId;
                     const matchDate = new Date(match.match_date);
-                    
+
                     return (
                       <Link 
                         key={match.id}
                         to={`/fixtures`}
                         className="group relative block overflow-hidden rounded-2xl border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
                       >
-                        {/* Top accent */}
                         <div 
                           className="absolute top-0 left-0 right-0 h-1.5 transition-all"
                           style={{ background: `linear-gradient(90deg, ${team.primary_color}, ${team.secondary_color})` }}
                         />
-                        
+
                         <div className="bg-card p-5 md:p-6">
                           <div className="flex items-start justify-between gap-4">
-                            {/* Match Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-3">
                                 <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: `${team.primary_color}20`, color: team.primary_color }}>
-                                  Match #{match.match_number}
+                                  Match #{match.match_number || index + 1}
                                 </span>
                                 <span 
                                   className="text-xs font-medium px-2 py-0.5 rounded-full border"
@@ -847,21 +860,29 @@ interface PlayerStats {
                                   {isHome ? '🏠 Home' : '🏃 Away'}
                                 </span>
                               </div>
-                              
+
                               <div className="flex items-center gap-3">
                                 {opponent?.logo_url ? (
-                      </div>
-                    )}
+                                  <img 
+                                    src={opponent.logo_url} 
+                                    alt={opponent.name}
+                                    className="w-12 h-12 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div 
+                                    className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                                    style={{ backgroundColor: opponent?.primary_color || team.primary_color }}
+                                  >
+                                    {opponent?.short_name?.substring(0, 2) || "TBA"}
                                   </div>
                                 )}
                                 <div className="min-w-0">
-                                  <p className="font-semibold text-base md:text-lg">{isHome ? 'vs' : '@'} {opponent?.name}</p>
+                                  <p className="font-semibold text-base md:text-lg">{isHome ? 'vs' : '@'} {opponent?.name || "TBA"}</p>
                                   <p className="text-xs md:text-sm text-muted-foreground">{match.venue}</p>
                                 </div>
                               </div>
                             </div>
-                            
-                            {/* Date & Time */}
+
                             <div className="text-right flex-shrink-0">
                               <p className="font-semibold text-sm md:text-base">
                                 {matchDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
