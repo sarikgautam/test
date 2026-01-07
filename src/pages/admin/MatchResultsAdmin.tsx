@@ -301,7 +301,10 @@ export default function MatchResultsAdmin() {
       // Use upsert to update existing stats or insert new ones
       const { error } = await supabase
         .from("player_stats")
-        .upsert(statsToInsert);
+        .upsert(statsToInsert, {
+          onConflict: 'player_id, match_id',
+          ignoreDuplicates: false
+        });
       if (error) throw error;
       return statsToInsert;
     },
