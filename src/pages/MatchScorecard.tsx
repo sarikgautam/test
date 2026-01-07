@@ -1145,7 +1145,7 @@ const MatchScorecard = () => {
             )}
           </div>
 
-          {match.status === 'completed' && (match as any).scorecard_pdf_url ? (
+          {match.status === 'completed' && (match as any).scorecard_pdf_url && (
             <div className="bg-card rounded-xl border border-border overflow-hidden">
               <div className="bg-primary/10 px-6 py-3 border-b border-border flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Official Scorecard (PDF)</h3>
@@ -1164,40 +1164,41 @@ const MatchScorecard = () => {
                 </object>
               </div>
             </div>
-          ) : (
-            <>
-              {/* Detailed Live Scorecard */}
-              {renderLiveScorecard()}
+          )}
 
-              {/* Scorecard Tabs */}
-              {playerStats && playerStats.length > 0 && (
-                <div className="bg-card rounded-xl border border-border overflow-hidden">
-                  <Tabs defaultValue="home" className="w-full">
-                    <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent p-0">
-                      <TabsTrigger 
-                        value="home" 
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
-                      >
-                        {match.home_team?.short_name}
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="away"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
-                      >
-                        {match.away_team?.short_name}
-                      </TabsTrigger>
-                    </TabsList>
+          <>
+            {/* Detailed Live Scorecard */}
+            {renderLiveScorecard()}
 
-                    <TabsContent value="home" className="mt-0">
-                      <TeamScorecard 
-                        stats={homeTeamStats} 
-                        teamName={match.home_team?.name || ""} 
-                        score={match.home_team_score}
-                        overs={match.home_team_overs}
-                        calculateStrikeRate={calculateStrikeRate}
-                        calculateEconomy={calculateEconomy}
-                        formatDismissal={formatDismissal}
-                      />
+            {/* Scorecard Tabs */}
+            {playerStats && playerStats.length > 0 && (
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <Tabs defaultValue="home" className="w-full">
+                  <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent p-0">
+                    <TabsTrigger 
+                      value="home" 
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                    >
+                      {match.home_team?.short_name}
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="away"
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                    >
+                      {match.away_team?.short_name}
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="home" className="mt-0">
+                    <TeamScorecard 
+                      stats={homeTeamStats} 
+                      teamName={match.home_team?.name || ""} 
+                      score={match.home_team_score}
+                      overs={match.home_team_overs}
+                      calculateStrikeRate={calculateStrikeRate}
+                      calculateEconomy={calculateEconomy}
+                      formatDismissal={formatDismissal}
+                    />
                     </TabsContent>
 
                     <TabsContent value="away" className="mt-0">
@@ -1215,8 +1216,7 @@ const MatchScorecard = () => {
                 </div>
               )}
             </>
-          )}
-        </div>
+          </div>
       </div>
     </Layout>
   );
