@@ -16,6 +16,8 @@ interface Match {
   winner_team_id?: string | null;
   home_team_score?: string | null;
   away_team_score?: string | null;
+  home_team_overs?: string | null;
+  away_team_overs?: string | null;
   match_summary?: string | null;
   season?: { id: string; name: string };
   home_team: { id: string; name: string; short_name: string; primary_color: string; logo_url: string | null };
@@ -38,6 +40,8 @@ export function UpcomingMatches() {
           winner_team_id,
           home_team_score,
           away_team_score,
+          home_team_overs,
+          away_team_overs,
           match_summary,
           season:seasons(id, name),
           home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, logo_url),
@@ -156,6 +160,7 @@ export function UpcomingMatches() {
                               )}
                               <p className="text-sm font-medium text-foreground truncate">{match.home_team?.short_name}</p>
                               <p className="text-xs font-semibold text-foreground">{match.home_team_score || "-"}</p>
+                              {match.home_team_overs && <p className="text-xs text-muted-foreground">{match.home_team_overs} ov</p>}
                             </div>
 
                             <div className="text-lg font-display text-red-500 flex flex-col items-center gap-1">
@@ -173,6 +178,7 @@ export function UpcomingMatches() {
                               )}
                               <p className="text-sm font-medium text-foreground truncate">{match.away_team?.short_name}</p>
                               <p className="text-xs font-semibold text-foreground">{match.away_team_score || "-"}</p>
+                              {match.away_team_overs && <p className="text-xs text-muted-foreground">{match.away_team_overs} ov</p>}
                             </div>
                           </div>
 

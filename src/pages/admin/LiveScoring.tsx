@@ -419,7 +419,7 @@ export default function LiveScoring() {
 
     if (!innings || innings.length === 0) return;
 
-    // Format scores as "runs/wickets"
+    // Format scores as "runs/wickets" and overs
     const homeTeamInnings = innings.find(i => i.batting_team_id === selectedMatch.home_team_id);
     const awayTeamInnings = innings.find(i => i.batting_team_id === selectedMatch.away_team_id);
 
@@ -431,12 +431,17 @@ export default function LiveScoring() {
       ? `${awayTeamInnings.total_runs}/${awayTeamInnings.total_wickets}`
       : null;
 
-    // Update matches table with current scores
+    const homeOvers = homeTeamInnings?.total_overs?.toString() || null;
+    const awayOvers = awayTeamInnings?.total_overs?.toString() || null;
+
+    // Update matches table with current scores and overs
     await supabase
       .from('matches')
       .update({
         home_team_score: homeScore,
-        away_team_score: awayScore
+        away_team_score: awayScore,
+        home_team_overs: homeOvers,
+        away_team_overs: awayOvers
       })
       .eq('id', selectedMatch.id);
   };

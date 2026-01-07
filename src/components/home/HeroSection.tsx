@@ -98,6 +98,8 @@ export function HeroSection() {
           venue,
           home_team_score,
           away_team_score,
+          home_team_overs,
+          away_team_overs,
           home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, logo_url),
           away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, logo_url)
         `)
@@ -154,6 +156,7 @@ export function HeroSection() {
                   <div>
                     <div className="font-semibold text-foreground">{liveMatch.home_team?.short_name}</div>
                     <div className="text-sm text-muted-foreground">{liveMatch.home_team_score || "-"}</div>
+                    {liveMatch.home_team_overs && <div className="text-xs text-muted-foreground">{liveMatch.home_team_overs} ov</div>}
                   </div>
                 </div>
 
@@ -170,6 +173,7 @@ export function HeroSection() {
                   <div>
                     <div className="font-semibold text-foreground">{liveMatch.away_team?.short_name}</div>
                     <div className="text-sm text-muted-foreground">{liveMatch.away_team_score || "-"}</div>
+                    {liveMatch.away_team_overs && <div className="text-xs text-muted-foreground">{liveMatch.away_team_overs} ov</div>}
                   </div>
                 </div>
               </div>
