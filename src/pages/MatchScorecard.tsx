@@ -29,6 +29,7 @@ interface PlayerStat {
   runout_by_id: string | null;
   dismissal_other_text: string | null;
   batting_order: number | null;
+  bowling_order: number | null;
   created_at: string;
   player: {
     id: string;
@@ -217,6 +218,7 @@ const MatchScorecard = () => {
           runout_by_id,
           dismissal_other_text,
           batting_order,
+          bowling_order,
           created_at,
           player:players!player_stats_player_id_fkey(id, full_name, role)
         `)
@@ -1262,9 +1264,19 @@ function TeamScorecard({
   calculateEconomy: (runs: number, overs: number) => string;
   formatDismissal: (stat: PlayerStat) => React.ReactNode;
 }) {
-  // Separate batters and bowlers
+  // Separate batters and bowlers, sort by their respective order
   const batters = stats.filter((s) => s.balls_faced > 0 || s.runs_scored > 0);
-  const bowlers = stats.filter((s) => Number(s.overs_bowled) > 0);
+  const bowlers = stats
+    .filter((s) => Number(s.overs_bowled) > 0)
+    .sort((a, b) => {
+      // Sort by bowling_order if available, otherwise by created_at
+      if (a.bowling_order !== null && b.bowling_order !== null) {
+        return a.bowling_order - b.bowling_order;
+      }
+      if (a.bowling_order !== null) return -1;
+      if (b.bowling_order !== null) return 1;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
   const fielders = stats.filter((s) => s.catches > 0 || s.stumpings > 0 || s.run_outs > 0);
 
   const totalRuns = batters.reduce((sum, s) => sum + s.runs_scored, 0);

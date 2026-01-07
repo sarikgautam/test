@@ -196,8 +196,8 @@ export function PDFImportDialog({
       };
     });
 
-    // Convert bowling stats
-    const bowlingEntries = validBowlingStats.map((stat) => ({
+    // Convert bowling stats with bowling order
+    const bowlingEntries = validBowlingStats.map((stat, index) => ({
       player_id: stat!.playerId,
       match_id: matchId,
       season_id: seasonId,
@@ -218,6 +218,7 @@ export function PDFImportDialog({
       runout_by_id: null,
       dismissal_other_text: null,
       batting_order: null,
+      bowling_order: index,  // Assign order based on PDF sequence (0 = first bowler)
     }));
 
     // Merge batting and bowling stats for same players
@@ -226,7 +227,7 @@ export function PDFImportDialog({
     [...battingEntries, ...bowlingEntries].forEach(entry => {
       const existing = mergedStats.get(entry.player_id);
       if (existing) {
-        // Merge stats for the same player, keep batting_order from batting entry
+        // Merge stats for the same player, keep batting_order from batting entry and bowling_order from bowling entry
         mergedStats.set(entry.player_id, {
           player_id: entry.player_id,
           match_id: matchId,
@@ -248,6 +249,7 @@ export function PDFImportDialog({
           runout_by_id: existing.runout_by_id || entry.runout_by_id,
           dismissal_other_text: existing.dismissal_other_text || entry.dismissal_other_text,
           batting_order: existing.batting_order !== undefined ? existing.batting_order : (entry.batting_order ?? 999),
+          bowling_order: existing.bowling_order !== undefined ? existing.bowling_order : (entry.bowling_order ?? null),
         });
       } else {
         mergedStats.set(entry.player_id, entry);

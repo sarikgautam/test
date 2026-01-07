@@ -295,7 +295,8 @@ export default function MatchResultsAdmin() {
         fielder_id: entry.fielder_id || null,
         runout_by_id: entry.runout_by_id || null,
         dismissal_other_text: entry.dismissal_other_text || null,
-        batting_order: (entry as any).batting_order ?? index,
+        batting_order: (entry as any).batting_order ?? null,
+        bowling_order: (entry as any).bowling_order ?? null,
       }));
       console.log(`[bulkCreateMutation] Upserting ${statsToInsert.length} stats. First entry matchId: ${statsToInsert[0]?.match_id}`, statsToInsert.slice(0, 2));
       // Use upsert to update existing stats or insert new ones
