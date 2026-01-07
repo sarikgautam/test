@@ -1216,7 +1216,7 @@ const MatchScorecard = () => {
                 </div>
               )}
             </>
-          </div>
+        </div>
       </div>
     </Layout>
   );
