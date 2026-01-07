@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import allTeamLogo from "@/assets/allteamlogo.jpg";
 import { useActiveSeason } from "@/hooks/useSeason";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TimeLeft {
   days: number;
@@ -84,6 +86,34 @@ export function HeroSection() {
     return "Tournament updates coming soon";
   }, [seasonStart, seasonEnd]);
 
+  // Live match spotlight (shows the top/most recent live match)
+  const { data: liveMatches } = useQuery({
+    queryKey: ["home-hero-live-match"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("matches")
+        .select(`
+          id,
+          match_date,
+          venue,
+          home_team_score,
+          away_team_score,
+          home_team:teams!matches_home_team_id_fkey(id, name, short_name, primary_color, logo_url),
+          away_team:teams!matches_away_team_id_fkey(id, name, short_name, primary_color, logo_url)
+        `)
+        .eq("status", "live")
+        .order("match_date", { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      return data || [];
+    },
+    // Light polling to keep scores fresh
+    refetchInterval: 10000,
+  });
+
+  const liveMatch = liveMatches?.[0];
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image */}
@@ -103,6 +133,53 @@ export function HeroSection() {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
+          {liveMatch && (
+            <Link
+              to={`/fixtures/${liveMatch.id}`}
+              className="group inline-flex items-center gap-4 px-4 py-3 mb-6 rounded-2xl bg-white/10 backdrop-blur-md border border-primary/40 shadow-lg shadow-primary/20 hover:border-primary/70 transition-colors"
+            >
+              <span className="flex items-center gap-2 text-red-500 font-semibold text-sm uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                Live Now
+              </span>
+              <div className="flex items-center gap-3 text-left">
+                <div className="flex items-center gap-2">
+                  {liveMatch.home_team?.logo_url ? (
+                    <img src={liveMatch.home_team.logo_url} alt={liveMatch.home_team.name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/20 text-primary font-semibold text-xs">
+                      {liveMatch.home_team?.short_name?.slice(0, 2) || "HM"}
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-semibold text-foreground">{liveMatch.home_team?.short_name}</div>
+                    <div className="text-sm text-muted-foreground">{liveMatch.home_team_score || "-"}</div>
+                  </div>
+                </div>
+
+                <div className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-semibold">vs</div>
+
+                <div className="flex items-center gap-2">
+                  {liveMatch.away_team?.logo_url ? (
+                    <img src={liveMatch.away_team.logo_url} alt={liveMatch.away_team.name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-secondary/20 text-secondary-foreground font-semibold text-xs">
+                      {liveMatch.away_team?.short_name?.slice(0, 2) || "AW"}
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-semibold text-foreground">{liveMatch.away_team?.short_name}</div>
+                    <div className="text-sm text-muted-foreground">{liveMatch.away_team_score || "-"}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 text-primary text-sm font-semibold group-hover:translate-x-1 transition-transform">
+                Watch live <ArrowRight className="w-4 h-4" />
+              </div>
+            </Link>
+          )}
+
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-vibrant-cyan/20 border border-primary/40 mb-6 animate-fade-in shadow-lg shadow-primary/20">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
