@@ -71,6 +71,7 @@ const Register = () => {
     register,
     handleSubmit,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
