@@ -24,7 +24,7 @@ interface PDFImportDialogProps {
   awayTeamId: string;
   homePlayers: Player[];
   awayPlayers: Player[];
-  onImportComplete: (stats: any[]) => void;
+  onImportComplete: (stats: any[], pdfFile?: File) => void;
 }
 
 interface MappedBattingStat extends BattingStats {
@@ -256,7 +256,7 @@ export function PDFImportDialog({
 
     const finalStats = Array.from(mergedStats.values());
 
-    onImportComplete(finalStats);
+    onImportComplete(finalStats, file);
     onOpenChange(false);
 
     toast({

@@ -1145,53 +1145,76 @@ const MatchScorecard = () => {
             )}
           </div>
 
-          {/* Detailed Live Scorecard */}
-          {renderLiveScorecard()}
-
-          {/* Scorecard Tabs */}
-          {playerStats && playerStats.length > 0 && (
+          {match.status === 'completed' && (match as any).scorecard_pdf_url ? (
             <div className="bg-card rounded-xl border border-border overflow-hidden">
-              <Tabs defaultValue="home" className="w-full">
-                <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent p-0">
-                  <TabsTrigger 
-                    value="home" 
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
-                  >
-                    {match.home_team?.short_name}
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="away"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
-                  >
-                    {match.away_team?.short_name}
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="home" className="mt-0">
-                  <TeamScorecard 
-                    stats={homeTeamStats} 
-                    teamName={match.home_team?.name || ""} 
-                    score={match.home_team_score}
-                    overs={match.home_team_overs}
-                    calculateStrikeRate={calculateStrikeRate}
-                    calculateEconomy={calculateEconomy}
-                    formatDismissal={formatDismissal}
-                  />
-                </TabsContent>
-
-                <TabsContent value="away" className="mt-0">
-                  <TeamScorecard 
-                    stats={awayTeamStats} 
-                    teamName={match.away_team?.name || ""} 
-                    score={match.away_team_score}
-                    overs={match.away_team_overs}
-                    calculateStrikeRate={calculateStrikeRate}
-                    calculateEconomy={calculateEconomy}
-                    formatDismissal={formatDismissal}
-                  />
-                </TabsContent>
-              </Tabs>
+              <div className="bg-primary/10 px-6 py-3 border-b border-border flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Official Scorecard (PDF)</h3>
+                <a
+                  className="text-sm text-primary hover:underline"
+                  href={(match as any).scorecard_pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Download
+                </a>
+              </div>
+              <div className="p-4">
+                <object data={(match as any).scorecard_pdf_url} type="application/pdf" className="w-full h-[80vh] rounded">
+                  <iframe src={(match as any).scorecard_pdf_url} className="w-full h-[80vh] rounded" />
+                </object>
+              </div>
             </div>
+          ) : (
+            <>
+              {/* Detailed Live Scorecard */}
+              {renderLiveScorecard()}
+
+              {/* Scorecard Tabs */}
+              {playerStats && playerStats.length > 0 && (
+                <div className="bg-card rounded-xl border border-border overflow-hidden">
+                  <Tabs defaultValue="home" className="w-full">
+                    <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent p-0">
+                      <TabsTrigger 
+                        value="home" 
+                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                      >
+                        {match.home_team?.short_name}
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="away"
+                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                      >
+                        {match.away_team?.short_name}
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="home" className="mt-0">
+                      <TeamScorecard 
+                        stats={homeTeamStats} 
+                        teamName={match.home_team?.name || ""} 
+                        score={match.home_team_score}
+                        overs={match.home_team_overs}
+                        calculateStrikeRate={calculateStrikeRate}
+                        calculateEconomy={calculateEconomy}
+                        formatDismissal={formatDismissal}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="away" className="mt-0">
+                      <TeamScorecard 
+                        stats={awayTeamStats} 
+                        teamName={match.away_team?.name || ""} 
+                        score={match.away_team_score}
+                        overs={match.away_team_overs}
+                        calculateStrikeRate={calculateStrikeRate}
+                        calculateEconomy={calculateEconomy}
+                        formatDismissal={formatDismissal}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

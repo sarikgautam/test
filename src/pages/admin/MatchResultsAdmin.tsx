@@ -301,9 +301,7 @@ export default function MatchResultsAdmin() {
       // Use upsert to update existing stats or insert new ones
       const { error } = await supabase
         .from("player_stats")
-        .upsert(statsToInsert, { 
-          onConflict: 'player_id,match_id'
-        });
+        .upsert(statsToInsert);
       if (error) throw error;
       return statsToInsert;
     },
@@ -324,6 +322,43 @@ export default function MatchResultsAdmin() {
     },
     onError: (error) => {
       toast({ title: "Error adding bulk stats", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const uploadPdfMutation = useMutation({
+    mutationFn: async ({ matchId, pdfFile }: { matchId: string; pdfFile: File }) => {
+      const fileExt = pdfFile.name.split('.').pop();
+      const fileName = `scorecard-${matchId}-${Date.now()}.${fileExt}`;
+
+      // Upload PDF to storage
+      const { error: uploadError } = await supabase.storage
+        .from("match-scorecards")
+        .upload(fileName, pdfFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage.from("match-scorecards").getPublicUrl(fileName);
+      const pdfUrl = data.publicUrl;
+
+      // Update match record with PDF URL
+      const { error: updateError } = await supabase
+        .from("matches")
+        .update({ scorecard_pdf_url: pdfUrl })
+        .eq("id", matchId);
+
+      if (updateError) throw updateError;
+      return pdfUrl;
+    },
+    onSuccess: (pdfUrl) => {
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      if (selectedMatchId) {
+        queryClient.invalidateQueries({ queryKey: ["match", selectedMatchId] });
+      }
+      toast({ title: "PDF scorecard uploaded successfully" });
+    },
+    onError: (error) => {
+      toast({ title: "Error uploading PDF", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1144,8 +1179,11 @@ export default function MatchResultsAdmin() {
           awayTeamId={selectedMatch.away_team_id}
           homePlayers={matchPlayers?.filter(p => p.team_id === selectedMatch.home_team_id).map(p => ({ id: p.id, name: p.full_name })) || []}
           awayPlayers={matchPlayers?.filter(p => p.team_id === selectedMatch.away_team_id).map(p => ({ id: p.id, name: p.full_name })) || []}
-          onImportComplete={(stats) => {
+          onImportComplete={(stats, pdfFile) => {
             bulkCreateMutation.mutate(stats);
+            if (pdfFile) {
+              uploadPdfMutation.mutate({ matchId: selectedMatch.id, pdfFile });
+            }
           }}
         />
       )}
