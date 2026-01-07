@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, UserPlus, Loader2, Upload, AlertCircle, CreditCard, User, Phone, XCircle, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { CheckCircle, UserPlus, Loader2, Upload, AlertCircle, CreditCard, User, Phone, XCircle, ChevronRight, ChevronLeft, Check, Trophy } from "lucide-react";
 import { useActiveSeason } from "@/hooks/useSeason";
 import { cn } from "@/lib/utils";
 
