@@ -54,6 +54,7 @@ export function UpcomingMatches() {
       console.log("[UpcomingMatches] Query data:", data);
       return data as Match[];
     },
+    refetchInterval: 3000, // Poll every 3s to keep scores fresh during live matches
   });
 
   if (queryError) {

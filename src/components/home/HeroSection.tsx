@@ -108,8 +108,8 @@ export function HeroSection() {
       if (error) throw error;
       return data || [];
     },
-    // Light polling to keep scores fresh
-    refetchInterval: 10000,
+    // Poll every 3s to keep scores fresh during live matches
+    refetchInterval: 3000,
   });
 
   const liveMatch = liveMatches?.[0];
