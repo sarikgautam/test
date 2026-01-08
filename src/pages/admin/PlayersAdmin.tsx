@@ -47,6 +47,7 @@ interface PlayerWithRegistration extends Player {
     sold_price: number | null;
     team_id: string | null;
     base_price: number;
+    residency_type: string | null;
   } | null;
 }
 
@@ -79,6 +80,7 @@ export default function PlayersAdmin() {
           team_id,
           base_price,
           player_id,
+          residency_type,
           players:player_id(*)
         `)
         .eq("season_id", selectedSeasonId!)
@@ -96,6 +98,7 @@ export default function PlayersAdmin() {
           sold_price: reg.sold_price,
           team_id: reg.team_id,
           base_price: reg.base_price,
+          residency_type: reg.residency_type,
         },
       })) as PlayerWithRegistration[];
     },
@@ -366,6 +369,7 @@ export default function PlayersAdmin() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Residency</TableHead>
                 <TableHead>Base Price</TableHead>
                 <TableHead>Registration</TableHead>
                 <TableHead>Auction Status</TableHead>
@@ -380,6 +384,17 @@ export default function PlayersAdmin() {
                   <TableCell className="font-medium">{player.full_name}</TableCell>
                   <TableCell className="text-muted-foreground">{player.email}</TableCell>
                   <TableCell>{roleLabels[player.role]}</TableCell>
+                  <TableCell>
+                    {player.registration?.residency_type && player.registration.residency_type !== "other-state" && (
+                      <Badge className={
+                        player.registration.residency_type === "gc-tweed"
+                          ? "bg-blue-500/20 text-blue-600 border-blue-500/30"
+                          : "bg-purple-500/20 text-purple-600 border-purple-500/30"
+                      }>
+                        {player.registration.residency_type === "gc-tweed" ? "🏆 GC" : "🏘️ QLD"}
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>${player.registration?.base_price?.toLocaleString() || player.base_price?.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge 
@@ -483,14 +498,25 @@ export default function PlayersAdmin() {
                 )}
                 <div>
                   <h3 className="text-xl font-semibold">{selectedPlayer.full_name}</h3>
-                  <Badge className={
-                    selectedPlayer.role === "batsman" ? "bg-blue-500" :
-                    selectedPlayer.role === "bowler" ? "bg-green-500" :
-                    selectedPlayer.role === "all_rounder" ? "bg-purple-500" :
-                    "bg-orange-500"
-                  }>
-                    {selectedPlayer.role.replace("_", " ")}
-                  </Badge>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge className={
+                      selectedPlayer.role === "batsman" ? "bg-blue-500" :
+                      selectedPlayer.role === "bowler" ? "bg-green-500" :
+                      selectedPlayer.role === "all_rounder" ? "bg-purple-500" :
+                      "bg-orange-500"
+                    }>
+                      {selectedPlayer.role.replace("_", " ")}
+                    </Badge>
+                    {selectedPlayer.registration?.residency_type && selectedPlayer.registration.residency_type !== "other-state" && (
+                      <Badge className={
+                        selectedPlayer.registration.residency_type === "gc-tweed"
+                          ? "bg-blue-500/20 text-blue-600 border-blue-500/30"
+                          : "bg-purple-500/20 text-purple-600 border-purple-500/30"
+                      }>
+                        {selectedPlayer.registration.residency_type === "gc-tweed" ? "🏆 GC" : "🏘️ QLD"}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
 

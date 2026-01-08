@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, UserPlus, Loader2, Upload, AlertCircle, CreditCard, User, Phone, XCircle, ChevronRight, ChevronLeft, Check, Trophy } from "lucide-react";
+import { CheckCircle, UserPlus, Loader2, Upload, AlertCircle, CreditCard, User, Phone, XCircle, ChevronRight, ChevronLeft, Check, Trophy, Clock, Copy } from "lucide-react";
 import { useActiveSeason } from "@/hooks/useSeason";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +37,7 @@ const registerSchema = z.object({
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 const STEPS = [
+  { id: 0, title: "Eligibility", icon: CheckCircle },
   { id: 1, title: "Personal Info", icon: User },
   { id: 2, title: "Emergency", icon: Phone },
   { id: 3, title: "Cricket Details", icon: UserPlus },
@@ -45,13 +46,22 @@ const STEPS = [
 ];
 
 const Register = () => {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [residencyType, setResidencyType] = useState<"gc-tweed" | "qld-other" | "other-state" | null>(null);
+  const [eligibilityConfirmed, setEligibilityConfirmed] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [uploadErrors, setUploadErrors] = useState<{ photo?: string; receipt?: string }>({});
+  const [countdown, setCountdown] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
+  const [registrationStatus, setRegistrationStatus] = useState<"not-started" | "open" | "ending-soon" | "closed">("open");
   const { toast } = useToast();
   const { activeSeason } = useActiveSeason();
 
@@ -66,6 +76,56 @@ const Register = () => {
       return data;
     },
   });
+
+  // Registration countdown effect
+  useEffect(() => {
+    if (!activeSeason?.registration_start_date || !activeSeason?.registration_end_date) {
+      setRegistrationStatus("open");
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const startDate = new Date(activeSeason.registration_start_date!).getTime();
+      const endDate = new Date(activeSeason.registration_end_date!).getTime();
+      const twoDaysBeforeEnd = endDate - (2 * 24 * 60 * 60 * 1000);
+
+      if (now < startDate) {
+        // Registration hasn't started yet
+        const difference = startDate - now;
+        setCountdown({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((difference % (1000 * 60)) / 1000),
+        });
+        setRegistrationStatus("not-started");
+      } else if (now >= startDate && now < twoDaysBeforeEnd) {
+        // Registration is open, more than 2 days remaining
+        setRegistrationStatus("open");
+        setCountdown(null);
+      } else if (now >= twoDaysBeforeEnd && now < endDate) {
+        // Less than 2 days remaining
+        const difference = endDate - now;
+        setCountdown({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((difference % (1000 * 60)) / 1000),
+        });
+        setRegistrationStatus("ending-soon");
+      } else {
+        // Registration has closed
+        setRegistrationStatus("closed");
+        setCountdown(null);
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeSeason?.registration_start_date, activeSeason?.registration_end_date]);
 
   const {
     register,
@@ -276,6 +336,7 @@ const Register = () => {
             auction_status: "registered",
             base_price: 20,
             registration_status: "pending",
+            residency_type: residencyType,
           });
 
         if (regError) throw regError;
@@ -337,6 +398,21 @@ const Register = () => {
   };
 
   const nextStep = async () => {
+    // Handle eligibility step
+    if (currentStep === 0) {
+      if (residencyType === "other-state") {
+        toast({ title: "Not Eligible", description: "Only Gold Coast, Tweed (NSW), and Queensland residents can register for this tournament", variant: "destructive" });
+        return;
+      }
+      if (residencyType !== null) {
+        setEligibilityConfirmed(true);
+        setCurrentStep(1);
+      } else {
+        toast({ title: "Required", description: "Please select your residency type", variant: "destructive" });
+      }
+      return;
+    }
+
     const isValid = await validateStep(currentStep);
     if (isValid && currentStep < 5) {
       setCurrentStep(currentStep + 1);
@@ -344,7 +420,7 @@ const Register = () => {
   };
 
   const prevStep = () => {
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
   };
@@ -373,7 +449,51 @@ const Register = () => {
   // Check if registration is open for the active season
   const isRegistrationOpen = activeSeason?.registration_open ?? false;
 
-  if (!isRegistrationOpen) {
+  // Handle registration not started yet
+  if (registrationStatus === "not-started" && countdown) {
+    return (
+      <Layout>
+        <div className="min-h-[80vh] flex items-center justify-center px-4">
+          <div className="text-center max-w-md animate-fade-in">
+            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6">
+              <Clock className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="font-display text-4xl mb-4">Registration Opens Soon!</h1>
+            <p className="text-muted-foreground mb-6">
+              Player registration for {activeSeason?.name || "the current season"} will open in:
+            </p>
+            <p className="text-sm text-primary font-medium mb-8">
+              Times shown in AEST (Australian Eastern Standard Time)
+            </p>
+            <div className="grid grid-cols-4 gap-4 mb-8">
+              <div className="bg-card border rounded-lg p-4">
+                <div className="text-3xl font-bold text-primary">{countdown.days}</div>
+                <div className="text-sm text-muted-foreground">Days</div>
+              </div>
+              <div className="bg-card border rounded-lg p-4">
+                <div className="text-3xl font-bold text-primary">{countdown.hours}</div>
+                <div className="text-sm text-muted-foreground">Hours</div>
+              </div>
+              <div className="bg-card border rounded-lg p-4">
+                <div className="text-3xl font-bold text-primary">{countdown.minutes}</div>
+                <div className="text-sm text-muted-foreground">Minutes</div>
+              </div>
+              <div className="bg-card border rounded-lg p-4">
+                <div className="text-3xl font-bold text-primary">{countdown.seconds}</div>
+                <div className="text-sm text-muted-foreground">Seconds</div>
+              </div>
+            </div>
+            <Button variant="default" size="lg" onClick={() => window.location.href = "/"}>
+              Go Home
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Handle registration closed or manually disabled
+  if (registrationStatus === "closed" || !isRegistrationOpen) {
     return (
       <Layout>
         <div className="min-h-[80vh] flex items-center justify-center px-4">
@@ -422,6 +542,44 @@ const Register = () => {
             </p>
           </div>
 
+          {/* Registration Ending Soon Banner */}
+          {registrationStatus === "ending-soon" && countdown && (
+            <Card className="mb-8 border-amber-500/50 bg-amber-500/10 animate-pulse">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <AlertCircle className="w-5 h-5" />
+                  Registration Ending Soon!
+                </CardTitle>
+                <CardDescription className="text-amber-600/80 dark:text-amber-400/80">
+                  Hurry up! Registration closes in:
+                </CardDescription>
+                <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">
+                  Times shown in AEST (Australian Eastern Standard Time)
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="bg-card border rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{countdown.days}</div>
+                    <div className="text-xs text-muted-foreground">Days</div>
+                  </div>
+                  <div className="bg-card border rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{countdown.hours}</div>
+                    <div className="text-xs text-muted-foreground">Hours</div>
+                  </div>
+                  <div className="bg-card border rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{countdown.minutes}</div>
+                    <div className="text-xs text-muted-foreground">Minutes</div>
+                  </div>
+                  <div className="bg-card border rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{countdown.seconds}</div>
+                    <div className="text-xs text-muted-foreground">Seconds</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Bank Details Card */}
           {bankDetails && (
             <Card className="mb-8 border-primary/30 bg-primary/5">
@@ -445,19 +603,61 @@ const Register = () => {
                   {bankDetails.accountName && (
                     <div>
                       <span className="text-muted-foreground">Account Name:</span>
-                      <p className="font-medium">{bankDetails.accountName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{bankDetails.accountName}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            navigator.clipboard.writeText(bankDetails.accountName);
+                            toast({ title: "Copied!", description: "Account name copied to clipboard" });
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   )}
                   {bankDetails.bsb && (
                     <div>
                       <span className="text-muted-foreground">BSB:</span>
-                      <p className="font-medium font-mono">{bankDetails.bsb}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium font-mono">{bankDetails.bsb}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            navigator.clipboard.writeText(bankDetails.bsb);
+                            toast({ title: "Copied!", description: "BSB copied to clipboard" });
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   )}
                   {bankDetails.accountNumber && (
                     <div>
                       <span className="text-muted-foreground">Account Number:</span>
-                      <p className="font-medium font-mono">{bankDetails.accountNumber}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium font-mono">{bankDetails.accountNumber}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            navigator.clipboard.writeText(bankDetails.accountNumber);
+                            toast({ title: "Copied!", description: "Account number copied to clipboard" });
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   )}
                   {bankDetails.amount && (
@@ -484,7 +684,7 @@ const Register = () => {
               <div className="absolute top-5 left-0 right-0 h-1 bg-muted -z-10">
                 <div
                   className="h-full bg-primary transition-all duration-500"
-                  style={{ width: `${((currentStep - 1) / 4) * 100}%` }}
+                  style={{ width: `${(currentStep / (STEPS.length - 1)) * 100}%` }}
                 />
               </div>
 
@@ -523,6 +723,72 @@ const Register = () => {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Step 0: Eligibility Check */}
+            {currentStep === 0 && (
+              <Card className="border-border/50 animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    Eligibility Check
+                  </CardTitle>
+                  <CardDescription>Verify your eligibility to register</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* State/Area Selection */}
+                  <div className="space-y-4">
+                    <Label className="text-base font-semibold">Where are you from? *</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <Button
+                        type="button"
+                        variant={residencyType === "gc-tweed" ? "default" : "outline"}
+                        className="h-auto py-4 flex-col"
+                        onClick={() => setResidencyType("gc-tweed")}
+                      >
+                        <span className="font-semibold">Gold Coast / Tweed</span>
+                        <span className="text-xs opacity-70">Gold Coast LGA or Tweed Heads (NSW)</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={residencyType === "qld-other" ? "default" : "outline"}
+                        className="h-auto py-4 flex-col"
+                        onClick={() => setResidencyType("qld-other")}
+                      >
+                        <span className="font-semibold">Other Queensland</span>
+                        <span className="text-xs opacity-70">Rest of Queensland (non-Gold Coast)</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={residencyType === "other-state" ? "destructive" : "outline"}
+                        className="h-auto py-4 flex-col"
+                        onClick={() => setResidencyType("other-state")}
+                      >
+                        <span className="font-semibold">Another State</span>
+                        <span className="text-xs opacity-70">Not eligible</span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Not Eligible Message */}
+                  {residencyType === "other-state" && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+                      <p className="text-sm text-destructive font-medium">
+                        ⚠️ Sorry, this tournament is only open to Gold Coast, Tweed (NSW), and Queensland residents. You are not eligible to register at this time.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Eligibility Confirmed */}
+                  {residencyType && residencyType !== "other-state" && (
+                    <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                      <p className="text-sm text-primary font-medium">
+                        ✓ You are eligible to register as a {residencyType === "gc-tweed" ? "Gold Coast/Tweed" : "Queensland"} resident.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Step 1: Personal Information */}
             {currentStep === 1 && (
               <Card className="border-border/50 animate-fade-in">
@@ -739,14 +1005,20 @@ const Register = () => {
 
             {/* Navigation Buttons */}
             <div className="flex gap-4 pt-4">
-              {currentStep > 1 && (
+              {currentStep > 0 && (
                 <Button type="button" variant="outline" size="lg" onClick={prevStep} className="flex-1">
                   <ChevronLeft className="w-4 h-4 mr-2" />
                   Back
                 </Button>
               )}
               {currentStep < 5 ? (
-                <Button type="button" size="lg" onClick={nextStep} className="flex-1">
+                <Button 
+                  type="button" 
+                  size="lg" 
+                  onClick={nextStep} 
+                  className="flex-1"
+                  disabled={currentStep === 0 && residencyType === "other-state"}
+                >
                   Next
                   <ChevronRight className="w-4 h-4 ml-2" />
                 </Button>

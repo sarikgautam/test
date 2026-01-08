@@ -25,12 +25,37 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Calendar, CheckCircle2 } from "lucide-react";
 
+// Helper functions to convert between UTC and AEST
+const convertUTCtoAEST = (utcDateString: string | null): string => {
+  if (!utcDateString) return "";
+  const date = new Date(utcDateString);
+  // AEST is UTC+10
+  const aestOffset = 10 * 60; // 10 hours in minutes
+  const localOffset = date.getTimezoneOffset(); // Browser's offset from UTC in minutes (negative for timezones ahead of UTC)
+  const totalOffset = aestOffset + localOffset; // Total adjustment needed
+  const aestDate = new Date(date.getTime() + totalOffset * 60 * 1000);
+  return aestDate.toISOString().slice(0, 16);
+};
+
+const convertAESTtoUTC = (aestDateString: string): string | null => {
+  if (!aestDateString) return null;
+  const date = new Date(aestDateString);
+  // AEST is UTC+10, so subtract 10 hours to get UTC
+  const aestOffset = 10 * 60; // 10 hours in minutes
+  const localOffset = date.getTimezoneOffset();
+  const totalOffset = aestOffset + localOffset;
+  const utcDate = new Date(date.getTime() - totalOffset * 60 * 1000);
+  return utcDate.toISOString();
+};
+
 interface Season {
   id: string;
   name: string;
   year: number;
   start_date: string | null;
   end_date: string | null;
+  registration_start_date: string | null;
+  registration_end_date: string | null;
   is_active: boolean;
   registration_open: boolean;
   auction_date: string | null;
@@ -46,6 +71,8 @@ export default function SeasonsAdmin() {
     year: new Date().getFullYear(),
     start_date: "",
     end_date: "",
+    registration_start_date: "",
+    registration_end_date: "",
     auction_date: "",
     is_active: false,
     registration_open: false,
@@ -74,6 +101,8 @@ export default function SeasonsAdmin() {
         year: data.year,
         start_date: data.start_date || null,
         end_date: data.end_date || null,
+        registration_start_date: convertAESTtoUTC(data.registration_start_date),
+        registration_end_date: convertAESTtoUTC(data.registration_end_date),
         auction_date: data.auction_date || null,
         is_active: data.is_active,
         registration_open: data.registration_open,
@@ -101,6 +130,8 @@ export default function SeasonsAdmin() {
           year: data.year,
           start_date: data.start_date || null,
           end_date: data.end_date || null,
+          registration_start_date: convertAESTtoUTC(data.registration_start_date),
+          registration_end_date: convertAESTtoUTC(data.registration_end_date),
           auction_date: data.auction_date || null,
           is_active: data.is_active,
           registration_open: data.registration_open,
@@ -169,6 +200,8 @@ export default function SeasonsAdmin() {
       year: new Date().getFullYear(),
       start_date: "",
       end_date: "",
+      registration_start_date: "",
+      registration_end_date: "",
       auction_date: "",
       is_active: false,
       registration_open: false,
@@ -185,6 +218,8 @@ export default function SeasonsAdmin() {
       year: season.year,
       start_date: season.start_date?.slice(0, 10) || "",
       end_date: season.end_date?.slice(0, 10) || "",
+      registration_start_date: convertUTCtoAEST(season.registration_start_date),
+      registration_end_date: convertUTCtoAEST(season.registration_end_date),
       auction_date: season.auction_date?.slice(0, 16) || "",
       is_active: season.is_active,
       registration_open: season.registration_open,
@@ -252,6 +287,29 @@ export default function SeasonsAdmin() {
                     value={formData.end_date}
                     onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="registration_start_date">Registration Start Date (AEST)</Label>
+                  <Input
+                    id="registration_start_date"
+                    type="datetime-local"
+                    value={formData.registration_start_date}
+                    onChange={(e) => setFormData({ ...formData, registration_start_date: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Australian Eastern Standard Time</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="registration_end_date">Registration End Date (AEST)</Label>
+                  <Input
+                    id="registration_end_date"
+                    type="datetime-local"
+                    value={formData.registration_end_date}
+                    onChange={(e) => setFormData({ ...formData, registration_end_date: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Australian Eastern Standard Time</p>
                 </div>
               </div>
 

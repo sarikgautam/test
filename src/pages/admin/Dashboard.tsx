@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Shield, Calendar, Trophy, TrendingUp, DollarSign } from "lucide-react";
+import { Users, Shield, Calendar, Trophy, TrendingUp, DollarSign, Clock } from "lucide-react";
 import { useSeason } from "@/hooks/useSeason";
 
 export default function AdminDashboard() {
@@ -11,11 +11,10 @@ export default function AdminDashboard() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-stats", selectedSeasonId],
     queryFn: async () => {
-      const [teamsRes, playersRes, matchesRes, registrationsRes] = await Promise.all([
+      const [teamsRes, matchesRes, registrationsRes] = await Promise.all([
         supabase.from("teams").select("id, remaining_budget", { count: "exact" }),
-        supabase.from("players").select("id", { count: "exact" }),
         supabase.from("matches").select("id, status", { count: "exact" }).eq("season_id", selectedSeasonId!),
-        supabase.from("player_season_registrations").select("id, auction_status, sold_price").eq("season_id", selectedSeasonId!),
+        supabase.from("player_season_registrations").select("id, auction_status, sold_price, registration_status").eq("season_id", selectedSeasonId!),
       ]);
 
       const registrations = registrationsRes.data || [];
@@ -26,11 +25,14 @@ export default function AdminDashboard() {
 
       const soldPlayers = registrations.filter(r => r.auction_status === "sold").length;
       const registeredPlayers = registrations.filter(r => r.auction_status === "registered").length;
+      const approvedPlayers = registrations.filter(r => r.registration_status === "approved").length;
+      const pendingPlayers = registrations.filter(r => r.registration_status === "pending").length;
       const completedMatches = matchesRes.data?.filter(m => m.status === "completed").length || 0;
 
       return {
         teams: teamsRes.count || 0,
-        players: playersRes.count || 0,
+        approvedPlayers,
+        pendingPlayers,
         matches: matchesRes.count || 0,
         registeredForAuction: registeredPlayers,
         soldPlayers,
@@ -48,13 +50,23 @@ export default function AdminDashboard() {
       icon: Shield,
       color: "text-primary",
       bgColor: "bg-primary/20",
+      href: "/admin/teams",
     },
     {
-      title: "Registered Players",
-      value: stats?.players || 0,
+      title: "Approved Players",
+      value: stats?.approvedPlayers || 0,
       icon: Users,
       color: "text-cricket-green",
       bgColor: "bg-cricket-green/20",
+      href: "/admin/players",
+    },
+    {
+      title: "Pending Players",
+      value: stats?.pendingPlayers || 0,
+      icon: Clock,
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/20",
+      href: "/admin/registration-review",
     },
     {
       title: "Awaiting Auction",
@@ -102,23 +114,30 @@ export default function AdminDashboard() {
               .map((_, i) => (
                 <Skeleton key={i} className="h-32 rounded-xl" />
               ))
-          : statCards.map((stat) => (
-              <Card key={stat.title} className="border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {stat.title}
-                  </CardTitle>
-                  <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-foreground">
-                    {stat.value.toLocaleString()}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          : statCards.map((stat) => {
+              const CardWrapper = stat.href ? 'a' : 'div';
+              const cardProps = stat.href ? { href: stat.href } : {};
+              
+              return (
+                <CardWrapper key={stat.title} {...cardProps} className={stat.href ? "block" : ""}>
+                  <Card className={`border-border/50 ${stat.href ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        {stat.title}
+                      </CardTitle>
+                      <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                        <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-foreground">
+                        {stat.value.toLocaleString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CardWrapper>
+              );
+            })}
       </div>
 
       <Card className="border-border/50">

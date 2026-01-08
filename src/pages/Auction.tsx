@@ -62,18 +62,19 @@ export default function Auction() {
   });
 
   const { data: currentPlayer } = useQuery({
-    queryKey: ["auction-current-player", liveAuction?.current_player_id],
+    queryKey: ["auction-current-player", liveAuction?.current_player_id, activeSeason?.id],
     queryFn: async () => {
-      if (!liveAuction?.current_player_id) return null;
+      if (!liveAuction?.current_player_id || !activeSeason?.id) return null;
       const { data, error } = await supabase
         .from("players")
-        .select("*")
+        .select("*, player_season_registrations!inner(residency_type)")
         .eq("id", liveAuction.current_player_id)
+        .eq("player_season_registrations.season_id", activeSeason.id)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!liveAuction?.current_player_id,
+    enabled: !!liveAuction?.current_player_id && !!activeSeason?.id,
   });
 
   const { data: playerStats } = useQuery({
@@ -350,6 +351,16 @@ export default function Auction() {
                           )}
                           {currentPlayer.bowling_style && (
                             <Badge variant="outline">{currentPlayer.bowling_style}</Badge>
+                          )}
+                          {currentPlayer.player_season_registrations?.[0]?.residency_type && 
+                           currentPlayer.player_season_registrations[0].residency_type !== "other-state" && (
+                            <Badge className={
+                              currentPlayer.player_season_registrations[0].residency_type === "gc-tweed"
+                                ? "bg-blue-500/20 text-blue-600 border-blue-500/30"
+                                : "bg-purple-500/20 text-purple-600 border-purple-500/30"
+                            }>
+                              {currentPlayer.player_season_registrations[0].residency_type === "gc-tweed" ? "🏆 GC" : "🏘️ QLD"}
+                            </Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-2">

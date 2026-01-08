@@ -52,6 +52,7 @@ interface PendingRegistration {
   player_id: string;
   season_id: string;
   registration_status: string;
+  residency_type: string | null;
   created_at: string;
   player: {
     id: string;
@@ -132,8 +133,7 @@ export default function RegistrationReviewAdmin() {
           id,
           player_id,
           season_id,
-          registration_status,
-          created_at,
+          registration_status,          residency_type,          created_at,
           player:players(id, full_name, email, phone, role, photo_url, current_team, date_of_birth, address, emergency_contact_name, emergency_contact_phone, emergency_contact_email, payment_receipt_url)
         `)
         .eq("season_id", selectedSeasonId);
@@ -559,6 +559,7 @@ export default function RegistrationReviewAdmin() {
                 <TableRow>
                   <TableHead>Player</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Residency</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead>Matches</TableHead>
@@ -595,6 +596,17 @@ export default function RegistrationReviewAdmin() {
                         <Badge className={getRoleBadgeColor(reg.player.role)}>
                           {reg.player.role.replace("_", " ")}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {reg.residency_type && reg.residency_type !== "other-state" && (
+                          <Badge className={
+                            reg.residency_type === "gc-tweed"
+                              ? "bg-blue-500/20 text-blue-600 border-blue-500/30"
+                              : "bg-purple-500/20 text-purple-600 border-purple-500/30"
+                          }>
+                            {reg.residency_type === "gc-tweed" ? "🏆 GC" : "🏘️ QLD"}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge 
@@ -783,9 +795,20 @@ export default function RegistrationReviewAdmin() {
                 )}
                 <div>
                   <h3 className="text-xl font-semibold">{selectedRegistration.player.full_name}</h3>
-                  <Badge className={getRoleBadgeColor(selectedRegistration.player.role)}>
-                    {selectedRegistration.player.role.replace("_", " ")}
-                  </Badge>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge className={getRoleBadgeColor(selectedRegistration.player.role)}>
+                      {selectedRegistration.player.role.replace("_", " ")}
+                    </Badge>
+                    {selectedRegistration.residency_type && selectedRegistration.residency_type !== "other-state" && (
+                      <Badge className={
+                        selectedRegistration.residency_type === "gc-tweed"
+                          ? "bg-blue-500/20 text-blue-600 border-blue-500/30"
+                          : "bg-purple-500/20 text-purple-600 border-purple-500/30"
+                      }>
+                        {selectedRegistration.residency_type === "gc-tweed" ? "🏆 GC" : "🏘️ QLD"}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
 

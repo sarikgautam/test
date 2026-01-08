@@ -10,6 +10,8 @@ interface Season {
   end_date: string | null;
   is_active: boolean;
   registration_open: boolean;
+  registration_start_date: string | null;
+  registration_end_date: string | null;
   auction_date: string | null;
   countdown_description?: string | null;
   created_at: string;
