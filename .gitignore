@@ -12,6 +12,19 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+*.env
+
+# Supabase
+supabase/.temp/
+supabase/migrations/*.sql
+supabase/config.toml
+
 # Ignore root-level utility scripts
 /*.mjs
 /*.cjs
