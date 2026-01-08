@@ -459,6 +459,19 @@ const Register = () => {
               <Clock className="w-10 h-10 text-primary" />
             </div>
             <h1 className="font-display text-4xl mb-4">Registration Opens Soon!</h1>
+            <p className="text-muted-foreground mb-2">
+              Registration starts on:
+            </p>
+            <p className="text-lg font-semibold text-primary mb-6">
+              {activeSeason?.registration_start_date 
+                ? new Date(activeSeason.registration_start_date).toLocaleDateString('en-AU', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })
+                : "TBA"}
+            </p>
             <p className="text-muted-foreground mb-6">
               Player registration for {activeSeason?.name || "the current season"} will open in:
             </p>
