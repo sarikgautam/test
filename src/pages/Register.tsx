@@ -469,6 +469,10 @@ const Register = () => {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
+                  }) + " at " + new Date(activeSeason.registration_start_date).toLocaleTimeString('en-AU', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
                   })
                 : "TBA"}
             </p>
