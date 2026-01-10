@@ -202,7 +202,8 @@ const sendPlayerConfirmationEmail = async (data: RegistrationEmailRequest) => {
       Authorization: `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: "noreply@gcnpl.com",
+      from: "GCNPL League <onboarding@resend.dev>",
+      reply_to: ADMIN_EMAIL,
       to: data.email,
       subject: "Your Registration is Confirmed - GC Cricket Feud",
       html: emailContent,
@@ -412,7 +413,8 @@ const sendAdminNotificationEmail = async (data: RegistrationEmailRequest) => {
       Authorization: `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: "noreply@gcnpl.com",
+      from: "GCNPL Bot <onboarding@resend.dev>",
+      reply_to: ADMIN_EMAIL,
       to: ADMIN_EMAIL,
       subject: `New Registration: ${data.playerName}`,
       html: emailContent,
