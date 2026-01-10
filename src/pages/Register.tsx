@@ -341,6 +341,44 @@ const Register = () => {
 
         if (regError) throw regError;
       }
+
+      // Send registration confirmation email
+      try {
+        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/send-registration-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              playerName: data.full_name,
+              email: data.email,
+              phone: data.phone,
+              address: data.address,
+              dateOfBirth: data.date_of_birth,
+              role: data.role,
+              currentTeam: data.current_team || "",
+              battingStyle: data.batting_style || "",
+              bowlingStyle: data.bowling_style || "",
+              emergencyContactName: data.emergency_contact_name,
+              emergencyContactPhone: data.emergency_contact_phone,
+              emergencyContactEmail: data.emergency_contact_email || "",
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          console.warn("Failed to send confirmation email, but registration was successful");
+        }
+      } catch (emailError) {
+        console.warn("Email service error:", emailError);
+        // Don't throw - registration was successful even if email fails
+      }
+
+      return { playerId, success: true };
     },
     onSuccess: () => {
       setIsSuccess(true);
