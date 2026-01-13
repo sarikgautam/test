@@ -50,7 +50,7 @@ export function TeamsShowcase() {
           </h2>
           
           <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto animate-fade-in mb-2" style={{ animationDelay: '200ms' }}>
-            Six powerhouse franchises competing for supreme glory in the Gold Coast Cricket League
+            Four powerhouse franchises competing for supreme glory in the Gold Coast Cricket League
           </p>
           
           <div className="flex items-center justify-center gap-2 text-sm text-primary animate-fade-in" style={{ animationDelay: '300ms' }}>
@@ -60,22 +60,22 @@ export function TeamsShowcase() {
         </div>
 
         {isLoading ? (
-          <div className="flex flex-wrap justify-center gap-6 max-w-7xl mx-auto">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className="w-48 h-72 rounded-3xl" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="w-full h-72 rounded-3xl" />
             ))}
           </div>
         ) : teams && teams.length > 0 ? (
-          <div className="flex flex-wrap justify-center gap-6 md:gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto">
             {teams.map((team, index) => (
               <Link
                 key={team.id}
                 to={`/teams/${team.id}`}
-                className="group relative animate-fade-in flex-shrink-0"
+                className="group relative animate-fade-in"
                 style={{ animationDelay: `${index * 80 + 300}ms` }}
               >
-                {/* Enhanced card with better depth and bigger size */}
-                <div className="relative w-64 h-auto sm:w-72 md:w-80 rounded-3xl overflow-hidden transition-all duration-700 ease-out group-hover:scale-110 group-hover:-translate-y-2 animate-float" style={{ animationDelay: `${index * 200}ms` }}>
+                {/* Enhanced card with better depth */}
+                <div className="relative w-full h-auto rounded-3xl overflow-hidden transition-all duration-700 ease-out group-hover:scale-110 group-hover:-translate-y-2 animate-float" style={{ animationDelay: `${index * 200}ms` }}>
                   
                   {/* Layered background */}
                   <div className="absolute inset-0 bg-gradient-to-b from-card via-card to-card/95 backdrop-blur-xl border-2 border-border/80 group-hover:border-primary/50 transition-all duration-700 rounded-3xl" />
@@ -120,11 +120,11 @@ export function TeamsShowcase() {
                         <img 
                           src={team.logo_url} 
                           alt={team.name}
-                          className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-44 md:h-44 mx-auto rounded-full object-cover shadow-2xl ring-4 ring-border/60 group-hover/logo:ring-primary/60 transition-all duration-700 md:group-hover/logo:scale-125 md:group-hover/logo:-rotate-6 backdrop-blur-sm"
+                          className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 mx-auto rounded-full object-cover shadow-2xl ring-4 ring-border/60 group-hover/logo:ring-primary/60 transition-all duration-700 md:group-hover/logo:scale-125 md:group-hover/logo:-rotate-6 backdrop-blur-sm"
                         />
                       ) : (
                         <div
-                          className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-44 md:h-44 mx-auto rounded-full flex items-center justify-center text-5xl sm:text-6xl md:text-5xl font-bold text-white shadow-2xl ring-4 ring-border/60 group-hover/logo:ring-primary/60 transition-all duration-700 md:group-hover/logo:scale-125 md:group-hover/logo:-rotate-6 backdrop-blur-sm"
+                          className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 mx-auto rounded-full flex items-center justify-center text-3xl sm:text-5xl md:text-5xl font-bold text-white shadow-2xl ring-4 ring-border/60 group-hover/logo:ring-primary/60 transition-all duration-700 md:group-hover/logo:scale-125 md:group-hover/logo:-rotate-6 backdrop-blur-sm"
                           style={{ 
                             background: `linear-gradient(135deg, ${team.primary_color}, ${team.secondary_color})` 
                           }}

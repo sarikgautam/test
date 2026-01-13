@@ -600,7 +600,7 @@ const TeamDetails = () => {
               </div>
               <div className="space-y-4">
                 {topRunScorers?.length ? topRunScorers.map((player, index) => (
-                  <div key={player.id} className="flex items-center gap-4 p-3 rounded-xl bg-background/50">
+                  <div key={player.id} className="group flex items-center gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/60 hover:border-primary/30 shadow-sm hover:shadow-md transition">
                     <span 
                       className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
                       style={{ 
@@ -611,10 +611,10 @@ const TeamDetails = () => {
                       {index + 1}
                     </span>
                     {player.photo_url ? (
-                      <img src={player.photo_url} alt={player.full_name} className="w-12 h-12 rounded-full object-cover" />
+                      <img src={player.photo_url} alt={player.full_name} className="w-16 h-16 rounded-full object-cover ring-2 ring-muted-foreground/20 group-hover:ring-primary/30 transition" />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                        <User className="w-6 h-6 text-muted-foreground" />
+                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center ring-2 ring-muted-foreground/20">
+                        <User className="w-8 h-8 text-muted-foreground" />
                       </div>
                     )}
                     <div className="flex-1">
@@ -645,7 +645,7 @@ const TeamDetails = () => {
               </div>
               <div className="space-y-4">
                 {topWicketTakers?.length ? topWicketTakers.map((player, index) => (
-                  <div key={player.id} className="flex items-center gap-4 p-3 rounded-xl bg-background/50">
+                  <div key={player.id} className="group flex items-center gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/60 hover:border-primary/30 shadow-sm hover:shadow-md transition">
                     <span 
                       className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
                       style={{ 
@@ -656,10 +656,10 @@ const TeamDetails = () => {
                       {index + 1}
                     </span>
                     {player.photo_url ? (
-                      <img src={player.photo_url} alt={player.full_name} className="w-12 h-12 rounded-full object-cover" />
+                      <img src={player.photo_url} alt={player.full_name} className="w-16 h-16 rounded-full object-cover ring-2 ring-muted-foreground/20 group-hover:ring-primary/30 transition" />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                        <User className="w-6 h-6 text-muted-foreground" />
+                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center ring-2 ring-muted-foreground/20">
+                        <User className="w-8 h-8 text-muted-foreground" />
                       </div>
                     )}
                     <div className="flex-1">
@@ -744,59 +744,61 @@ const TeamDetails = () => {
                       />
                       
                       <div className="p-5">
-                        <div className="flex items-start gap-4">
-                          {reg.player.photo_url ? (
-                            <img 
-                              src={reg.player.photo_url} 
-                              alt={reg.player.full_name}
-                              className="w-16 h-16 rounded-xl object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                            />
-                          ) : (
-                            <div 
-                              className="w-16 h-16 rounded-xl flex items-center justify-center"
-                              style={{ backgroundColor: `${team.primary_color}20` }}
-                            >
-                              <User className="w-8 h-8" style={{ color: team.primary_color }} />
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex flex-col items-center gap-3">
+                            {reg.player.photo_url ? (
+                              <img 
+                                src={reg.player.photo_url} 
+                                alt={reg.player.full_name}
+                                className="w-48 h-48 rounded-xl object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                              />
+                            ) : (
+                              <div 
+                                className="w-48 h-48 rounded-xl flex items-center justify-center"
+                                style={{ backgroundColor: `${team.primary_color}20` }}
+                              >
+                                <User className="w-24 h-24" style={{ color: team.primary_color }} />
+                              </div>
+                            )}
+                            <div className="text-center">
+                              <div className="flex items-center justify-center gap-2 mb-1">
+                                {reg.jersey_number && (
+                                  <span 
+                                    className="text-xs font-bold px-2 py-0.5 rounded"
+                                    style={{ backgroundColor: `${team.primary_color}20`, color: team.primary_color }}
+                                  >
+                                    #{reg.jersey_number}
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="font-medium">{reg.player.full_name}</h4>
+                              <Badge 
+                                variant="outline" 
+                                className="mt-1 text-xs"
+                                style={{ backgroundColor: `${team.secondary_color}12`, color: team.primary_color, borderColor: `${team.primary_color}40` }}
+                              >
+                                {getRoleLabel(reg.player.role)}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {stats && (
+                            <div className="flex flex-col gap-3 pt-4">
+                              <div className="text-center">
+                                <p className="font-bold text-2xl" style={{ color: team.primary_color }}>{stats.matches}</p>
+                                <p className="text-xs text-muted-foreground">Matches</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="font-bold text-2xl" style={{ color: team.primary_color }}>{stats.runs}</p>
+                                <p className="text-xs text-muted-foreground">Runs</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="font-bold text-2xl" style={{ color: team.primary_color }}>{stats.wickets}</p>
+                                <p className="text-xs text-muted-foreground">Wickets</p>
+                              </div>
                             </div>
                           )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              {reg.jersey_number && (
-                                <span 
-                                  className="text-xs font-bold px-2 py-0.5 rounded"
-                                  style={{ backgroundColor: `${team.primary_color}20`, color: team.primary_color }}
-                                >
-                                  #{reg.jersey_number}
-                                </span>
-                              )}
-                            </div>
-                            <h4 className="font-medium truncate mt-1">{reg.player.full_name}</h4>
-                            <Badge 
-                              variant="outline" 
-                              className="mt-1 text-xs"
-                              style={{ backgroundColor: `${team.secondary_color}12`, color: team.primary_color, borderColor: `${team.primary_color}40` }}
-                            >
-                              {getRoleLabel(reg.player.role)}
-                            </Badge>
-                          </div>
                         </div>
-
-                        {stats && (
-                          <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border">
-                            <div className="text-center">
-                              <p className="font-bold" style={{ color: team.primary_color }}>{stats.matches}</p>
-                              <p className="text-xs text-muted-foreground">Matches</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="font-bold" style={{ color: team.primary_color }}>{stats.runs}</p>
-                              <p className="text-xs text-muted-foreground">Runs</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="font-bold" style={{ color: team.primary_color }}>{stats.wickets}</p>
-                              <p className="text-xs text-muted-foreground">Wickets</p>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );

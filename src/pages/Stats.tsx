@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/layout/Layout";
@@ -53,6 +53,171 @@ interface PlayerWithStats {
   };
 }
 
+// Netflix-style horizontal stat row with arrow navigation
+const HorizontalStatRow = ({
+  title,
+  icon: Icon,
+  players,
+  statLabel,
+  formatValue,
+  accent,
+}: {
+  title: string;
+  icon: React.ElementType;
+  players: PlayerWithStats[];
+  statLabel: string;
+  formatValue: (player: PlayerWithStats) => string | number;
+  accent: "blue" | "purple" | "green" | "emerald" | "amber";
+}) => {
+  if (!players || players.length === 0) return null;
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const accentMap: Record<string, { chipBg: string; chipText: string; topBar: string; indexBg: string; indexBorder: string; valueText: string; }> = {
+    blue: {
+      chipBg: "bg-blue-500/20",
+      chipText: "text-blue-400",
+      topBar: "from-blue-500/60",
+      indexBg: "bg-blue-500/15",
+      indexBorder: "border-blue-500/30",
+      valueText: "text-blue-400",
+    },
+    purple: {
+      chipBg: "bg-purple-500/20",
+      chipText: "text-purple-400",
+      topBar: "from-purple-500/60",
+      indexBg: "bg-purple-500/15",
+      indexBorder: "border-purple-500/30",
+      valueText: "text-purple-400",
+    },
+    green: {
+      chipBg: "bg-green-500/20",
+      chipText: "text-green-400",
+      topBar: "from-green-500/60",
+      indexBg: "bg-green-500/15",
+      indexBorder: "border-green-500/30",
+      valueText: "text-green-400",
+    },
+    emerald: {
+      chipBg: "bg-emerald-500/20",
+      chipText: "text-emerald-400",
+      topBar: "from-emerald-500/60",
+      indexBg: "bg-emerald-500/15",
+      indexBorder: "border-emerald-500/30",
+      valueText: "text-emerald-400",
+    },
+    amber: {
+      chipBg: "bg-amber-500/20",
+      chipText: "text-amber-400",
+      topBar: "from-amber-500/60",
+      indexBg: "bg-amber-500/15",
+      indexBorder: "border-amber-500/30",
+      valueText: "text-amber-400",
+    },
+  };
+  const a = accentMap[accent] || accentMap.blue;
+
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const scrollAmount = 280; // Card width + gap
+      scrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  return (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-display text-xl flex items-center gap-2">
+          <span className={`p-2 rounded-lg ${a.chipBg}`}>
+            <Icon className={`w-5 h-5 ${a.chipText}`} />
+          </span>
+          {title}
+        </h3>
+      </div>
+      <div className="relative group">
+        <button
+          onClick={() => scroll("left")}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary"
+          aria-label="Scroll left"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button
+          onClick={() => scroll("right")}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary"
+          aria-label="Scroll right"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory" ref={scrollRef}>
+          {players.map((player, index) => (
+            <div
+              key={player.id}
+              className="snap-start min-w-[280px] max-w-[280px] bg-card/80 backdrop-blur rounded-2xl border border-border/50 shadow-sm hover:shadow-md transition-all group/card"
+            >
+              <div className={`h-1 rounded-t-2xl bg-gradient-to-r ${a.topBar} to-transparent`} />
+              <div className="p-4 flex items-center justify-between gap-3 h-full">
+                <div className="flex items-start gap-2 flex-1 min-w-0">
+                  <div className={`w-10 h-10 ${a.chipText} font-bold grid place-items-center rounded-full ${a.indexBg} border ${a.indexBorder} flex-shrink-0`}>
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="w-24 h-24 rounded-xl overflow-hidden bg-muted ring-2 ring-muted-foreground/20 group-hover/card:ring-primary/30 transition mb-2">
+                      {player.photo_url ? (
+                        <img
+                          src={player.photo_url}
+                          alt={player.full_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-8 h-8 text-muted-foreground m-auto" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p
+                        className="font-bold text-sm leading-tight whitespace-normal break-words"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {player.full_name}
+                      </p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {player.team && (
+                          <p className="text-xs text-muted-foreground">{player.team.short_name}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end justify-center flex-shrink-0">
+                  <span className={`text-3xl font-black ${a.valueText}`}>
+                    {formatValue(player)}
+                  </span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{statLabel}</span>
+                  <p className="text-xs text-muted-foreground mt-1">M: {player.stats.matches}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent" />
+      </div>
+    </div>
+  );
+}
+
 // Reusable leaderboard card component
 const LeaderboardCard = ({
   title,
@@ -86,7 +251,7 @@ const LeaderboardCard = ({
           {players.slice(0, 5).map((player, index) => (
             <div
               key={player.id}
-              className={`flex items-center gap-3 p-2 rounded-lg transition-all ${
+              className={`group flex items-start gap-4 p-3 rounded-xl transition-all shadow-sm hover:shadow-md hover:ring-1 hover:ring-primary/20 ${
                 index === 0 
                   ? "bg-gradient-to-r from-yellow-500/20 to-amber-500/10 border border-yellow-500/30" 
                   : "bg-muted/30 hover:bg-muted/50"
@@ -95,7 +260,7 @@ const LeaderboardCard = ({
               <span className={`font-bold w-6 text-center ${index === 0 ? "text-yellow-500" : "text-primary"}`}>
                 {index + 1}
               </span>
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+              <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden ring-2 ring-muted-foreground/20 group-hover:ring-primary/30 transition">
                 {player.photo_url ? (
                   <img
                     src={player.photo_url}
@@ -103,11 +268,21 @@ const LeaderboardCard = ({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <User className="w-4 h-4 text-muted-foreground" />
+                  <User className="w-12 h-12 text-muted-foreground" />
                 )}
               </div>
               <div className="flex-grow min-w-0">
-                <p className="font-medium text-sm truncate">{player.full_name}</p>
+                <p
+                  className="font-medium text-sm whitespace-normal break-words leading-tight"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {player.full_name}
+                </p>
                 {player.team && (
                   <p className="text-xs text-muted-foreground">{player.team.short_name}</p>
                 )}
@@ -363,32 +538,32 @@ const Stats = () => {
 
   const topRunScorers = [...playersWithMatches]
     .sort((a, b) => b.stats.runs_scored - a.stats.runs_scored)
-    .slice(0, 5);
+    .slice(0, 20);
 
   const topWicketTakers = [...playersWithMatches]
     .filter((p) => p.stats.wickets > 0)
     .sort((a, b) => b.stats.wickets - a.stats.wickets)
-    .slice(0, 5);
+    .slice(0, 20);
 
   const mostSixes = [...playersWithMatches]
     .filter((p) => p.stats.sixes > 0)
     .sort((a, b) => b.stats.sixes - a.stats.sixes)
-    .slice(0, 5);
+    .slice(0, 20);
 
   const mostFours = [...playersWithMatches]
     .filter((p) => p.stats.fours > 0)
     .sort((a, b) => b.stats.fours - a.stats.fours)
-    .slice(0, 5);
+    .slice(0, 20);
 
   const mostCatches = [...playersWithMatches]
     .filter((p) => p.stats.catches > 0)
     .sort((a, b) => b.stats.catches - a.stats.catches)
-    .slice(0, 5);
+    .slice(0, 20);
 
   const mostRunOuts = [...playersWithMatches]
     .filter((p) => p.stats.run_outs > 0)
     .sort((a, b) => b.stats.run_outs - a.stats.run_outs)
-    .slice(0, 5);
+    .slice(0, 20);
 
   const bestStrikeRate = [...playersWithMatches]
     .filter((p) => p.stats.balls_faced >= 20) // Minimum 20 balls
@@ -489,121 +664,90 @@ const Stats = () => {
             </Card>
           ) : (
             <div className="space-y-10">
-              {/* Batting Leaders Section */}
+              {/* Batting Leaders: Horizontal Carousels */}
               <section>
-                <h2 className="font-display text-2xl mb-6 flex items-center gap-3">
+                <h2 className="font-display text-2xl mb-4 flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-blue-500/20">
                     <Trophy className="w-6 h-6 text-blue-400" />
                   </div>
                   Batting Leaders
                 </h2>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <LeaderboardCard
-                    title="Top Run Scorers"
-                    icon={Trophy}
-                    players={topRunScorers}
-                    statKey="runs_scored"
-                    statLabel="runs"
-                    formatValue={(p) => p.stats.runs_scored}
-                    gradient="bg-gradient-to-br from-blue-500/10 to-transparent"
-                  />
-                  <LeaderboardCard
-                    title="Most Sixes"
-                    icon={Zap}
-                    players={mostSixes}
-                    statKey="sixes"
-                    statLabel="sixes"
-                    formatValue={(p) => p.stats.sixes}
-                    gradient="bg-gradient-to-br from-purple-500/10 to-transparent"
-                  />
-                  <LeaderboardCard
-                    title="Most Fours"
-                    icon={TrendingUp}
-                    players={mostFours}
-                    statKey="fours"
-                    statLabel="fours"
-                    formatValue={(p) => p.stats.fours}
-                    gradient="bg-gradient-to-br from-green-500/10 to-transparent"
-                  />
-                  <LeaderboardCard
-                    title="Best Strike Rate"
-                    icon={Target}
-                    players={bestStrikeRate}
-                    statKey="calculated"
-                    statLabel="SR"
-                    formatValue={(p) => calculateStrikeRate(p.stats.runs_scored, p.stats.balls_faced)}
-                    gradient="bg-gradient-to-br from-amber-500/10 to-transparent"
-                  />
-                </div>
+                <HorizontalStatRow
+                  title="Most Runs"
+                  icon={Trophy}
+                  players={topRunScorers}
+                  statLabel="runs"
+                  formatValue={(p) => p.stats.runs_scored}
+                  accent="blue"
+                />
+                <HorizontalStatRow
+                  title="Most Sixes"
+                  icon={Zap}
+                  players={mostSixes}
+                  statLabel="sixes"
+                  formatValue={(p) => p.stats.sixes}
+                  accent="purple"
+                />
+                <HorizontalStatRow
+                  title="Most Fours"
+                  icon={TrendingUp}
+                  players={mostFours}
+                  statLabel="fours"
+                  formatValue={(p) => p.stats.fours}
+                  accent="green"
+                />
               </section>
 
-              {/* Bowling Leaders Section */}
+              {/* Bowling Leaders: Horizontal Carousels */}
               <section>
-                <h2 className="font-display text-2xl mb-6 flex items-center gap-3">
+                <h2 className="font-display text-2xl mb-4 flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-emerald-500/20">
                     <Target className="w-6 h-6 text-emerald-400" />
                   </div>
                   Bowling Leaders
                 </h2>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <LeaderboardCard
-                    title="Top Wicket Takers"
-                    icon={Target}
-                    players={topWicketTakers}
-                    statKey="wickets"
-                    statLabel="wickets"
-                    formatValue={(p) => p.stats.wickets}
-                    gradient="bg-gradient-to-br from-emerald-500/10 to-transparent"
-                  />
-                  <LeaderboardCard
-                    title="Best Bowling Figures"
-                    icon={Trophy}
-                    players={bestBowlingInMatch}
-                    statKey="calculated"
-                    statLabel="in match"
-                    formatValue={(p) => `${p.stats.wickets}/${p.stats.runs_conceded}`}
-                    gradient="bg-gradient-to-br from-blue-500/10 to-transparent"
-                  />
-                  <LeaderboardCard
-                    title="Best Economy"
-                    icon={BarChart3}
-                    players={bestEconomy}
-                    statKey="calculated"
-                    statLabel="econ"
-                    formatValue={(p) => calculateEconomy(p.stats.runs_conceded, p.stats.overs_bowled)}
-                    gradient="bg-gradient-to-br from-teal-500/10 to-transparent"
-                  />
-                </div>
+                <HorizontalStatRow
+                  title="Top Wicket Takers"
+                  icon={Target}
+                  players={topWicketTakers}
+                  statLabel="wickets"
+                  formatValue={(p) => p.stats.wickets}
+                  accent="emerald"
+                />
+                <HorizontalStatRow
+                  title="Best Economy"
+                  icon={BarChart3}
+                  players={bestEconomy}
+                  statLabel="econ"
+                  formatValue={(p) => calculateEconomy(p.stats.runs_conceded, p.stats.overs_bowled)}
+                  accent="blue"
+                />
               </section>
 
-              {/* Fielding Leaders Section */}
+              {/* Fielding Leaders: Horizontal Carousels */}
               <section>
-                <h2 className="font-display text-2xl mb-6 flex items-center gap-3">
+                <h2 className="font-display text-2xl mb-4 flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-amber-500/20">
                     <Hand className="w-6 h-6 text-amber-400" />
                   </div>
                   Fielding Leaders
                 </h2>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <LeaderboardCard
-                    title="Most Catches"
-                    icon={Hand}
-                    players={mostCatches}
-                    statKey="catches"
-                    statLabel="catches"
-                    formatValue={(p) => p.stats.catches}
-                    gradient="bg-gradient-to-br from-amber-500/10 to-transparent"
-                  />
-                  <LeaderboardCard
-                    title="Most Run Outs"
-                    icon={Shield}
-                    players={mostRunOuts}
-                    statKey="run_outs"
-                    statLabel="run outs"
-                    formatValue={(p) => p.stats.run_outs}
-                    gradient="bg-gradient-to-br from-orange-500/10 to-transparent"
-                  />
-                </div>
+                <HorizontalStatRow
+                  title="Most Catches"
+                  icon={Hand}
+                  players={mostCatches}
+                  statLabel="catches"
+                  formatValue={(p) => p.stats.catches}
+                  accent="amber"
+                />
+                <HorizontalStatRow
+                  title="Most Run Outs"
+                  icon={Shield}
+                  players={mostRunOuts}
+                  statLabel="run outs"
+                  formatValue={(p) => p.stats.run_outs}
+                  accent="emerald"
+                />
               </section>
 
               {/* Detailed Stats Section */}
