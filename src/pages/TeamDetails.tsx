@@ -738,6 +738,17 @@ const TeamDetails = () => {
                         </div>
                       )}
                       
+                      {/* Team logo at bottom right */}
+                      {team.logo_url && (
+                        <div className="absolute bottom-3 right-3 z-10 w-10 h-10 rounded-lg overflow-hidden border border-border/50 shadow-md bg-white/10 backdrop-blur-sm">
+                          <img 
+                            src={team.logo_url} 
+                            alt={team.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      
                       <div 
                         className="h-2"
                         style={{ background: `linear-gradient(90deg, ${team.primary_color}, ${team.secondary_color})` }}
