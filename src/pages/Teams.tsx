@@ -35,6 +35,12 @@ interface Team {
 
 const Teams = () => {
   const { activeSeason } = useActiveSeason();
+
+  const resolveLogoUrl = (logoUrl: string | null) => {
+    if (!logoUrl) return null;
+    if (logoUrl.startsWith("http")) return logoUrl;
+    return supabase.storage.from("player-photos").getPublicUrl(logoUrl).data.publicUrl;
+  };
   
   const { data: teams, isLoading } = useQuery({
     queryKey: ["teams"],
@@ -119,6 +125,7 @@ const Teams = () => {
           ) : teams && teams.length > 0 ? (
             <div className="space-y-16 md:space-y-24">
               {teams.map((team, index) => {
+                const logoUrl = resolveLogoUrl(team.logo_url);
                 const teamPlayers = registrations?.filter((r) => r.team_id === team.id) || [];
                 const owner = getOwner(team.owner_id);
                 const isEven = index % 2 === 0;
@@ -156,9 +163,9 @@ const Teams = () => {
                           
                           {/* Team Logo */}
                           <div className="absolute inset-0 flex items-center justify-center">
-                            {team.logo_url ? (
+                            {logoUrl ? (
                               <img 
-                                src={team.logo_url} 
+                                src={logoUrl} 
                                 alt={team.name}
                                 className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500"
                               />

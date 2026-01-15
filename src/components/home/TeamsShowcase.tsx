@@ -6,6 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, ChevronRight, Trophy, Zap } from "lucide-react";
 
 export function TeamsShowcase() {
+  const resolveLogoUrl = (logoUrl: string | null) => {
+    if (!logoUrl) return null;
+    if (logoUrl.startsWith("http")) return logoUrl;
+    return supabase.storage.from("player-photos").getPublicUrl(logoUrl).data.publicUrl;
+  };
+
   const { data: teams, isLoading } = useQuery({
     queryKey: ["teams-showcase"],
     queryFn: async () => {
@@ -67,7 +73,9 @@ export function TeamsShowcase() {
           </div>
         ) : teams && teams.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto">
-            {teams.map((team, index) => (
+            {teams.map((team, index) => {
+              const logoUrl = resolveLogoUrl(team.logo_url);
+              return (
               <Link
                 key={team.id}
                 to={`/teams/${team.id}`}
@@ -116,9 +124,9 @@ export function TeamsShowcase() {
                         style={{ backgroundColor: team.secondary_color }}
                       />
                       
-                      {team.logo_url ? (
+                      {logoUrl ? (
                         <img 
-                          src={team.logo_url} 
+                          src={logoUrl} 
                           alt={team.name}
                           className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 mx-auto rounded-full object-cover shadow-2xl ring-4 ring-border/60 group-hover/logo:ring-primary/60 transition-all duration-700 md:group-hover/logo:scale-125 md:group-hover/logo:-rotate-6 backdrop-blur-sm"
                         />
@@ -159,7 +167,8 @@ export function TeamsShowcase() {
                   </div>
                 </div>
               </Link>
-            ))}
+            );
+            })}
           </div>
         ) : (
           <div className="text-center py-20 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl rounded-3xl border border-border/50 max-w-md mx-auto shadow-lg">

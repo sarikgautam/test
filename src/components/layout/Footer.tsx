@@ -34,7 +34,7 @@ export function Footer() {
               </div>
               <div>
                 <h3 className="font-display text-2xl tracking-wide bg-gradient-to-r from-primary to-vibrant-orange bg-clip-text text-transparent font-bold">GCNPL</h3>
-                <p className="text-xs text-muted-foreground">Gold Coast Cricket</p>
+                <p className="text-xs text-muted-foreground">Gold Coast Nepalese Premier League</p>
               </div>
             </Link>
             <p className="text-muted-foreground text-sm">
@@ -69,7 +69,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm hover:text-primary transition-colors">
                 <Mail className="w-4 h-4 text-primary flex-shrink-0" />
-                contact@gcnpl.com.au
+                gcnpleague@gmail.com
               </li>
             </ul>
           </div>
@@ -131,7 +131,7 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-border text-center">
           <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} Gold Coast Nepalese Premier League. All rights reserved.
+            © {new Date().getFullYear()} Gold Coast Nepalese Premier League 2026. All rights reserved.
           </p>
         </div>
       </div>

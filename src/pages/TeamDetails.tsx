@@ -112,6 +112,12 @@ const TeamDetails = () => {
   const { activeSeason } = useActiveSeason();
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(activeSeason?.id ?? null);
 
+  const resolveLogoUrl = (logoUrl: string | null) => {
+    if (!logoUrl) return null;
+    if (logoUrl.startsWith("http")) return logoUrl;
+    return supabase.storage.from("player-photos").getPublicUrl(logoUrl).data.publicUrl;
+  };
+
   useEffect(() => {
     if (activeSeason?.id && !selectedSeasonId) {
       setSelectedSeasonId(activeSeason.id);
@@ -377,6 +383,8 @@ const TeamDetails = () => {
     );
   }
 
+  const teamLogoUrl = resolveLogoUrl(team.logo_url);
+
   return (
     <Layout>
       <div className="min-h-screen">
@@ -421,9 +429,9 @@ const TeamDetails = () => {
                   className="absolute -inset-10 md:-inset-14 rounded-full blur-2xl opacity-35"
                   style={{ background: `radial-gradient(closest-side, ${team.primary_color}40, transparent)` }}
                 />
-                {team.logo_url ? (
+                {teamLogoUrl ? (
                   <img 
-                    src={team.logo_url} 
+                    src={teamLogoUrl} 
                     alt={team.name}
                     className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-2xl transition-transform duration-300 hover:scale-[1.02]"
                   />
@@ -739,10 +747,10 @@ const TeamDetails = () => {
                       )}
                       
                       {/* Team logo at bottom right */}
-                      {team.logo_url && (
+                      {teamLogoUrl && (
                         <div className="absolute bottom-3 right-3 z-10 w-10 h-10 rounded-lg overflow-hidden border border-border/50 shadow-md bg-white/10 backdrop-blur-sm">
                           <img 
-                            src={team.logo_url} 
+                            src={teamLogoUrl} 
                             alt={team.name}
                             className="w-full h-full object-cover"
                           />
@@ -945,6 +953,7 @@ const TeamDetails = () => {
                     const resultColor = result === 'win' ? '#22c55e' : result === 'loss' ? '#ef4444' : '#8b5cf6';
                     const resultLabel = result === 'win' ? 'W' : result === 'loss' ? 'L' : 'D';
                     
+                    const opponentLogoUrl = resolveLogoUrl(opponent?.logo_url ?? null);
                     return (
                       <Link
                         key={match.id}
@@ -975,8 +984,8 @@ const TeamDetails = () => {
 
                           <div className="flex items-center justify-between gap-4 mb-3">
                             <div className="flex-1 text-center">
-                              {team.logo_url ? (
-                                <img src={team.logo_url} alt={team.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
+                              {teamLogoUrl ? (
+                                <img src={teamLogoUrl} alt={team.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
                               ) : (
                                 <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-sm font-bold text-white mb-1" style={{ backgroundColor: team.primary_color }}>
                                   {team.short_name.substring(0, 2)}
@@ -989,8 +998,8 @@ const TeamDetails = () => {
                             <div className="text-lg font-display text-muted-foreground">vs</div>
 
                             <div className="flex-1 text-center">
-                              {opponent?.logo_url ? (
-                                <img src={opponent.logo_url} alt={opponent.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
+                              {opponentLogoUrl ? (
+                                <img src={opponentLogoUrl} alt={opponent?.name} className="w-12 h-12 mx-auto rounded-full object-cover mb-1" />
                               ) : (
                                 <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-sm font-bold text-white mb-1" style={{ backgroundColor: opponent?.primary_color }}>
                                   {opponent?.short_name?.substring(0, 2) || "TBA"}

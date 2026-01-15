@@ -36,6 +36,7 @@ interface PlayerWithStats {
     name: string;
     short_name: string;
     primary_color: string;
+    logo_url?: string | null;
   } | null;
   stats: {
     matches: number;
@@ -364,7 +365,7 @@ const Stats = () => {
       const playerIds = [...new Set(data.map(s => s.player_id))];
       const { data: registrations } = await supabase
         .from("player_season_registrations")
-        .select("player_id, team:teams(id, name, short_name, primary_color)")
+        .select("player_id, team:teams(id, name, short_name, primary_color, logo_url)")
         .in("player_id", playerIds)
         .eq("auction_status", "sold");
 
@@ -408,7 +409,7 @@ const Stats = () => {
           team_id,
           season_id,
           player:players!inner(id, full_name, role, photo_url),
-          team:teams!inner(id, name, short_name, primary_color)
+          team:teams!inner(id, name, short_name, primary_color, logo_url)
         `)
         .in("auction_status", ["sold", "retained"]) 
         .eq("registration_status", "approved")
@@ -664,6 +665,134 @@ const Stats = () => {
             </Card>
           ) : (
             <div className="space-y-10">
+              {(topRunScorers[0] || topWicketTakers[0]) && (
+                <section className="grid gap-4 md:gap-6 md:grid-cols-2">
+                  {topRunScorers[0] && (
+                    <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-blue-500/5 to-transparent">
+                      <CardHeader className="pb-2 flex flex-row items-center gap-3">
+                        <div className="p-2 rounded-lg bg-blue-500/20">
+                          <Trophy className="w-6 h-6 text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Top Run Scorer</p>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex items-center gap-4 sm:gap-6">
+                        <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden bg-muted ring-2 ring-muted-foreground/20">
+                          {topRunScorers[0].photo_url ? (
+                            <img src={topRunScorers[0].photo_url} alt={topRunScorers[0].full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-12 h-12 text-muted-foreground m-auto" />
+                          )}
+                        </div>
+                        <div className="flex-1 flex flex-col gap-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <p className="text-lg font-bold leading-snug">{topRunScorers[0].full_name}</p>
+                              {topRunScorers[0].team && (
+                                <div className="flex items-center gap-2">
+                                  {topRunScorers[0].team.logo_url && (
+                                    <div className="w-8 h-8 rounded-full overflow-hidden border border-border/60 bg-white/60">
+                                      <img src={topRunScorers[0].team.logo_url} alt={topRunScorers[0].team.short_name} className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
+                                  <span
+                                    className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold border"
+                                    style={{
+                                      backgroundColor: `${topRunScorers[0].team.primary_color}15`,
+                                      color: topRunScorers[0].team.primary_color,
+                                      borderColor: `${topRunScorers[0].team.primary_color}40`,
+                                    }}
+                                  >
+                                    {topRunScorers[0].team.short_name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Matches</p>
+                              <p className="text-lg font-semibold">{topRunScorers[0].stats.matches}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Runs</p>
+                              <p className="text-3xl font-black text-blue-400">{topRunScorers[0].stats.runs_scored}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Strike Rate</p>
+                              <p className="text-xl font-bold">{calculateStrikeRate(topRunScorers[0].stats.runs_scored, topRunScorers[0].stats.balls_faced)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {topWicketTakers[0] && (
+                    <Card className="overflow-hidden border-emerald/30 bg-gradient-to-br from-emerald-500/5 to-transparent">
+                      <CardHeader className="pb-2 flex flex-row items-center gap-3">
+                        <div className="p-2 rounded-lg bg-emerald-500/20">
+                          <Target className="w-6 h-6 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Top Wicket Taker</p>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex items-center gap-4 sm:gap-6">
+                        <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden bg-muted ring-2 ring-muted-foreground/20">
+                          {topWicketTakers[0].photo_url ? (
+                            <img src={topWicketTakers[0].photo_url} alt={topWicketTakers[0].full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-12 h-12 text-muted-foreground m-auto" />
+                          )}
+                        </div>
+                        <div className="flex-1 flex flex-col gap-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <p className="text-lg font-bold leading-snug">{topWicketTakers[0].full_name}</p>
+                              {topWicketTakers[0].team && (
+                                <div className="flex items-center gap-2">
+                                  {topWicketTakers[0].team.logo_url && (
+                                    <div className="w-8 h-8 rounded-full overflow-hidden border border-border/60 bg-white/60">
+                                      <img src={topWicketTakers[0].team.logo_url} alt={topWicketTakers[0].team.short_name} className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
+                                  <span
+                                    className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold border"
+                                    style={{
+                                      backgroundColor: `${topWicketTakers[0].team.primary_color}15`,
+                                      color: topWicketTakers[0].team.primary_color,
+                                      borderColor: `${topWicketTakers[0].team.primary_color}40`,
+                                    }}
+                                  >
+                                    {topWicketTakers[0].team.short_name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Matches</p>
+                              <p className="text-lg font-semibold">{topWicketTakers[0].stats.matches}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Wickets</p>
+                              <p className="text-3xl font-black text-emerald-400">{topWicketTakers[0].stats.wickets}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Economy</p>
+                              <p className="text-xl font-bold">{calculateEconomy(topWicketTakers[0].stats.runs_conceded, topWicketTakers[0].stats.overs_bowled)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </section>
+              )}
+
               {/* Batting Leaders: Horizontal Carousels */}
               <section>
                 <h2 className="font-display text-2xl mb-4 flex items-center gap-3">
