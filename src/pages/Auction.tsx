@@ -14,6 +14,7 @@ import { SoldPlayersList } from "@/components/auction/SoldPlayersList";
 import { HoldPlayersList } from "@/components/auction/HoldPlayersList";
 import { RecentSoldPlayers } from "@/components/auction/RecentSoldPlayers";
 import { SoldPlayerCelebration } from "@/components/auction/SoldPlayerCelebration";
+import { AuctionPoolList } from "@/components/auction/AuctionPoolList";
 import type { Database } from "@/integrations/supabase/types";
 
 type Player = Database["public"]["Tables"]["players"]["Row"];
@@ -278,15 +279,14 @@ export default function Auction() {
               <span className="font-semibold">LIVE NOW</span>
             </div>
           )}
-          <p className="text-muted-foreground">
-            Watch the bidding action in real-time
-          </p>
-          <Link to="/auction/stats" className="inline-block mt-4">
-            <Button variant="outline" className="gap-2">
-              <BarChart3 className="w-4 h-4" />
-              View Auction Stats
-            </Button>
-          </Link>
+          <div className="flex items-center justify-center mt-4">
+            <Link to="/auction/stats">
+              <Button variant="outline" className="gap-2">
+                <BarChart3 className="w-4 h-4" />
+                View Auction Stats
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {seasonLoading ? (
@@ -301,9 +301,12 @@ export default function Auction() {
               <AuctionCountdown auctionDate={activeSeason.auction_date} />
             )}
 
-            {/* Always show recent sold players and full list */}
+            {/* Always show recent sold players and top bids before pool */}
             <RecentSoldPlayers seasonId={activeSeason?.id} limit={3} />
             <SoldPlayersList seasonId={activeSeason?.id} />
+
+            {/* Auction Pool - Show available players */}
+            <AuctionPoolList seasonId={activeSeason?.id} />
           </div>
         ) : (
           <div className="space-y-8">
@@ -324,90 +327,107 @@ export default function Auction() {
                     )}
                   </div>
                   
-                  <div className="p-6">
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                        {currentPlayer.photo_url ? (
-                          <img
-                            src={currentPlayer.photo_url}
-                            alt={currentPlayer.full_name}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <User className="w-12 h-12 text-muted-foreground" />
-                        )}
-                      </div>
-                      
-                      <div className="text-center md:text-left flex-grow">
-                        <h2 className="text-2xl md:text-3xl font-display font-bold">
-                          {currentPlayer.full_name}
-                        </h2>
-                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
-                          <Badge variant="secondary">
-                            {roleLabels[currentPlayer.role]}
-                          </Badge>
-                          {currentPlayer.batting_style && (
-                            <Badge variant="outline">{currentPlayer.batting_style}</Badge>
-                          )}
-                          {currentPlayer.bowling_style && (
-                            <Badge variant="outline">{currentPlayer.bowling_style}</Badge>
-                          )}
-                          {currentPlayer.player_season_registrations?.[0]?.residency_type && 
-                           currentPlayer.player_season_registrations[0].residency_type !== "other-state" && (
-                            <Badge className={
-                              currentPlayer.player_season_registrations[0].residency_type === "gc-tweed"
-                                ? "bg-blue-500/20 text-blue-600 border-blue-500/30"
-                                : "bg-purple-500/20 text-purple-600 border-purple-500/30"
-                            }>
-                              {currentPlayer.player_season_registrations[0].residency_type === "gc-tweed" ? "🏆 GC" : "🏘️ QLD"}
-                            </Badge>
+                  <div className="p-8">
+                    <div className="flex flex-col lg:flex-row items-center gap-8">
+                      {/* Large Profile Picture */}
+                      <div className="relative group flex-shrink-0">
+                        <div className="w-56 h-56 md:w-72 md:h-72 lg:w-80 lg:h-80 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 shadow-xl overflow-hidden ring-4 ring-primary/20 hover:ring-primary/40 transition-all duration-300">
+                          {currentPlayer.photo_url ? (
+                            <img
+                              src={currentPlayer.photo_url}
+                              alt={currentPlayer.full_name}
+                              className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <User className="w-32 h-32 text-muted-foreground/50" />
+                            </div>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Base Price: ${liveAuction.base_price.toLocaleString()}
-                        </p>
-                        
-                        {playerStats && (
-                          <div className="mt-4 pt-4 border-t border-border space-y-2">
-                            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                              <div>
-                                <p className="font-semibold">{playerStats.matches}</p>
-                                <p className="text-muted-foreground">Matches</p>
-                              </div>
-                              <div>
-                                <p className="font-semibold">{playerStats.runs_scored}</p>
-                                <p className="text-muted-foreground">Runs</p>
-                              </div>
-                              <div>
-                                <p className="font-semibold">{playerStats.wickets}</p>
-                                <p className="text-muted-foreground">Wickets</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <div className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-xl px-4 py-2 shadow-lg">
+                          <span className="text-xs font-semibold">ON AUCTION</span>
+                        </div>
                       </div>
-
-                      <div className="text-center flex-shrink-0">
-                        <p className="text-sm text-muted-foreground mb-1">Current Bid</p>
-                        <p className="text-4xl font-display font-bold text-primary">
-                          ${currentBid.toLocaleString()}
-                        </p>
-                        {currentBiddingTeam && (
-                          <div className="mt-2 flex items-center justify-center gap-2">
-                            <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
-                              style={{
-                                backgroundColor: currentBiddingTeam.primary_color,
-                                color: currentBiddingTeam.secondary_color,
-                              }}
-                            >
-                              {currentBiddingTeam.short_name}
+                      
+                      {/* Player Details */}
+                      <div className="flex-grow space-y-6 text-center lg:text-left w-full">
+                        <div>
+                          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold mb-3 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                            {currentPlayer.full_name}
+                          </h2>
+                          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2">
+                            <Badge variant="secondary" className="text-sm px-3 py-1">
+                              {roleLabels[currentPlayer.role]}
+                            </Badge>
+                            {currentPlayer.batting_style && (
+                              <Badge variant="outline" className="text-sm">{currentPlayer.batting_style}</Badge>
+                            )}
+                            {currentPlayer.bowling_style && (
+                              <Badge variant="outline" className="text-sm">{currentPlayer.bowling_style}</Badge>
+                            )}
+                            {(currentPlayer as any).player_season_registrations?.[0]?.residency_type && 
+                             (currentPlayer as any).player_season_registrations[0].residency_type !== "other-state" && (
+                              <Badge className={
+                                (currentPlayer as any).player_season_registrations[0].residency_type === "gc-tweed"
+                                  ? "bg-blue-500/20 text-blue-600 border-blue-500/30 text-sm"
+                                  : "bg-purple-500/20 text-purple-600 border-purple-500/30 text-sm"
+                              }>
+                                {(currentPlayer as any).player_season_registrations[0].residency_type === "gc-tweed" ? "🏆 GC" : "🏘️ QLD"}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Stats */}
+                        {playerStats && (
+                          <div className="bg-muted/30 rounded-xl p-4">
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-2xl font-bold text-primary">{playerStats.matches}</p>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Matches</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-2xl font-bold text-primary">{playerStats.runs_scored}</p>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Runs</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-2xl font-bold text-primary">{playerStats.wickets}</p>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Wickets</p>
+                              </div>
                             </div>
-                            <span className="text-sm font-medium">
-                              {currentBiddingTeam.name}
-                            </span>
                           </div>
                         )}
+
+                        {/* Current Bid Section */}
+                        <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent rounded-xl p-6 border border-primary/30">
+                          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wide">Current Bid</p>
+                              <p className="text-5xl md:text-6xl font-display font-bold text-primary animate-pulse">
+                                ${currentBid.toLocaleString()}
+                              </p>
+                            </div>
+                            {currentBiddingTeam && (
+                              <div className="flex items-center gap-3 bg-background/50 backdrop-blur-sm rounded-lg px-6 py-3 border border-border">
+                                <div
+                                  className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold shadow-md"
+                                  style={{
+                                    backgroundColor: currentBiddingTeam.primary_color,
+                                    color: currentBiddingTeam.secondary_color,
+                                  }}
+                                >
+                                  {currentBiddingTeam.short_name}
+                                </div>
+                                <div className="text-left">
+                                  <p className="text-xs text-muted-foreground">Leading Team</p>
+                                  <p className="font-semibold">
+                                    {currentBiddingTeam.name}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -508,6 +528,9 @@ export default function Auction() {
 
             {/* Hold Players Section */}
             <HoldPlayersList seasonId={activeSeason?.id} />
+
+            {/* Auction Pool - Show remaining available players during live auction */}
+            <AuctionPoolList seasonId={activeSeason?.id} />
 
             {/* Sold Players Section during live auction */}
             <SoldPlayersList seasonId={activeSeason?.id} />

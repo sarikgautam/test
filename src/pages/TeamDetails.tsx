@@ -286,6 +286,17 @@ const TeamDetails = () => {
     .sort((a, b) => b.wickets - a.wickets)
     .slice(0, 3);
 
+  // Show captain first in squad list
+  const sortedPlayerRegistrations = playerRegistrations
+    ? [...playerRegistrations].sort((a, b) => {
+        const aIsCaptain = a.player.id === team?.captain_id;
+        const bIsCaptain = b.player.id === team?.captain_id;
+        if (aIsCaptain && !bIsCaptain) return -1;
+        if (bIsCaptain && !aIsCaptain) return 1;
+        return a.player.full_name.localeCompare(b.player.full_name);
+      })
+    : undefined;
+
   const completedMatches = matches?.filter(m => m.status === "completed").slice(0, 5) || [];
   const upcomingMatches = matches?.filter(m => m.status === "upcoming").slice(0, 3) || [];
 
@@ -718,9 +729,9 @@ const TeamDetails = () => {
               </div>
             </div>
 
-            {playerRegistrations?.length ? (
+            {sortedPlayerRegistrations?.length ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {playerRegistrations.map((reg) => {
+                {sortedPlayerRegistrations.map((reg) => {
                   const stats = aggregatedStats?.[reg.player.id];
                   const isCaptain = reg.player.id === team.captain_id;
                   
@@ -729,22 +740,23 @@ const TeamDetails = () => {
                       key={reg.player.id} 
                       className="group relative bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/40 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                     >
-                      {isCaptain && (
-                        <div 
-                          className="absolute top-3 right-3 z-10 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
-                          style={{ backgroundColor: team.primary_color, color: 'white' }}
-                        >
-                          <Crown className="w-3 h-3" /> Captain
-                        </div>
-                      )}
-                      
-                      {reg.auction_status === "retained" && (
-                        <div 
-                          className="absolute top-3 left-3 z-10 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 bg-green-500/20 text-green-400 border border-green-500/50"
-                        >
-                          Retained
-                        </div>
-                      )}
+                      <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-2">
+                        {isCaptain && (
+                          <div 
+                            className="px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
+                            style={{ backgroundColor: team.primary_color, color: 'white' }}
+                          >
+                            <Crown className="w-3 h-3" /> Captain
+                          </div>
+                        )}
+                        {reg.auction_status === "retained" && (
+                          <div 
+                            className="px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 bg-green-500/20 text-green-400 border border-green-500/50"
+                          >
+                            Retained
+                          </div>
+                        )}
+                      </div>
                       
                       {/* Team logo at bottom right */}
                       {teamLogoUrl && (
@@ -766,14 +778,16 @@ const TeamDetails = () => {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex flex-col items-center gap-3">
                             {reg.player.photo_url ? (
-                              <img 
-                                src={reg.player.photo_url} 
-                                alt={reg.player.full_name}
-                                className="w-48 h-48 rounded-xl object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                              />
+                              <div className="relative w-48 h-48 rounded-xl overflow-hidden shadow-lg ring-2 ring-border/60 transition-transform duration-500 group-hover:scale-110">
+                                <img 
+                                  src={reg.player.photo_url} 
+                                  alt={reg.player.full_name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
                             ) : (
                               <div 
-                                className="w-48 h-48 rounded-xl flex items-center justify-center"
+                                className="w-48 h-48 rounded-xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110"
                                 style={{ backgroundColor: `${team.primary_color}20` }}
                               >
                                 <User className="w-24 h-24" style={{ color: team.primary_color }} />

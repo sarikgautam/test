@@ -72,6 +72,8 @@ export default function PlayersAdmin() {
   const [editForm, setEditForm] = useState<Partial<Player>>({});
   const [playerToDelete, setPlayerToDelete] = useState<string | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { selectedSeasonId } = useSeason();
 
   const { toast } = useToast();
@@ -171,6 +173,24 @@ export default function PlayersAdmin() {
     unsold: "destructive",
   };
 
+  const uploadPhoto = async (playerId: string, file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${playerId}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("player-photos")
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from("player-photos")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
   const addMutation = useMutation({
     mutationFn: async () => {
       if (!selectedSeasonId) throw new Error("No season selected");
@@ -226,6 +246,17 @@ export default function PlayersAdmin() {
     mutationFn: async () => {
       if (!selectedPlayer) throw new Error("No player selected");
       
+      // Upload photo if provided
+      let photoUrl = selectedPlayer.photo_url;
+      if (photoFile) {
+        setUploading(true);
+        try {
+          photoUrl = await uploadPhoto(selectedPlayer.id, photoFile);
+        } finally {
+          setUploading(false);
+        }
+      }
+      
       const { error } = await supabase
         .from("players")
         .update({
@@ -241,6 +272,7 @@ export default function PlayersAdmin() {
           emergency_contact_name: editForm.emergency_contact_name,
           emergency_contact_phone: editForm.emergency_contact_phone,
           emergency_contact_email: editForm.emergency_contact_email,
+          photo_url: photoUrl,
         })
         .eq("id", selectedPlayer.id);
       
@@ -297,6 +329,7 @@ export default function PlayersAdmin() {
       emergency_contact_phone: player.emergency_contact_phone || "",
       emergency_contact_email: player.emergency_contact_email || "",
     });
+    setPhotoFile(null);
     setIsEditDialogOpen(true);
   };
 
@@ -624,6 +657,61 @@ export default function PlayersAdmin() {
           </DialogHeader>
           
           <div className="space-y-6">
+            {/* Profile Photo */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Profile Photo</h3>
+              <div className="flex items-center gap-4">
+                <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                  {photoFile ? (
+                    <img
+                      src={URL.createObjectURL(photoFile)}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : selectedPlayer?.photo_url ? (
+                    <img
+                      src={selectedPlayer.photo_url}
+                      alt={selectedPlayer.full_name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-12 h-12 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <Label htmlFor="photo-upload" className="cursor-pointer">
+                    <div className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors">
+                      <User className="w-4 h-4" />
+                      <span>Choose Photo</span>
+                    </div>
+                  </Label>
+                  <Input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setPhotoFile(file);
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Upload a profile photo (JPG, PNG, max 5MB)
+                  </p>
+                  {photoFile && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => setPhotoFile(null)}
+                    >
+                      Clear Selection
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Personal Information */}
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Personal Information</h3>
@@ -751,9 +839,9 @@ export default function PlayersAdmin() {
             </Button>
             <Button 
               onClick={() => editMutation.mutate()}
-              disabled={editMutation.isPending}
+              disabled={editMutation.isPending || uploading}
             >
-              {editMutation.isPending ? "Saving..." : "Save Changes"}
+              {uploading ? "Uploading..." : editMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

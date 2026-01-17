@@ -587,91 +587,120 @@ export default function AuctionDayBanner() {
             const group = teamsWithAcquisitions[acquisitionIndex];
             if (!group || !group.team) return null;
 
+            // Split auctioned players into chunks of 5 for multiple columns
+            const auctionChunks = (() => {
+              const list = group.acquired || [];
+              const chunks = [] as typeof list[];
+              for (let i = 0; i < list.length; i += 5) {
+                chunks.push(list.slice(i, i + 5));
+              }
+              return chunks.length ? chunks : [[]];
+            })();
+
             return (
               <div className="w-full max-w-6xl mx-auto animate-fade-in">
-                <div className="text-center mb-10">
-                  <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Player Acquisition</p>
-                  <h3 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-2">
-                    {group.team.name}
-                  </h3>
+                <div className="flex items-center justify-center gap-4 mb-8 flex-wrap text-center">
+                  {group.team.logo_url ? (
+                    <img
+                      src={group.team.logo_url}
+                      alt={group.team.name}
+                      className="w-16 h-16 rounded-full object-contain"
+                    />
+                  ) : (
+                    <div
+                      className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-bold text-white"
+                      style={{ backgroundColor: group.team.primary_color || '#f59e0b' }}
+                    >
+                      {group.team.short_name?.substring(0, 2)}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Player Acquisition</p>
+                    <h3 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-1">
+                      {group.team.name}
+                    </h3>
+                  </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-8">
-                  {/* Team card */}
-                  <div className="lg:w-1/3 bg-card/80 border border-border rounded-3xl p-6 shadow-xl backdrop-blur-sm">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="relative">
-                        <div 
-                          className="absolute -inset-4 blur-xl opacity-40"
-                          style={{ backgroundColor: group.team.primary_color || '#f59e0b' }}
-                        />
-                        {group.team.logo_url ? (
-                          <img
-                            src={group.team.logo_url}
-                            alt={group.team.name}
-                            className="relative w-32 h-32 object-contain"
-                          />
-                        ) : (
-                          <div
-                            className="relative w-32 h-32 rounded-full flex items-center justify-center text-3xl font-bold text-white ring-4 ring-border"
-                            style={{ background: `linear-gradient(135deg, ${group.team.primary_color || '#f59e0b'}, ${group.team.primary_color || '#fbbf24'})` }}
-                          >
-                            {group.team.short_name?.substring(0, 2)}
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground">Short name</p>
-                        <p className="text-xl font-semibold" style={{ color: group.team.primary_color || '#f59e0b' }}>
-                          {group.team.short_name || ""}
-                        </p>
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Retained */}
+                  <div className="bg-card/80 border border-border rounded-2xl p-5 shadow">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-lg text-foreground">Retained</h4>
+                      <span className="text-xs uppercase tracking-wide px-3 py-1 rounded-full" style={{ backgroundColor: `#22c55e1A`, color: '#22c55e', border: `1px solid #22c55e55` }}>
+                        {group.retained.length} players
+                      </span>
                     </div>
-                  </div>
-
-                  {/* Players list */}
-                  <div className="lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[{ title: "Retained", items: group.retained, badge: "Retained", tone: "#22c55e" }, { title: "Auctioned", items: group.acquired, badge: "Sold", tone: "#f59e0b" }].map(section => (
-                      <div key={section.title} className="bg-card/80 border border-border rounded-2xl p-5 shadow">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-semibold text-lg text-foreground">{section.title}</h4>
-                          <span className="text-xs uppercase tracking-wide px-3 py-1 rounded-full" style={{ backgroundColor: `${section.tone}1A`, color: section.tone, border: `1px solid ${section.tone}55` }}>
-                            {section.items.length} players
-                          </span>
-                        </div>
-
-                        {section.items.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">Waiting for updates…</p>
-                        ) : (
-                          <div className="space-y-3">
-                            {section.items.map((acq) => (
-                              <div key={acq.id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 border border-border/70">
-                                <div className="w-12 h-12 rounded-full bg-white overflow-hidden ring-2 ring-border">
-                                  {acq.player?.photo_url ? (
-                                    <img src={acq.player.photo_url} alt={acq.player.full_name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-muted-foreground bg-muted">{acq.player?.full_name?.[0]}</div>
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold text-foreground leading-tight">{acq.player?.full_name}</p>
-                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{acq.player?.role?.replace("_", " ")}</p>
-                                </div>
-                                <div className="text-right">
-                                  {acq.sold_price ? (
-                                    <p className="text-sm font-semibold">${acq.sold_price.toLocaleString()}</p>
-                                  ) : acq.base_price ? (
-                                    <p className="text-sm text-muted-foreground">Base ${acq.base_price.toLocaleString()}</p>
-                                  ) : null}
-                                  <span className="text-[10px] px-2 py-1 rounded-full inline-block mt-1" style={{ backgroundColor: `${section.tone}1A`, color: section.tone, border: `1px solid ${section.tone}40` }}>{section.badge}</span>
-                                </div>
-                              </div>
-                            ))}
+                    {group.retained.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Waiting for updates…</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {group.retained.map((acq) => (
+                          <div key={acq.id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 border border-border/70">
+                            <div className="w-12 h-12 rounded-full bg-white overflow-hidden ring-2 ring-border">
+                              {acq.player?.photo_url ? (
+                                <img src={acq.player.photo_url} alt={acq.player.full_name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-muted-foreground bg-muted">{acq.player?.full_name?.[0]}</div>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-foreground leading-tight">{acq.player?.full_name}</p>
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">{acq.player?.role?.replace("_", " ")}</p>
+                            </div>
+                            <div className="text-right">
+                              {acq.base_price ? (
+                                <p className="text-sm text-muted-foreground">Base ${acq.base_price.toLocaleString()}</p>
+                              ) : null}
+                              <span className="text-[10px] px-2 py-1 rounded-full inline-block mt-1" style={{ backgroundColor: `#22c55e1A`, color: '#22c55e', border: `1px solid #22c55e40` }}>Retained</span>
+                            </div>
                           </div>
-                        )}
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
+
+                  {/* Auctioned chunks */}
+                  {auctionChunks.map((chunk, idx) => (
+                    <div key={`auction-${idx}`} className="bg-card/80 border border-border rounded-2xl p-5 shadow">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-semibold text-lg text-foreground">Auctioned {auctionChunks.length > 1 ? `#${idx + 1}` : ''}</h4>
+                        <span className="text-xs uppercase tracking-wide px-3 py-1 rounded-full" style={{ backgroundColor: `#f59e0b1A`, color: '#f59e0b', border: `1px solid #f59e0b55` }}>
+                          {chunk.length} players
+                        </span>
+                      </div>
+
+                      {chunk.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Waiting for updates…</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {chunk.map((acq) => (
+                            <div key={acq.id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 border border-border/70">
+                              <div className="w-12 h-12 rounded-full bg-white overflow-hidden ring-2 ring-border">
+                                {acq.player?.photo_url ? (
+                                  <img src={acq.player.photo_url} alt={acq.player.full_name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-muted-foreground bg-muted">{acq.player?.full_name?.[0]}</div>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-semibold text-foreground leading-tight">{acq.player?.full_name}</p>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">{acq.player?.role?.replace("_", " ")}</p>
+                              </div>
+                              <div className="text-right">
+                                {acq.sold_price ? (
+                                  <p className="text-sm font-semibold">${acq.sold_price.toLocaleString()}</p>
+                                ) : acq.base_price ? (
+                                  <p className="text-sm text-muted-foreground">Base ${acq.base_price.toLocaleString()}</p>
+                                ) : null}
+                                <span className="text-[10px] px-2 py-1 rounded-full inline-block mt-1" style={{ backgroundColor: `#f59e0b1A`, color: '#f59e0b', border: `1px solid #f59e0b40` }}>Sold</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             );

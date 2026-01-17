@@ -25,6 +25,7 @@ import {
   TrendingDown,
   XCircle
 } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveSeason } from "@/hooks/useSeason";
@@ -56,6 +57,24 @@ interface UnsoldPlayer {
     role: string;
     photo_url: string | null;
   };
+}
+
+interface RetainedPlayer {
+  id: string;
+  base_price: number | null;
+  player: {
+    id: string;
+    full_name: string;
+    role: string;
+    photo_url: string | null;
+  };
+  team: {
+    id: string;
+    name: string;
+    short_name: string;
+    primary_color: string;
+    logo_url: string | null;
+  } | null;
 }
 
 interface TeamStats {
@@ -168,6 +187,34 @@ export default function AuctionStats() {
 
       if (error) throw error;
       return data as unknown as UnsoldPlayer[];
+    },
+    enabled: seasonFilter !== "active" || !!activeSeason?.id,
+  });
+
+  const { data: retainedPlayers } = useQuery({
+    queryKey: ["auction-stats-retained", seasonFilter],
+    queryFn: async () => {
+      const targetSeasonId = seasonFilter === "active" ? activeSeason?.id : seasonFilter === "all" ? undefined : seasonFilter;
+      
+      let query = supabase
+        .from("player_season_registrations")
+        .select(`
+          id,
+          base_price,
+          player:players!inner(id, full_name, role, photo_url),
+          team:teams(id, name, short_name, primary_color, logo_url)
+        `)
+        .eq("registration_status", "approved")
+        .eq("auction_status", "retained");
+
+      if (targetSeasonId) {
+        query = query.eq("season_id", targetSeasonId);
+      }
+
+      const { data, error } = await query.order("created_at");
+
+      if (error) throw error;
+      return data as unknown as RetainedPlayer[];
     },
     enabled: seasonFilter !== "active" || !!activeSeason?.id,
   });
@@ -486,6 +533,69 @@ export default function AuctionStats() {
         )}
 
         {/* Unsold Players */}
+        {retainedPlayers && retainedPlayers.length > 0 && (
+          <Card className="border-border/50 border-emerald-500/20">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                Retained Players ({retainedPlayers.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {retainedPlayers.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card/50"
+                  >
+                    {p.player.photo_url ? (
+                      <img
+                        src={p.player.photo_url}
+                        alt={p.player.full_name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                        <Users className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium">{p.player.full_name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Badge variant="outline" className={`text-xs ${getRoleBadgeColor(p.player.role)}`}>
+                          {formatRole(p.player.role)}
+                        </Badge>
+                        {p.team && (
+                          <span className="text-xs text-muted-foreground">
+                            {p.team.short_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {p.team && p.team.logo_url ? (
+                      <img
+                        src={p.team.logo_url}
+                        alt={p.team.name}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : p.team ? (
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                        style={{ backgroundColor: p.team.primary_color }}
+                      >
+                        {p.team.short_name.charAt(0)}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Retained</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Unsold Players */}
         {unsoldPlayers && unsoldPlayers.length > 0 && (
           <Card className="border-border/50 border-red-500/20">
             <CardHeader>
@@ -529,35 +639,60 @@ export default function AuctionStats() {
         )}
 
         {/* Players List */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <CardTitle className="text-lg">Sold Players</CardTitle>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={viewMode === "roles" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => { setViewMode("roles"); setActiveTab("all"); }}
-                  >
-                    By Role
-                  </Button>
-                  <Button
-                    variant={viewMode === "teams" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => { setViewMode("teams"); setActiveTab("all"); }}
-                  >
-                    By Team
-                  </Button>
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background overflow-hidden">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg">
+                      <Gavel className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl md:text-3xl">Sold Players</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Players acquired in the auction
+                      </p>
+                    </div>
+                  </div>
+                  {!isLoading && soldPlayers && (
+                    <div className="flex items-center gap-2 ml-1 mt-2">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/20 border border-green-500/30">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span className="text-sm font-semibold text-green-600">{soldPlayers.length} Players</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div className="relative w-full md:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search players or teams..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={viewMode === "roles" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => { setViewMode("roles"); setActiveTab("all"); }}
+                    >
+                      By Role
+                    </Button>
+                    <Button
+                      variant={viewMode === "teams" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => { setViewMode("teams"); setActiveTab("all"); }}
+                    >
+                      By Team
+                    </Button>
+                  </div>
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search players or teams..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 h-11"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -584,73 +719,88 @@ export default function AuctionStats() {
 
               <TabsContent value={activeTab}>
                 {isLoading ? (
-                  <div className="space-y-3">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {[...Array(8)].map((_, i) => (
+                      <Skeleton key={i} className="h-72 w-full rounded-xl" />
                     ))}
                   </div>
                 ) : filteredPlayers.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-12">
                     <Trophy className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No players found</p>
+                    <p className="text-muted-foreground">No players found</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredPlayers.map((p) => (
                       <div
                         key={p.id}
-                        className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-card/80 transition-colors"
+                        className="group relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-card via-card to-card/80 shadow-sm hover:shadow-xl hover:border-primary/40 transition-all duration-500 hover:-translate-y-1 cursor-pointer"
                       >
-                        <div className="flex items-center gap-3">
-                          {p.player.photo_url ? (
-                            <img
-                              src={p.player.photo_url}
-                              alt={p.player.full_name}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                              <Users className="w-5 h-5 text-muted-foreground" />
-                            </div>
-                          )}
-                          <div>
-                            <p className="font-medium">{p.player.full_name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs ${getRoleBadgeColor(p.player.role)}`}
-                              >
-                                {formatRole(p.player.role)}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
+                        {/* Background gradient accent */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-green-500/0 via-transparent to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                         
-                        <div className="flex items-center gap-4">
-                          {p.team && (
-                            <div className="flex items-center gap-2">
-                              {p.team.logo_url ? (
+                        <div className="relative p-4 space-y-4">
+                          {/* Player Image */}
+                          <div className="flex justify-center">
+                            <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-500/5 flex items-center justify-center overflow-hidden ring-3 ring-border/40 group-hover:ring-green-500/30 transition-all duration-300 shadow-md">
+                              {p.player.photo_url ? (
                                 <img
-                                  src={p.team.logo_url}
-                                  alt={p.team.name}
-                                  className="w-6 h-6 rounded-full object-cover"
+                                  src={p.player.photo_url}
+                                  alt={p.player.full_name}
+                                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                                 />
                               ) : (
-                                <div
-                                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                                  style={{ backgroundColor: p.team.primary_color }}
-                                >
-                                  {p.team.short_name.charAt(0)}
-                                </div>
+                                <Users className="w-12 h-12 text-muted-foreground/50" />
                               )}
-                              <span className="text-sm text-muted-foreground hidden md:inline">
-                                {p.team.short_name}
-                              </span>
+                            </div>
+                          </div>
+
+                          {/* Player Name */}
+                          <div className="text-center">
+                            <h4 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                              {p.player.full_name}
+                            </h4>
+                          </div>
+
+                          {/* Role Badge */}
+                          <div className="flex justify-center">
+                            <Badge 
+                              className={`text-sm px-3 py-1 font-semibold ${getRoleBadgeColor(p.player.role)}`}
+                            >
+                              {formatRole(p.player.role)}
+                            </Badge>
+                          </div>
+
+                          {/* Team Section */}
+                          {p.team && (
+                            <div className="pt-3 border-t border-border/40">
+                              <div className="flex items-center justify-center gap-2 mb-2">
+                                {p.team.logo_url ? (
+                                  <img
+                                    src={p.team.logo_url}
+                                    alt={p.team.name}
+                                    className="w-6 h-6 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div
+                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                                    style={{ backgroundColor: p.team.primary_color }}
+                                  >
+                                    {p.team.short_name.charAt(0)}
+                                  </div>
+                                )}
+                                <span className="text-xs font-medium text-muted-foreground">{p.team.name}</span>
+                              </div>
                             </div>
                           )}
-                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                            {formatPrice(p.sold_price || 0)}
-                          </Badge>
+
+                          {/* Price Section */}
+                          <div className="pt-2 border-t border-border/40">
+                            <p className="text-xs text-muted-foreground text-center mb-1">Sold For</p>
+                            <p className="text-2xl font-display font-bold text-center text-green-600">
+                              {formatPrice(p.sold_price || 0)}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ))}
