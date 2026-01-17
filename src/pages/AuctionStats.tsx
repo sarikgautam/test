@@ -123,6 +123,7 @@ export default function AuctionStats() {
   const [activeTab, setActiveTab] = useState("all");
   const [viewMode, setViewMode] = useState<"roles" | "teams">("roles");
   const [seasonFilter, setSeasonFilter] = useState("active");
+  const [retainedTab, setRetainedTab] = useState("all");
 
   const { data: seasons } = useQuery({
     queryKey: ["auction-all-seasons"],
@@ -532,65 +533,143 @@ export default function AuctionStats() {
           </Card>
         )}
 
-        {/* Unsold Players */}
+        {/* Retained Players */}
         {retainedPlayers && retainedPlayers.length > 0 && (
-          <Card className="border-border/50 border-emerald-500/20">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                Retained Players ({retainedPlayers.length})
-              </CardTitle>
+          <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-background to-background overflow-hidden">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                  <ShieldCheck className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl md:text-3xl">Retained Players</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Pre-auction retained squad members
+                  </p>
+                </div>
+              </div>
+              {retainedPlayers && (
+                <div className="flex items-center gap-2 ml-1 mt-3">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span className="text-sm font-semibold text-emerald-600">{retainedPlayers.length} Players</span>
+                  </span>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {retainedPlayers.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card/50"
-                  >
-                    {p.player.photo_url ? (
-                      <img
-                        src={p.player.photo_url}
-                        alt={p.player.full_name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                        <Users className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium">{p.player.full_name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant="outline" className={`text-xs ${getRoleBadgeColor(p.player.role)}`}>
-                          {formatRole(p.player.role)}
-                        </Badge>
-                        {p.team && (
-                          <span className="text-xs text-muted-foreground">
-                            {p.team.short_name}
-                          </span>
-                        )}
-                      </div>
+              <Tabs value={retainedTab} onValueChange={setRetainedTab} className="w-full">
+                <TabsList className="mb-4 flex-wrap h-auto gap-1">
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  {[...new Map(retainedPlayers.map(p => [p.team?.id, p.team])).values()]
+                    .filter((team): team is RetainedPlayer['team'] => team !== null)
+                    .map(team => (
+                      <TabsTrigger key={team.id} value={team.id}>
+                        {team.short_name}
+                      </TabsTrigger>
+                    ))}
+                </TabsList>
+
+                <TabsContent value={retainedTab}>
+                  {isLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {[...Array(4)].map((_, i) => (
+                        <Skeleton key={i} className="h-72 w-full rounded-xl" />
+                      ))}
                     </div>
-                    {p.team && p.team.logo_url ? (
-                      <img
-                        src={p.team.logo_url}
-                        alt={p.team.name}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : p.team ? (
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                        style={{ backgroundColor: p.team.primary_color }}
-                      >
-                        {p.team.short_name.charAt(0)}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Retained</span>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ) : (
+                    (() => {
+                      const filtered = retainedTab === "all" 
+                        ? retainedPlayers 
+                        : retainedPlayers.filter(p => p.team?.id === retainedTab);
+                      
+                      return filtered.length === 0 ? (
+                        <div className="text-center py-12">
+                          <ShieldCheck className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                          <p className="text-muted-foreground">No retained players in this team</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {filtered.map((p) => (
+                            <div
+                              key={p.id}
+                              className="group relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-card via-card to-card/80 shadow-sm hover:shadow-xl hover:border-emerald-500/40 transition-all duration-500 hover:-translate-y-1 cursor-pointer"
+                            >
+                              {/* Background gradient accent */}
+                              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                              
+                              <div className="relative p-4 space-y-4">
+                                {/* Player Image */}
+                                <div className="flex justify-center">
+                                  <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center overflow-hidden ring-3 ring-border/40 group-hover:ring-emerald-500/30 transition-all duration-300 shadow-md">
+                                    {p.player.photo_url ? (
+                                      <img
+                                        src={p.player.photo_url}
+                                        alt={p.player.full_name}
+                                        className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                                      />
+                                    ) : (
+                                      <Users className="w-12 h-12 text-muted-foreground/50" />
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Player Name */}
+                                <div className="text-center">
+                                  <h4 className="font-bold text-lg text-foreground group-hover:text-emerald-600 transition-colors line-clamp-2">
+                                    {p.player.full_name}
+                                  </h4>
+                                </div>
+
+                                {/* Role Badge */}
+                                <div className="flex justify-center">
+                                  <Badge 
+                                    className={`text-sm px-3 py-1 font-semibold ${getRoleBadgeColor(p.player.role)}`}
+                                  >
+                                    {formatRole(p.player.role)}
+                                  </Badge>
+                                </div>
+
+                                {/* Team Section */}
+                                {p.team && (
+                                  <div className="pt-3 border-t border-border/40">
+                                    <div className="flex items-center justify-center gap-2 mb-2">
+                                      {p.team.logo_url ? (
+                                        <img
+                                          src={p.team.logo_url}
+                                          alt={p.team.name}
+                                          className="w-6 h-6 rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                                          style={{ backgroundColor: p.team.primary_color }}
+                                        >
+                                          {p.team.short_name.charAt(0)}
+                                        </div>
+                                      )}
+                                      <span className="text-xs font-medium text-muted-foreground">{p.team.name}</span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Retained Badge */}
+                                <div className="pt-2 border-t border-border/40">
+                                  <div className="flex justify-center">
+                                    <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30 font-semibold">
+                                      ✓ Retained
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         )}
