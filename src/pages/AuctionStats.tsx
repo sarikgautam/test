@@ -524,7 +524,7 @@ export default function AuctionStats() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Remaining</p>
-                      <p className="font-semibold text-primary">{formatPrice(team.remaining_budget)}</p>
+                      <p className="font-semibold text-primary">${team.remaining_budget.toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
