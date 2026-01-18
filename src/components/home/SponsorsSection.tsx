@@ -4,20 +4,27 @@ import { ArrowRight, Handshake } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActiveSeason } from "@/hooks/useActiveSeason";
 
 export function SponsorsSection() {
+  const { activeSeason } = useActiveSeason();
+
   const { data: sponsors, isLoading } = useQuery({
-    queryKey: ['sponsors-preview'],
+    queryKey: ['sponsors-preview', activeSeason?.id],
     queryFn: async () => {
+      if (!activeSeason?.id) return [];
+      
       const { data, error } = await supabase
         .from('sponsors')
         .select('*')
         .eq('is_active', true)
+        .eq('season_id', activeSeason.id)
         .order('display_order', { ascending: true })
         .limit(6);
       if (error) throw error;
       return data;
     },
+    enabled: !!activeSeason?.id,
   });
 
   if (isLoading) {
