@@ -9,10 +9,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Activity, RefreshCw } from "lucide-react";
+import { ArrowLeft, Activity, RefreshCw, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSeason } from "@/hooks/useSeason";
-import { Input } from "@/components/ui/input";
 
 interface Player {
   id: string;
@@ -85,6 +84,7 @@ export default function LiveScoring() {
   const [wideRuns, setWideRuns] = useState<number>(1);
   const [byeRuns, setByeRuns] = useState<number>(1);
   const [legByeRuns, setLegByeRuns] = useState<number>(1);
+  const [noBallBatRuns, setNoBallBatRuns] = useState<number>(0);
   
   const { toast } = useToast();
 
@@ -1052,38 +1052,26 @@ export default function LiveScoring() {
 
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader><CardTitle className="text-white">Extras & Wickets</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-2 items-center">
                   <Button onClick={() => recordBall(0, 'wide', Math.max(1, wideRuns))} className="w-full bg-orange-600 hover:bg-orange-700" size="lg">Wide (+{Math.max(1, wideRuns)})</Button>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-slate-300">Runs</Label>
-                    <Input type="number" min={1} max={7} value={wideRuns} onChange={(e) => setWideRuns(parseInt(e.target.value || '1'))} className="h-9 w-20 bg-slate-900 border-slate-700 text-white" />
-                  </div>
+                  <Button variant="secondary" className="h-10" onClick={() => setWideRuns(Math.max(1, wideRuns) + 1)}><Plus className="w-4 h-4" />
+                  </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 items-center">
-                  <Button onClick={() => recordBall(0, 'noball', 0)} className="w-full bg-orange-600 hover:bg-orange-700" size="lg">No Ball (+1)</Button>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-slate-300">No Ball + Runs</Label>
-                    <div className="grid grid-cols-6 gap-1">
-                      {[1,2,3,4,5,6].map(r => (
-                        <Button key={r} variant="secondary" className="h-9" onClick={() => recordBall(r, 'noball', 0)}>{r}</Button>
-                      ))}
-                    </div>
-                  </div>
+                  <Button onClick={() => recordBall(noBallBatRuns, 'noball', 0)} className="w-full bg-orange-600 hover:bg-orange-700" size="lg">No Ball (+{1 + noBallBatRuns})</Button>
+                  <Button variant="secondary" className="h-10" onClick={() => setNoBallBatRuns(noBallBatRuns + 1)}><Plus className="w-4 h-4" />
+                  </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 items-center">
                   <Button onClick={() => recordBall(0, 'bye', Math.max(1, byeRuns))} className="w-full bg-yellow-600 hover:bg-yellow-700" size="lg">Bye (+{Math.max(1, byeRuns)})</Button>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-slate-300">Runs</Label>
-                    <Input type="number" min={1} max={7} value={byeRuns} onChange={(e) => setByeRuns(parseInt(e.target.value || '1'))} className="h-9 w-20 bg-slate-900 border-slate-700 text-white" />
-                  </div>
+                  <Button variant="secondary" className="h-10" onClick={() => setByeRuns(Math.max(1, byeRuns) + 1)}><Plus className="w-4 h-4" />
+                  </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 items-center">
                   <Button onClick={() => recordBall(0, 'legbye', Math.max(1, legByeRuns))} className="w-full bg-yellow-600 hover:bg-yellow-700" size="lg">Leg Bye (+{Math.max(1, legByeRuns)})</Button>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-slate-300">Runs</Label>
-                    <Input type="number" min={1} max={7} value={legByeRuns} onChange={(e) => setLegByeRuns(parseInt(e.target.value || '1'))} className="h-9 w-20 bg-slate-900 border-slate-700 text-white" />
-                  </div>
+                  <Button variant="secondary" className="h-10" onClick={() => setLegByeRuns(Math.max(1, legByeRuns) + 1)}><Plus className="w-4 h-4" />
+                  </Button>
                 </div>
                 <Button onClick={() => setShowWicketDialog(true)} className="w-full bg-red-600 hover:bg-red-700" size="lg">Wicket</Button>
                 <Button onClick={handleEndInningsEarly} variant="destructive" className="w-full" size="lg">End Innings Now</Button>
