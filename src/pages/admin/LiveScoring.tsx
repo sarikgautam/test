@@ -901,6 +901,15 @@ export default function LiveScoring() {
               <Button onClick={startScoring} className="w-full bg-emerald-600 hover:bg-emerald-700" size="lg">
                 Start Scoring
               </Button>
+
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <Button onClick={handleUndoLastBall} variant="outline" className="w-full" size="lg">
+                  Undo Last Ball
+                </Button>
+                <Button onClick={handleEndInningsEarly} variant="destructive" className="w-full" size="lg">
+                  End Innings
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
