@@ -25,6 +25,7 @@ interface Match {
   overs_per_side: number;
   home_team_id: string;
   away_team_id: string;
+  season_id: string | null;
   home_team: { id: string; name: string; logo_url: string | null };
   away_team: { id: string; name: string; logo_url: string | null };
 }
@@ -88,7 +89,7 @@ export default function LiveScoring() {
     try {
       const { data, error } = await supabase
         .from('matches')
-        .select('*, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)')
+        .select('id, match_number, venue, status, overs_per_side, season_id, home_team_id, away_team_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)')
         .order('match_date', { ascending: true });
       
       if (error) throw error;
@@ -106,18 +107,25 @@ export default function LiveScoring() {
     }
   };
 
-  const loadPlayers = async (teamId: string, isBatting: boolean) => {
+  const loadPlayers = async (teamId: string, seasonId: string | null, isBatting: boolean) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('player_season_registrations')
         .select('players(id, full_name)')
         .eq('team_id', teamId)
         .eq('registration_status', 'approved');
+
+      // Filter by season if available
+      if (seasonId) {
+        query = query.eq('season_id', seasonId);
+      }
+
+      const { data, error } = await query;
       
       if (error) throw error;
       const players = data?.map((r: any) => r.players) || [];
       isBatting ? setBattingPlayers(players) : setBowlingPlayers(players);
-      console.log(`Loaded ${players.length} players for team`);
+      console.log(`Loaded ${players.length} players for team (season: ${seasonId || 'all'})`);
       return players as Player[];
     } catch (error) {
       console.error('Error loading players:', error);
@@ -204,8 +212,8 @@ export default function LiveScoring() {
 
       setCurrentInnings(inningsRow);
       setShowTossDialog(false);
-      await loadPlayers(battingTeamId, true);
-      await loadPlayers(bowlingTeamId, false);
+      await loadPlayers(battingTeamId, selectedMatch.season_id, true);
+      await loadPlayers(bowlingTeamId, selectedMatch.season_id, false);
       toast({ title: "Match Started", description: "Select opening batsmen and bowler" });
     } catch (error) {
       console.error(error);
@@ -570,8 +578,8 @@ export default function LiveScoring() {
     setBallCount(0);
     setOverNumber(0);
     setScoringStarted(false);
-    await loadPlayers(nextInnings.batting_team_id, true);
-    await loadPlayers(nextInnings.bowling_team_id, false);
+    await loadPlayers(nextInnings.batting_team_id, selectedMatch?.season_id || null, true);
+    await loadPlayers(nextInnings.bowling_team_id, selectedMatch?.season_id || null, false);
     toast({ title: "Innings Complete", description: "Second innings ready. Select openers and bowler." });
   };
 
@@ -642,8 +650,8 @@ export default function LiveScoring() {
       setCurrentInnings(innings as Innings);
 
       // Load player lists for batting/bowling sides (capture for lookup)
-      const battingList = await loadPlayers(innings.batting_team_id, true);
-      const bowlingList = await loadPlayers(innings.bowling_team_id, false);
+      const battingList = await loadPlayers(innings.batting_team_id, selectedMatch?.season_id || null, true);
+      const bowlingList = await loadPlayers(innings.bowling_team_id, selectedMatch?.season_id || null, false);
 
       // Recompute totals/overs and derive ball/over counts
       await recomputeInningsData(innings as Innings);

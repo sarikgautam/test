@@ -277,6 +277,16 @@ export default function PlayersAdmin() {
         .eq("id", selectedPlayer.id);
       
       if (error) throw error;
+
+      // Update residency in player_season_registrations if registration exists
+      if (selectedPlayer.registration && (editForm as any).residency_type !== undefined) {
+        const { error: regError } = await supabase
+          .from("player_season_registrations")
+          .update({ residency_type: (editForm as any).residency_type })
+          .eq("id", selectedPlayer.registration.id);
+        
+        if (regError) throw regError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-players", selectedSeasonId] });
@@ -328,7 +338,8 @@ export default function PlayersAdmin() {
       emergency_contact_name: player.emergency_contact_name || "",
       emergency_contact_phone: player.emergency_contact_phone || "",
       emergency_contact_email: player.emergency_contact_email || "",
-    });
+      residency_type: player.registration?.residency_type || "other-state",
+    } as any);
     setPhotoFile(null);
     setIsEditDialogOpen(true);
   };
@@ -410,6 +421,7 @@ export default function PlayersAdmin() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-32">ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
@@ -425,6 +437,9 @@ export default function PlayersAdmin() {
             <TableBody>
               {filteredPlayers?.map((player) => (
                 <TableRow key={player.id}>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {player.id.slice(0, 8)}
+                  </TableCell>
                   <TableCell className="font-medium">{player.full_name}</TableCell>
                   <TableCell className="text-muted-foreground">{player.email}</TableCell>
                   <TableCell>{roleLabels[player.role]}</TableCell>
@@ -799,6 +814,22 @@ export default function PlayersAdmin() {
                     onChange={(e) => setEditForm({...editForm, bowling_style: e.target.value})}
                     placeholder="e.g., Right-arm fast"
                   />
+                </div>
+                <div>
+                  <Label>Residency Type</Label>
+                  <Select 
+                    value={(editForm as any).residency_type || "other-state"} 
+                    onValueChange={(value) => setEditForm({...editForm, residency_type: value} as any)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gc-tweed">🏆 GC/Tweed</SelectItem>
+                      <SelectItem value="queensland">🏘️ QLD</SelectItem>
+                      <SelectItem value="other-state">Other State</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
