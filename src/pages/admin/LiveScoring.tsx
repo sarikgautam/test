@@ -853,6 +853,8 @@ export default function LiveScoring() {
   // Player Selection
   if (selectedMatch && currentInnings && !scoringStarted) {
     const availableBatters = battingPlayers.filter(p => !battingStats.some((s: any) => s.batsman_id === p.id && s.is_out));
+    const availableStriker = availableBatters.filter(p => p.id !== (nonStriker?.id || ""));
+    const availableNonStriker = availableBatters.filter(p => p.id !== (striker?.id || ""));
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
@@ -871,7 +873,7 @@ export default function LiveScoring() {
                 <Select value={striker?.id || ""} onValueChange={(id) => setStriker(availableBatters.find(p => p.id === id) || null)}>
                   <SelectTrigger><SelectValue placeholder="Select striker" /></SelectTrigger>
                   <SelectContent>
-                    {availableBatters.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                    {availableStriker.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -881,7 +883,7 @@ export default function LiveScoring() {
                 <Select value={nonStriker?.id || ""} onValueChange={(id) => setNonStriker(availableBatters.find(p => p.id === id) || null)}>
                   <SelectTrigger><SelectValue placeholder="Select non-striker" /></SelectTrigger>
                   <SelectContent>
-                    {availableBatters.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                    {availableNonStriker.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
