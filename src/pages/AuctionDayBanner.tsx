@@ -79,11 +79,15 @@ export default function AuctionDayBanner() {
   });
 
   const { data: sponsors, isLoading: sponsorsLoading } = useQuery({
-    queryKey: ["sponsors-showcase"],
+    queryKey: ["sponsors-showcase", activeSeason?.id],
+    enabled: !!activeSeason?.id,
     queryFn: async () => {
+      if (!activeSeason?.id) return [];
+
       const { data, error } = await supabase
         .from("sponsors")
         .select("*")
+        .eq("season_id", activeSeason.id)
         .order("tier", { ascending: true });
 
       if (error) throw error;
