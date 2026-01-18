@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ArrowLeft, Activity, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSeason } from "@/hooks/useSeason";
+import { Input } from "@/components/ui/input";
 
 interface Player {
   id: string;
@@ -80,6 +81,10 @@ export default function LiveScoring() {
   const [battingStats, setBattingStats] = useState<any[]>([]);
   const [bowlingStats, setBowlingStats] = useState<any[]>([]);
   const [recentBalls, setRecentBalls] = useState<any[]>([]);
+  // Extras run controls
+  const [wideRuns, setWideRuns] = useState<number>(1);
+  const [byeRuns, setByeRuns] = useState<number>(1);
+  const [legByeRuns, setLegByeRuns] = useState<number>(1);
   
   const { toast } = useToast();
 
@@ -253,7 +258,7 @@ export default function LiveScoring() {
     if (!currentInnings || !striker || !nonStriker || !bowler) return;
 
     const isLegal = extrasType !== 'wide' && extrasType !== 'noball';
-    const totalRuns = runsOffBat + extrasRuns;
+    const totalRuns = runsOffBat + extrasRuns + (extrasType === 'noball' ? 1 : 0);
     const willCompleteOver = isLegal && (ballCount + 1 === 6);
 
     try {
@@ -285,7 +290,7 @@ export default function LiveScoring() {
         } else {
           setBallCount(newBallCount);
         }
-        // Swap strike on odd runs except when last ball of the over with 1 run (keep strike per custom rule)
+        // Swap strike on odd total team runs except when last ball with 1 team run (custom rule)
         if (totalRuns % 2 === 1 && !(willCompleteOver && totalRuns === 1)) {
           const temp = striker;
           setStriker(nonStriker);
@@ -325,9 +330,9 @@ export default function LiveScoring() {
     const overNum = Math.floor(legalDeliveries / 6);
     const ballNum = legalDeliveries % 6;
     const totalRuns = balls.reduce((sum, b) => sum + (b.total_runs || 0), 0);
-    const extrasTotal = balls.reduce((sum, b) => sum + (b.extras_runs || 0), 0);
-    const extrasWides = balls.reduce((sum, b) => sum + (b.extras_type === 'wide' ? b.extras_runs || 0 : 0), 0);
     const extrasNoBalls = balls.reduce((sum, b) => sum + (b.extras_type === 'noball' ? 1 : 0), 0);
+    const extrasTotal = balls.reduce((sum, b) => sum + (b.extras_runs || 0), 0) + extrasNoBalls;
+    const extrasWides = balls.reduce((sum, b) => sum + (b.extras_type === 'wide' ? b.extras_runs || 0 : 0), 0);
     const extrasByes = balls.reduce((sum, b) => sum + (b.extras_type === 'bye' ? b.extras_runs || 0 : 0), 0);
     const extrasLegByes = balls.reduce((sum, b) => sum + (b.extras_type === 'legbye' ? b.extras_runs || 0 : 0), 0);
     const wickets = balls.filter(b => b.is_wicket).length;
@@ -354,7 +359,8 @@ export default function LiveScoring() {
       const batterId = b.striker_id;
       if (!battingMap[batterId]) battingMap[batterId] = { runs: 0, balls: 0, fours: 0, sixes: 0 };
       battingMap[batterId].runs += b.runs_off_bat || 0;
-      if (b.is_legal_delivery) battingMap[batterId].balls += 1;
+      // Count balls faced for all deliveries except wides
+      if (b.extras_type !== 'wide') battingMap[batterId].balls += 1;
       if (b.runs_off_bat === 4) battingMap[batterId].fours += 1;
       if (b.runs_off_bat === 6) battingMap[batterId].sixes += 1;
       if (b.is_wicket) {
@@ -1047,10 +1053,38 @@ export default function LiveScoring() {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader><CardTitle className="text-white">Extras & Wickets</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                <Button onClick={() => recordBall(0, 'wide', 1)} className="w-full bg-orange-600 hover:bg-orange-700" size="lg">Wide</Button>
-                <Button onClick={() => recordBall(0, 'noball', 1)} className="w-full bg-orange-600 hover:bg-orange-700" size="lg">No Ball</Button>
-                <Button onClick={() => recordBall(0, 'bye', 1)} className="w-full bg-yellow-600 hover:bg-yellow-700" size="lg">Bye</Button>
-                <Button onClick={() => recordBall(0, 'legbye', 1)} className="w-full bg-yellow-600 hover:bg-yellow-700" size="lg">Leg Bye</Button>
+                <div className="grid grid-cols-2 gap-2 items-center">
+                  <Button onClick={() => recordBall(0, 'wide', Math.max(1, wideRuns))} className="w-full bg-orange-600 hover:bg-orange-700" size="lg">Wide (+{Math.max(1, wideRuns)})</Button>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-slate-300">Runs</Label>
+                    <Input type="number" min={1} max={7} value={wideRuns} onChange={(e) => setWideRuns(parseInt(e.target.value || '1'))} className="h-9 w-20 bg-slate-900 border-slate-700 text-white" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 items-center">
+                  <Button onClick={() => recordBall(0, 'noball', 0)} className="w-full bg-orange-600 hover:bg-orange-700" size="lg">No Ball (+1)</Button>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-slate-300">No Ball + Runs</Label>
+                    <div className="grid grid-cols-6 gap-1">
+                      {[1,2,3,4,5,6].map(r => (
+                        <Button key={r} variant="secondary" className="h-9" onClick={() => recordBall(r, 'noball', 0)}>{r}</Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 items-center">
+                  <Button onClick={() => recordBall(0, 'bye', Math.max(1, byeRuns))} className="w-full bg-yellow-600 hover:bg-yellow-700" size="lg">Bye (+{Math.max(1, byeRuns)})</Button>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-slate-300">Runs</Label>
+                    <Input type="number" min={1} max={7} value={byeRuns} onChange={(e) => setByeRuns(parseInt(e.target.value || '1'))} className="h-9 w-20 bg-slate-900 border-slate-700 text-white" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 items-center">
+                  <Button onClick={() => recordBall(0, 'legbye', Math.max(1, legByeRuns))} className="w-full bg-yellow-600 hover:bg-yellow-700" size="lg">Leg Bye (+{Math.max(1, legByeRuns)})</Button>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-slate-300">Runs</Label>
+                    <Input type="number" min={1} max={7} value={legByeRuns} onChange={(e) => setLegByeRuns(parseInt(e.target.value || '1'))} className="h-9 w-20 bg-slate-900 border-slate-700 text-white" />
+                  </div>
+                </div>
                 <Button onClick={() => setShowWicketDialog(true)} className="w-full bg-red-600 hover:bg-red-700" size="lg">Wicket</Button>
                 <Button onClick={handleEndInningsEarly} variant="destructive" className="w-full" size="lg">End Innings Now</Button>
                 <Button onClick={handleUndoLastBall} variant="outline" className="w-full" size="lg">Undo Last Ball</Button>
