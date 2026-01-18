@@ -4,7 +4,7 @@ import { ArrowRight, Handshake } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useActiveSeason } from "@/hooks/useActiveSeason";
+import { useActiveSeason } from "@/hooks/useSeason";
 
 export function SponsorsSection() {
   const { activeSeason } = useActiveSeason();
