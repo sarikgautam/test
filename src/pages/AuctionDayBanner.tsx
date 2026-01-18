@@ -65,6 +65,19 @@ export default function AuctionDayBanner() {
 
   const slideKey = `${slideType}-${currentSlideIndex}`;
 
+  const { data: activeSeason } = useQuery({
+    queryKey: ["active-season-banner"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("id, name")
+        .eq("is_active", true)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: teams, isLoading: teamsLoading } = useQuery({
     queryKey: ["teams-showcase"],
     queryFn: async () => {
@@ -78,9 +91,8 @@ export default function AuctionDayBanner() {
     },
   });
 
-  const { data: sponsors, isLoading: sponsorsLoading } = useQuery({
+  const { data: sponsors = [], isLoading: sponsorsLoading } = useQuery({
     queryKey: ["sponsors-showcase", activeSeason?.id],
-    enabled: !!activeSeason?.id,
     queryFn: async () => {
       if (!activeSeason?.id) return [];
 
@@ -91,11 +103,11 @@ export default function AuctionDayBanner() {
         .order("tier", { ascending: true });
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
-  const { data: owners, isLoading: ownersLoading } = useQuery({
+  const { data: owners = [], isLoading: ownersLoading } = useQuery({
     queryKey: ["owners-showcase"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -104,11 +116,11 @@ export default function AuctionDayBanner() {
         .order("name");
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
-  const { data: supportClubs, isLoading: supportLoading } = useQuery({
+  const { data: supportClubs = [], isLoading: supportLoading } = useQuery({
     queryKey: ["support-clubs-banner"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -117,20 +129,7 @@ export default function AuctionDayBanner() {
         .eq("is_active", true)
         .order("display_order");
       if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: activeSeason } = useQuery({
-    queryKey: ["active-season-banner"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("seasons")
-        .select("id, name")
-        .eq("is_active", true)
-        .single();
-      if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
