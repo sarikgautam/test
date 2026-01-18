@@ -409,20 +409,25 @@ export default function Auction() {
                             </div>
                             {currentBiddingTeam && (
                               <div className="flex items-center gap-3 bg-background/50 backdrop-blur-sm rounded-lg px-6 py-3 border border-border">
-                                <div
-                                  className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold shadow-md"
-                                  style={{
-                                    backgroundColor: currentBiddingTeam.primary_color,
-                                    color: currentBiddingTeam.secondary_color,
-                                  }}
-                                >
-                                  {currentBiddingTeam.short_name}
-                                </div>
+                                {currentBiddingTeam.logo_url ? (
+                                  <img
+                                    src={currentBiddingTeam.logo_url}
+                                    alt={currentBiddingTeam.name}
+                                    className="w-10 h-10 rounded-lg object-cover shadow-md"
+                                  />
+                                ) : (
+                                  <div
+                                    className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold shadow-md"
+                                    style={{
+                                      backgroundColor: currentBiddingTeam.primary_color,
+                                      color: currentBiddingTeam.secondary_color,
+                                    }}
+                                  >
+                                    {currentBiddingTeam.short_name}
+                                  </div>
+                                )}
                                 <div className="text-left">
                                   <p className="text-xs text-muted-foreground">Leading Team</p>
-                                  <p className="font-semibold">
-                                    {currentBiddingTeam.name}
-                                  </p>
                                 </div>
                               </div>
                             )}
@@ -460,7 +465,7 @@ export default function Auction() {
                       </div>
                       <p className="text-xs text-muted-foreground truncate">{team.name}</p>
                       <p className="font-bold text-sm">
-                        ${(team.remaining_budget / 1000).toFixed(0)}K
+                        ${team.remaining_budget.toLocaleString()}
                       </p>
                     </CardContent>
                   </Card>
