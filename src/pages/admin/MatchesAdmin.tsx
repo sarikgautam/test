@@ -99,13 +99,16 @@ export default function MatchesAdmin() {
     queryFn: async () => {
       if (!selectedSeasonId) return [];
       
+      const teamIds = [formData.home_team_id, formData.away_team_id].filter(Boolean);
+      if (teamIds.length === 0) return [];
+      
       // Get players from player_season_registrations for the current season
       const { data: registrations, error } = await supabase
         .from("player_season_registrations")
         .select("player:players(id, full_name), team_id")
         .eq("season_id", selectedSeasonId)
-        .eq("auction_status", "sold")
-        .in("team_id", [formData.home_team_id, formData.away_team_id].filter(Boolean));
+        .eq("registration_status", "approved")
+        .in("team_id", teamIds);
       
       if (error) throw error;
       
