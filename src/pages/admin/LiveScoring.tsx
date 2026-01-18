@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Activity, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSeason } from "@/hooks/useSeason";
 
 interface Player {
   id: string;
@@ -50,6 +51,7 @@ export default function LiveScoring() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [multipleLiveNotice, setMultipleLiveNotice] = useState(false);
+  const { selectedSeasonId, activeSeason } = useSeason();
   
   // Toss
   const [showTossDialog, setShowTossDialog] = useState(false);
@@ -212,8 +214,9 @@ export default function LiveScoring() {
 
       setCurrentInnings(inningsRow);
       setShowTossDialog(false);
-      await loadPlayers(battingTeamId, selectedMatch.season_id, true);
-      await loadPlayers(bowlingTeamId, selectedMatch.season_id, false);
+      const effectiveSeasonId = selectedMatch.season_id || selectedSeasonId || activeSeason?.id || null;
+      await loadPlayers(battingTeamId, effectiveSeasonId, true);
+      await loadPlayers(bowlingTeamId, effectiveSeasonId, false);
       toast({ title: "Match Started", description: "Select opening batsmen and bowler" });
     } catch (error) {
       console.error(error);
@@ -578,8 +581,11 @@ export default function LiveScoring() {
     setBallCount(0);
     setOverNumber(0);
     setScoringStarted(false);
-    await loadPlayers(nextInnings.batting_team_id, selectedMatch?.season_id || null, true);
-    await loadPlayers(nextInnings.bowling_team_id, selectedMatch?.season_id || null, false);
+    {
+      const effectiveSeasonId = selectedMatch?.season_id || selectedSeasonId || activeSeason?.id || null;
+      await loadPlayers(nextInnings.batting_team_id, effectiveSeasonId, true);
+      await loadPlayers(nextInnings.bowling_team_id, effectiveSeasonId, false);
+    }
     toast({ title: "Innings Complete", description: "Second innings ready. Select openers and bowler." });
   };
 
@@ -650,8 +656,9 @@ export default function LiveScoring() {
       setCurrentInnings(innings as Innings);
 
       // Load player lists for batting/bowling sides (capture for lookup)
-      const battingList = await loadPlayers(innings.batting_team_id, selectedMatch?.season_id || null, true);
-      const bowlingList = await loadPlayers(innings.bowling_team_id, selectedMatch?.season_id || null, false);
+      const effectiveSeasonId = selectedMatch?.season_id || selectedSeasonId || activeSeason?.id || null;
+      const battingList = await loadPlayers(innings.batting_team_id, effectiveSeasonId, true);
+      const bowlingList = await loadPlayers(innings.bowling_team_id, effectiveSeasonId, false);
 
       // Recompute totals/overs and derive ball/over counts
       await recomputeInningsData(innings as Innings);
