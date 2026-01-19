@@ -60,6 +60,7 @@ export function AuctionPoolList({ seasonId }: AuctionPoolListProps) {
           )
         `)
         .eq("season_id", seasonId)
+        .eq("registration_status", "approved")
         .in("auction_status", ["registered", "unsold"]);
       
       if (error) throw error;
