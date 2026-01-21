@@ -321,6 +321,35 @@ export default function AuctionAdmin() {
         .eq("season_id", selectedSeasonId);
       if (regError) throw regError;
 
+      // Set sold fields for broadcast overlay
+      const soldTeam = teams?.find(t => t.id === liveAuction.current_bidding_team_id);
+      if (!soldTeam) throw new Error("Sold team not found");
+
+      const { data: soldUpdateData, error: soldFieldsError } = await supabase
+        .from("live_auction")
+        .update({
+          current_player_status: "sold",
+          sold_team: {
+            id: soldTeam.id,
+            name: soldTeam.name,
+            short_name: soldTeam.short_name,
+            logo_url: soldTeam.logo_url,
+            primary_color: soldTeam.primary_color,
+            secondary_color: soldTeam.secondary_color,
+          },
+          sold_price: liveAuction.current_bid,
+        })
+        .eq("id", liveAuction.id)
+        .select();
+      // Debug: log and alert the update result
+      // eslint-disable-next-line no-console
+      console.log('Sold fields update result:', soldUpdateData, soldFieldsError);
+      alert('Sold fields update result: ' + JSON.stringify({ soldUpdateData, soldFieldsError }));
+      if (soldFieldsError) throw soldFieldsError;
+
+      // Wait for overlay to show on broadcast
+      await new Promise(res => setTimeout(res, 2500));
+
       // Reset auction state
       const { error: auctionError } = await supabase
         .from("live_auction")
@@ -330,6 +359,7 @@ export default function AuctionAdmin() {
           current_bidding_team_id: null,
           is_live: false,
           bid_history: [],
+          // Do NOT reset current_player_status, sold_team, sold_price here
         })
         .eq("id", liveAuction.id);
       if (auctionError) throw auctionError;
