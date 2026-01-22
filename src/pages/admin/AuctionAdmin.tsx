@@ -118,7 +118,6 @@ export default function AuctionAdmin() {
     queryKey: ["auction-teams", selectedSeasonId],
     queryFn: async () => {
       if (!selectedSeasonId) return [];
-      
       // Get teams
       const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
@@ -129,25 +128,32 @@ export default function AuctionAdmin() {
       // Get sold players for this season to calculate spent budget
       const { data: soldPlayers, error: soldError } = await supabase
         .from("player_season_registrations")
-        .select("team_id, sold_price")
+        .select("team_id, sold_price, residency_type")
         .eq("season_id", selectedSeasonId)
         .eq("auction_status", "sold")
         .not("team_id", "is", null);
       if (soldError) throw soldError;
 
-      // Calculate remaining budget for each team
+      // Calculate remaining budget for each team, and QLD spent
       const teamsWithBudget = teamsData.map(team => {
-        const teamSpent = soldPlayers
-          ?.filter(p => p.team_id === team.id)
-          .reduce((sum, p) => sum + (p.sold_price || 0), 0) || 0;
-        
+        let teamSpent = 0;
+        let qldSpent = 0;
+        soldPlayers?.forEach(p => {
+          if (p.team_id === team.id) {
+            teamSpent += p.sold_price || 0;
+            // Only 'qld-other' counts toward QLD cap
+            if (p.residency_type === 'qld-other') {
+              qldSpent += p.sold_price || 0;
+            }
+          }
+        });
         return {
           ...team,
           remaining_budget: team.budget - teamSpent,
+          qld_spent: qldSpent,
         };
       });
-
-      return teamsWithBudget as Team[];
+      return teamsWithBudget as (Team & { qld_spent: number })[];
     },
     enabled: !!selectedSeasonId,
   });
@@ -269,9 +275,21 @@ export default function AuctionAdmin() {
       const newBid = isFirstBid 
         ? liveAuction.base_price 
         : liveAuction.current_bid + liveAuction.increment_amount;
-      
-      if (newBid > team.remaining_budget) {
-        throw new Error("Team doesn't have enough budget");
+
+      // Residency cap logic
+      let residencyType = null;
+      if (currentPlayer && 'residency_type' in currentPlayer) {
+        residencyType = currentPlayer.residency_type;
+      }
+      // QLD cap: $700, total cap: $2500
+      if (residencyType === 'QLD') {
+        if ((team.qld_spent || 0) + newBid > 700) {
+          throw new Error("Team cannot spend more than $700 on QLD residency players");
+        }
+      } else {
+        if (newBid > team.remaining_budget) {
+          throw new Error("Team doesn't have enough budget");
+        }
       }
 
       const bidEntry: BidEntry = {
@@ -341,10 +359,7 @@ export default function AuctionAdmin() {
         })
         .eq("id", liveAuction.id)
         .select();
-      // Debug: log and alert the update result
-      // eslint-disable-next-line no-console
-      console.log('Sold fields update result:', soldUpdateData, soldFieldsError);
-      alert('Sold fields update result: ' + JSON.stringify({ soldUpdateData, soldFieldsError }));
+      // Removed debug log and alert after player is sold
       if (soldFieldsError) throw soldFieldsError;
 
       // Wait for overlay to show on broadcast
@@ -629,12 +644,13 @@ export default function AuctionAdmin() {
       {/* Team Budgets */}
       <div className="flex flex-wrap justify-center gap-4">
         {teamsLoading
-          ? Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-32 w-36 rounded-lg" />)
+          ? Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-32 w-40 rounded-lg" />)
           : teams?.map((team) => {
               const spent = team.budget - team.remaining_budget;
               const spentPercentage = (spent / team.budget) * 100;
+              const qldSpent = team.qld_spent || 0;
               return (
-                <Card key={team.id} className="border-border/50 w-36">
+                <Card key={team.id} className="border-border/50 w-40">
                   <CardContent className="p-4 text-center">
                     <div
                       className="w-10 h-10 mx-auto rounded-full flex items-center justify-center text-xs font-bold mb-2"
@@ -644,20 +660,20 @@ export default function AuctionAdmin() {
                     </div>
                     <div className="space-y-1">
                       <div>
-                        <p className="text-[10px] text-muted-foreground">Budget</p>
+                        <p className="text-[10px] text-muted-foreground">Total Budget</p>
                         <p className="text-xs font-medium">{formatBudget(team.budget)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-muted-foreground">Spent</p>
-                        <p className="text-xs font-medium text-destructive">
-                          -{formatBudget(spent)}
-                        </p>
+                        <p className="text-[10px] text-muted-foreground">Total Spent</p>
+                        <p className="text-xs font-medium text-destructive">-{formatBudget(spent)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground">Remaining</p>
+                        <p className="font-bold text-sm text-primary">{formatBudget(team.remaining_budget)}</p>
                       </div>
                       <div className="pt-1 border-t">
-                        <p className="text-[10px] text-muted-foreground">Remaining</p>
-                        <p className="font-bold text-sm text-primary">
-                          {formatBudget(team.remaining_budget)}
-                        </p>
+                        <p className="text-[10px] text-muted-foreground">QLD Spent</p>
+                        <p className={`text-xs font-medium ${qldSpent > 700 ? 'text-destructive' : 'text-emerald-600'}`}>{formatBudget(qldSpent)} / $700</p>
                       </div>
                       <div className="w-full bg-muted rounded-full h-1.5 mt-2">
                         <div

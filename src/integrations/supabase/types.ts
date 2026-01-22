@@ -930,6 +930,7 @@ export type Database = {
           season_id: string
           sold_price: number | null
           team_id: string | null
+          residency_type: string | null
           updated_at: string
         }
         Insert: {
@@ -943,6 +944,7 @@ export type Database = {
           season_id: string
           sold_price?: number | null
           team_id?: string | null
+          residency_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -956,6 +958,7 @@ export type Database = {
           season_id?: string
           sold_price?: number | null
           team_id?: string | null
+          residency_type?: string | null
           updated_at?: string
         }
         Relationships: [

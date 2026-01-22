@@ -17,6 +17,8 @@ import Auth from "./pages/Auth";
 import Auction from "./pages/Auction";
 import AuctionStats from "./pages/AuctionStats";
 import AuctionDayBanner from "./pages/AuctionDayBanner";
+import AuctionDayBannerTest from "./pages/AuctionDayBannerTest";
+
 import Sponsors from "./pages/Sponsors";
 import Gallery from "./pages/Gallery";
 import Contact from "./pages/Contact";
@@ -37,6 +39,7 @@ import StatsAdmin from "./pages/admin/StatsAdmin";
 import MatchResultsAdmin from "./pages/admin/MatchResultsAdmin";
 import AwardsAdmin from "./pages/admin/AwardsAdmin";
 import AuctionAdmin from "./pages/admin/AuctionAdmin";
+import AuctionDayBannerController from "./pages/admin/AuctionDayBannerController";
 import SponsorsAdmin from "./pages/admin/SponsorsAdmin";
 import GalleryAdmin from "./pages/admin/GalleryAdmin";
 import ContactAdmin from "./pages/admin/ContactAdmin";
@@ -71,7 +74,9 @@ const App = () => (
               <Route path="/auction" element={<Auction />} />
               <Route path="/auction/stats" element={<AuctionStats />} />
               <Route path="/auction-day-banner" element={<AuctionDayBanner />} />
+              <Route path="/auction-day-banner-test" element={<AuctionDayBannerTest />} />
               <Route path="/sponsors" element={<Sponsors />} />
+
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/news" element={<News />} />
               <Route path="/news/:id" element={<NewsDetail />} />
@@ -93,6 +98,7 @@ const App = () => (
                 <Route path="standings" element={<StandingsAdmin />} />
                 <Route path="stats" element={<StatsAdmin />} />
                 <Route path="auction" element={<AuctionAdmin />} />
+                <Route path="auction-banner-controller" element={<AuctionDayBannerController />} />
                 <Route path="live-scoring" element={<LiveScoring />} />
                 <Route path="sponsors" element={<SponsorsAdmin />} />
                 <Route path="gallery" element={<GalleryAdmin />} />

@@ -41,6 +41,7 @@ const navItems = [
   { href: "/admin/standings", label: "Standings", icon: Table },
   { href: "/admin/stats", label: "Player Stats", icon: BarChart3 },
   { href: "/admin/auction", label: "Auction", icon: Gavel },
+  { href: "/admin/auction-banner-controller", label: "Auction Banner Controller", icon: LayoutDashboard },
   { href: "/admin/sponsors", label: "Sponsors", icon: Trophy },
   { href: "/admin/gallery", label: "Gallery", icon: Image },
   { href: "/admin/news", label: "News", icon: Newspaper },
