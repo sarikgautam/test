@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import BudgetStatusAdmin from "@/components/admin/BudgetStatusAdmin";
+import BudgetStatusMini from "@/components/admin/BudgetStatusMini";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -183,6 +185,7 @@ export default function AuctionDayBannerController() {
       slides.push({ type: "owner", label: teamsWithOwners[i]?.name || `Owner ${i+1}`, team: teamsWithOwners[i] });
     }
     slides.push({ type: "top-bids", label: "Top Bids" });
+    slides.push({ type: "budget", label: "Team Budgets" });
     return slides;
   }, [teams, sponsors, teamsWithAcquisitions, teamsWithOwners]);
 
@@ -205,7 +208,8 @@ export default function AuctionDayBannerController() {
   if (!bannerState) return <div>No banner state found for this season.</div>;
 
   return (
-    <Card className="max-w-5xl mx-auto mt-10 p-6">
+    <>
+      <Card className="max-w-5xl mx-auto mt-10 p-6">
       <h2 className="text-2xl font-bold mb-4">Auction Day Banner Controller</h2>
       <div className="mb-4">
         <span className="font-semibold">Current Slide:</span> {bannerState.current_slide}
@@ -238,7 +242,14 @@ export default function AuctionDayBannerController() {
       </div>
       <div className="text-xs text-muted-foreground mb-6">(This controls the AuctionDayBannerTest page in real time.)</div>
 
-      {/* Slide Preview Grid */}
+      {/* Mini Budget Bar for Slide Controller */}
+      <BudgetStatusMini onBudgetClick={() => {
+        // Find the index of the budget slide in slideList
+        const budgetIdx = slideList.findIndex(slide => slide.type === 'budget');
+        if (budgetIdx !== -1) {
+          updateState.mutate({ current_slide: budgetIdx });
+        }
+      }} />
       <div className="mb-2 font-semibold text-lg">Slide Previews</div>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {slideList.map((slide, idx) => (
@@ -326,6 +337,7 @@ export default function AuctionDayBannerController() {
           </button>
         ))}
       </div>
-    </Card>
+      </Card>
+    </>
   );
 }

@@ -250,6 +250,7 @@ export default function Auction() {
   const increment = lastBid ? currentBid - lastBid.amount : 0;
 
   return (
+
     <Layout>
       {/* Sold Player Celebration Modal */}
       {showCelebration && (
@@ -259,6 +260,31 @@ export default function Auction() {
           soldPrice={showCelebration.soldPrice}
           onClose={() => setShowCelebration(null)}
         />
+      )}
+
+      {/* Manual Celebration Trigger for Admins */}
+      {liveAuction?.is_live && currentPlayer && currentBiddingTeam && (
+        <div className="flex justify-center mb-4">
+          <button
+            className="px-4 py-2 bg-gradient-to-r from-yellow-400 to-pink-500 text-white font-bold rounded-lg shadow-lg hover:scale-105 transition-transform border-2 border-primary"
+            onClick={async () => {
+              // Fetch latest player and team data for celebration
+              const [playerRes, teamRes] = await Promise.all([
+                supabase.from("players").select("*").eq("id", currentPlayer.id).single(),
+                supabase.from("teams").select("*").eq("id", currentBiddingTeam.id).single(),
+              ]);
+              if (playerRes.data && teamRes.data) {
+                setShowCelebration({
+                  player: playerRes.data,
+                  team: teamRes.data,
+                  soldPrice: currentBid,
+                });
+              }
+            }}
+          >
+            Manually Trigger Celebration
+          </button>
+        </div>
       )}
 
       <div className="container mx-auto px-4 py-8">

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import BudgetSlide from "./BudgetSlide";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +15,7 @@ type SlideType =
   | "all-teams"
   | "team"
   | "acquisition"
+  | "budget"
   | "sponsors"
   | "owner"
   | "top-bids";
@@ -154,6 +156,7 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
       if (error) throw error;
       return { data };
     },
+    refetchInterval: 2000, // Poll every 2 seconds for instant updates
   });
 
   const { data: topBids } = useQuery<{ data: TopBid[] | null }>({
@@ -174,6 +177,7 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
       if (error) throw error;
       return { data };
     },
+    refetchInterval: 2000, // Poll every 2 seconds for instant updates
   });
 
   const teamsWithAcquisitions = useMemo(() => {
@@ -201,12 +205,12 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
     return Object.values(grouped).sort((a, b) => (a.team?.name || "").localeCompare(b.team?.name || ""));
   }, [acquisitions?.data]);
 
-  // Calculate total slides: intro + support + all-teams + team slides + acquisition slides + sponsors + owners + top-bids
+  // Calculate total slides: intro + support + all-teams + team slides + acquisition slides + budget + sponsors + owners + top-bids
   const ownersCount = teams?.filter(t => t.owner_id).length || 0;
   const teamsCount = teams?.length || 0;
   const acquisitionsCount = teamsWithAcquisitions.length;
   const sponsorsCount = sponsors?.length || 0;
-  const totalSlides = 3 + teamsCount + acquisitionsCount + sponsorsCount + ownersCount + 1;
+  const totalSlides = 4 + teamsCount + acquisitionsCount + sponsorsCount + ownersCount + 1; // +1 for budget (now last)
 
   // Respond to admin control (pause and slide)
   useEffect(() => {
@@ -275,7 +279,8 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
     const sponsorsStart = acquisitionStart + acquisitionsCount;
     const ownersStart = sponsorsStart + sponsorsCount;
     const topBidStart = ownersStart + ownersCount;
-    
+    const budgetStart = topBidStart + 1;
+
     if (index === 0) {
       setSlideType("intro");
     } else if (index === 1) {
@@ -290,8 +295,10 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
       setSlideType("sponsors");
     } else if (index >= ownersStart && index < topBidStart) {
       setSlideType("owner");
-    } else {
+    } else if (index === budgetStart - 1) {
       setSlideType("top-bids");
+    } else if (index === budgetStart) {
+      setSlideType("budget");
     }
   };
 
@@ -301,6 +308,8 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
   const acquisitionStartIndex = teamStartIndex + teamsCount;
   const sponsorsStartIndex = acquisitionStartIndex + acquisitionsCount;
   const ownersStartIndex = sponsorsStartIndex + sponsorsCount;
+  const topBidsStartIndex = ownersStartIndex + ownersCount;
+  const budgetStartIndex = topBidsStartIndex + 1;
 
   return (
     <div className="h-screen relative overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col">
@@ -616,57 +625,57 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
 
             return (
               <div className="w-full animate-fade-in">
-                <div className="flex items-center justify-center gap-4 mb-8 flex-wrap text-center">
+                <div className="flex items-center justify-center gap-8 mb-12 flex-wrap text-center">
                   {group.team.logo_url ? (
                     <img
                       src={group.team.logo_url}
                       alt={group.team.name}
-                      className="w-16 h-16 rounded-full object-contain"
+                      className="w-28 h-28 rounded-full object-contain shadow-2xl"
                     />
                   ) : (
                     <div
-                      className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-bold text-white"
+                      className="w-28 h-28 rounded-full flex items-center justify-center text-3xl font-extrabold text-white shadow-2xl border-4 border-primary"
                       style={{ backgroundColor: group.team.primary_color || '#f59e0b' }}
                     >
                       {group.team.short_name?.substring(0, 2)}
                     </div>
                   )}
                   <div>
-                    <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Player Acquisition</p>
-                    <h3 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-1">
+                    <p className="text-lg uppercase tracking-[0.3em] text-muted-foreground mb-2">Player Acquisition</p>
+                    <h3 className="font-display text-6xl md:text-7xl font-extrabold text-foreground mt-1 drop-shadow-lg">
                       {group.team.name}
                     </h3>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 w-full h-full">
+                <div className="grid grid-cols-3 gap-8 w-full h-full">
                   {/* Retained */}
-                  <div className="bg-card/80 border border-border rounded-2xl p-5 shadow flex flex-col flex-1 min-h-0">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-lg text-foreground">Retained</h4>
-                      <span className="text-xs uppercase tracking-wide px-3 py-1 rounded-full" style={{ backgroundColor: `#22c55e1A`, color: '#22c55e', border: `1px solid #22c55e55` }}>
+                  <div className="bg-card/90 border-2 border-primary rounded-3xl p-8 shadow-2xl flex flex-col flex-1 min-h-0">
+                    <div className="flex items-center justify-between mb-6">
+                      <h4 className="font-extrabold text-2xl text-foreground">Retained</h4>
+                      <span className="text-base uppercase tracking-wide px-4 py-2 rounded-full" style={{ backgroundColor: `#22c55e1A`, color: '#22c55e', border: `1.5px solid #22c55e55` }}>
                         {group.retained.length} players
                       </span>
                     </div>
                     {group.retained.length === 0 ? (
                       <p className="text-sm text-muted-foreground">Waiting for updates…</p>
                     ) : (
-                      <div className="space-y-1 flex-1 min-h-0 overflow-y-auto pr-1">
+                      <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1">
                         {group.retained.map((acq) => (
-                          <div key={acq.id} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/40 border border-border/70">
-                            <div className="w-8 h-8 rounded-full bg-white overflow-hidden ring-2 ring-border flex-shrink-0">
+                          <div key={acq.id} className="flex items-center gap-4 p-4 rounded-xl bg-secondary/60 border border-border/70">
+                            <div className="w-14 h-14 rounded-full bg-white overflow-hidden flex-shrink-0">
                               {acq.player?.photo_url ? (
                                 <img src={acq.player.photo_url} alt={acq.player.full_name} className="w-full h-full object-cover" />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground bg-muted">{acq.player?.full_name?.[0]}</div>
+                                <div className="w-full h-full flex items-center justify-center text-xl font-extrabold text-muted-foreground bg-muted">{acq.player?.full_name?.[0]}</div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-bold text-base text-foreground leading-tight truncate whitespace-nowrap">{acq.player?.full_name}</p>
-                              <p className="text-sm uppercase tracking-wide text-muted-foreground truncate">{acq.player?.role?.replace("_", " ")}</p>
+                              <p className="font-extrabold text-xl text-foreground leading-tight">{acq.player?.full_name}</p>
+                              <p className="text-lg uppercase tracking-wide text-muted-foreground truncate">{acq.player?.role?.replace("_", " ")}</p>
                             </div>
                             <div className="text-right">
-                              <span className="text-[9px] px-1.5 py-0.5 rounded-full inline-block mt-1" style={{ backgroundColor: `#22c55e1A`, color: '#22c55e', border: `1px solid #22c55e40` }}>Retained</span>
+                              <span className="text-xs px-2 py-1 rounded-full inline-block mt-1" style={{ backgroundColor: `#22c55e1A`, color: '#22c55e', border: `1.5px solid #22c55e40` }}>Retained</span>
                             </div>
                           </div>
                         ))}
@@ -676,10 +685,10 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
 
                   {/* Auctioned chunks */}
                   {auctionChunks.map((chunk, idx) => (
-                    <div key={`auction-${idx}`} className="bg-card/80 border border-border rounded-2xl p-5 shadow flex flex-col flex-1 min-h-0">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-semibold text-lg text-foreground">Auctioned {auctionChunks.length > 1 ? `#${idx + 1}` : ''}</h4>
-                        <span className="text-xs uppercase tracking-wide px-3 py-1 rounded-full" style={{ backgroundColor: `#f59e0b1A`, color: '#f59e0b', border: `1px solid #f59e0b55` }}>
+                    <div key={`auction-${idx}`} className="bg-card/90 border-2 border-primary rounded-3xl p-8 shadow-2xl flex flex-col flex-1 min-h-0">
+                      <div className="flex items-center justify-between mb-6">
+                        <h4 className="font-extrabold text-2xl text-foreground">Auctioned {auctionChunks.length > 1 ? `#${idx + 1}` : ''}</h4>
+                        <span className="text-base uppercase tracking-wide px-4 py-2 rounded-full" style={{ backgroundColor: `#f59e0b1A`, color: '#f59e0b', border: `1.5px solid #f59e0b55` }}>
                           {chunk.length} players
                         </span>
                       </div>
@@ -687,27 +696,27 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
                       {chunk.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Waiting for updates…</p>
                       ) : (
-                        <div className="space-y-1 flex-1 min-h-0 overflow-y-auto pr-1">
+                        <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1">
                           {chunk.map((acq) => (
-                            <div key={acq.id} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/40 border border-border/70">
-                              <div className="w-10 h-10 rounded-full bg-white overflow-hidden ring-2 ring-border">
+                            <div key={acq.id} className="flex items-center gap-4 p-4 rounded-xl bg-secondary/60 border border-border/70">
+                              <div className="w-14 h-14 rounded-full bg-white overflow-hidden">
                                 {acq.player?.photo_url ? (
                                   <img src={acq.player.photo_url} alt={acq.player.full_name} className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground bg-muted">{acq.player?.full_name?.[0]}</div>
+                                  <div className="w-full h-full flex items-center justify-center text-xl font-extrabold text-muted-foreground bg-muted">{acq.player?.full_name?.[0]}</div>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-bold text-base text-foreground leading-tight truncate whitespace-nowrap">{acq.player?.full_name}</p>
-                                <p className="text-sm uppercase tracking-wide text-muted-foreground truncate">{acq.player?.role?.replace("_", " ")}</p>
+                                <p className="font-extrabold text-xl text-foreground leading-tight">{acq.player?.full_name}</p>
+                                <p className="text-lg uppercase tracking-wide text-muted-foreground truncate">{acq.player?.role?.replace("_", " ")}</p>
                               </div>
                               <div className="text-right">
                                 {acq.sold_price ? (
-                                  <p className="text-[10px] font-bold">${acq.sold_price.toLocaleString()}</p>
+                                  <p className="text-base font-extrabold">${acq.sold_price.toLocaleString()}</p>
                                 ) : acq.base_price ? (
-                                  <p className="text-[10px] text-muted-foreground">Base ${acq.base_price.toLocaleString()}</p>
+                                  <p className="text-base text-muted-foreground">Base ${acq.base_price.toLocaleString()}</p>
                                 ) : null}
-                                <span className="text-[9px] px-1.5 py-0.5 rounded-full inline-block mt-1" style={{ backgroundColor: `#f59e0b1A`, color: '#f59e0b', border: `1px solid #f59e0b40` }}>Sold</span>
+                                <span className="text-xs px-2 py-1 rounded-full inline-block mt-1" style={{ backgroundColor: `#f59e0b1A`, color: '#f59e0b', border: `1.5px solid #f59e0b40` }}>Sold</span>
                               </div>
                             </div>
                           ))}
@@ -719,6 +728,9 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
               </div>
             );
           })()
+        ) : slideType === "budget" ? (
+          // Budget Slide
+          <BudgetSlide />
         ) : slideType === "sponsors" && sponsors && sponsors.length > 0 ? (
           // Sponsor Slide (individual)
           (() => {
@@ -959,7 +971,7 @@ export default function AuctionDayBanner({ control }: AuctionDayBannerProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {topBids.data.map((bid, idx) => (
+              {topBids.data.filter(bid => bid.auction_status !== "retained").map((bid, idx) => (
                 <div key={bid.id} className="relative overflow-hidden rounded-2xl border border-border bg-card/85 shadow-lg p-4">
                   <div className="absolute inset-0 opacity-5" style={{ background: "radial-gradient(circle at 30% 20%, #f59e0b, transparent 45%)" }} />
                   <div className="flex items-center gap-3 mb-3">
