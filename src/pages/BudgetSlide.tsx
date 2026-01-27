@@ -44,7 +44,7 @@ export default function BudgetSlide() {
   });
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-10 bg-white/95 rounded-3xl shadow-2xl">
+    <div className="w-full max-w-[95vw] xl:max-w-[1800px] mx-auto p-14 rounded-3xl shadow-2xl bg-transparent">
       <h2 className="text-4xl font-extrabold text-center mb-10 text-primary tracking-tight">Team Budgets</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10">
         {isLoading
@@ -52,7 +52,7 @@ export default function BudgetSlide() {
               <div key={i} className="h-32 w-full bg-muted rounded-lg animate-pulse" />
             ))
           : teams?.map((team: any) => (
-              <div key={team.id} className="bg-card rounded-2xl shadow-xl p-8 flex flex-col items-center border-2 border-primary/30 min-h-[270px]">
+              <div key={team.id} className="bg-card/80 rounded-2xl shadow-xl p-10 flex flex-col items-center border-2 border-primary/30 min-h-[320px] w-full">
                 {team.logo_url ? (
                   <img src={team.logo_url} alt={team.name} className="w-28 h-28 object-contain mb-4 rounded-full bg-white border-2 border-primary/40" />
                 ) : (
