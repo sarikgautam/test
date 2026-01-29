@@ -7,12 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Gavel, User, DollarSign, Users, Play, Pause, Check, X, TrendingUp, Calendar, Save, Undo2, Clock, RotateCcw } from "lucide-react";
@@ -34,6 +30,7 @@ interface BidEntry {
 
 export default function AuctionAdmin() {
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
+  const [playerSearch, setPlayerSearch] = useState("");
   const [incrementAmount, setIncrementAmount] = useState("10");
   const [basePrice, setBasePrice] = useState("20");
   const [auctionDate, setAuctionDate] = useState("");
@@ -726,9 +723,10 @@ export default function AuctionAdmin() {
                     src={currentPlayer.photo_url}
                     alt={currentPlayer.full_name}
                     className="w-full h-full rounded-full object-cover"
+                    style={{ width: '120px', height: '120px' }}
                   />
                 ) : (
-                  <User className="w-10 h-10 text-muted-foreground" />
+                  <User className="w-16 h-16 text-muted-foreground" />
                 )}
               </div>
               <div className="text-center md:text-left flex-grow">
@@ -847,18 +845,17 @@ export default function AuctionAdmin() {
             <div className="grid md:grid-cols-4 gap-4 mb-4">
               <div className="md:col-span-2">
                 <Label>Select Player</Label>
-                <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a player" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {players?.map((reg) => (
-                      <SelectItem key={reg.player.id} value={reg.player.id}>
-                        {reg.player.full_name} - {roleLabels[reg.player.role]} (${reg.base_price.toLocaleString()})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={
+                    players?.map(reg => ({
+                      label: `${reg.player.full_name} - ${roleLabels[reg.player.role]} ($${reg.base_price.toLocaleString()})`,
+                      value: reg.player.id
+                    })) || []
+                  }
+                  value={selectedPlayerId}
+                  onChange={setSelectedPlayerId}
+                  placeholder="Search and choose player..."
+                />
               </div>
               <div>
                 <Label>Base Price ($)</Label>
@@ -921,9 +918,10 @@ export default function AuctionAdmin() {
                             src={reg.player.photo_url}
                             alt={reg.player.full_name}
                             className="w-full h-full rounded-full object-cover"
+                            style={{ width: '64px', height: '64px' }}
                           />
                         ) : (
-                          <User className="w-6 h-6 text-muted-foreground" />
+                          <User className="w-10 h-10 text-muted-foreground" />
                         )}
                       </div>
                       <div>
@@ -999,9 +997,10 @@ export default function AuctionAdmin() {
                             src={reg.player.photo_url}
                             alt={reg.player.full_name}
                             className="w-full h-full rounded-full object-cover"
+                            style={{ width: '64px', height: '64px' }}
                           />
                         ) : (
-                          <User className="w-6 h-6 text-muted-foreground" />
+                          <User className="w-10 h-10 text-muted-foreground" />
                         )}
                       </div>
                       <div>

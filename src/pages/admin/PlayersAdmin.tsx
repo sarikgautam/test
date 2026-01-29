@@ -224,7 +224,7 @@ export default function PlayersAdmin() {
           player_id: player.id,
           season_id: selectedSeasonId,
           auction_status: "registered",
-          base_price: player.base_price ?? 20,
+          base_price: player.base_price ?? 30,
         });
       if (regErr) throw regErr;
 
@@ -279,13 +279,24 @@ export default function PlayersAdmin() {
       if (error) throw error;
 
       // Update residency in player_season_registrations if registration exists
-      if (selectedPlayer.registration && (editForm as any).residency_type !== undefined) {
-        const { error: regError } = await supabase
-          .from("player_season_registrations")
-          .update({ residency_type: (editForm as any).residency_type })
-          .eq("id", selectedPlayer.registration.id);
-        
-        if (regError) throw regError;
+      if (selectedPlayer.registration) {
+        const updateObj: any = {};
+        if ((editForm as any).residency_type !== undefined) {
+          updateObj.residency_type = (editForm as any).residency_type;
+        }
+        if ((editForm as any).registration_status !== undefined) {
+          updateObj.registration_status = (editForm as any).registration_status;
+        }
+        if ((editForm as any).auction_status !== undefined) {
+          updateObj.auction_status = (editForm as any).auction_status;
+        }
+        if (Object.keys(updateObj).length > 0) {
+          const { error: regError } = await supabase
+            .from("player_season_registrations")
+            .update(updateObj)
+            .eq("id", selectedPlayer.registration.id);
+          if (regError) throw regError;
+        }
       }
     },
     onSuccess: () => {
@@ -339,6 +350,8 @@ export default function PlayersAdmin() {
       emergency_contact_phone: player.emergency_contact_phone || "",
       emergency_contact_email: player.emergency_contact_email || "",
       residency_type: player.registration?.residency_type || "other-state",
+      registration_status: player.registration?.registration_status || "pending",
+      auction_status: player.registration?.auction_status || "registered",
     } as any);
     setPhotoFile(null);
     setIsEditDialogOpen(true);
@@ -782,6 +795,39 @@ export default function PlayersAdmin() {
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Playing Information</h3>
               <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label>Registration Status</Label>
+                                  <Select
+                                    value={(editForm as any).registration_status || "pending"}
+                                    onValueChange={value => setEditForm({ ...editForm, registration_status: value } as any)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="pending">Pending</SelectItem>
+                                      <SelectItem value="approved">Approved</SelectItem>
+                                      <SelectItem value="rejected">Rejected</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label>Auction Status</Label>
+                                  <Select
+                                    value={(editForm as any).auction_status || "registered"}
+                                    onValueChange={value => setEditForm({ ...editForm, auction_status: value } as any)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="registered">Registered</SelectItem>
+                                      <SelectItem value="sold">Sold</SelectItem>
+                                      <SelectItem value="unsold">Unsold</SelectItem>
+                                      <SelectItem value="hold">Hold</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                 <div>
                   <Label>Role *</Label>
                   <Select 

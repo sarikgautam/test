@@ -372,13 +372,7 @@ export function UpcomingMatches() {
 
                           <div className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2">
                             <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: resultColor }}>
-                              {isDraw ? (
-                                <Minus className="w-4 h-4" />
-                              ) : match.winner_team_id === match.home_team.id ? (
-                                <CheckCircle2 className="w-4 h-4" />
-                              ) : (
-                                <XCircle className="w-4 h-4" />
-                              )}
+                              <CheckCircle2 className="w-4 h-4" />
                               <span>{resultText || "Result pending"}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">

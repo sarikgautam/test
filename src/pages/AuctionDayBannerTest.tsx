@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import BudgetSlide from "./BudgetSlide";
 
 // Celebration animation component
-// Stats are retrieved from PlayHQ profile based on player's recent registration
+
 function SoldCelebration({ teamName, amount, onDone }: { teamName: string; amount: number; onDone: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onDone, 8000); // Show for 8 seconds
@@ -36,6 +36,13 @@ function SoldCelebration({ teamName, amount, onDone }: { teamName: string; amoun
 
 
 export default function AuctionDayBannerTest() {
+    // Type guard for control object
+    function isValidControl(obj: any): obj is { current_slide?: number; is_paused?: boolean } {
+      return obj && typeof obj === 'object' && (
+        ('current_slide' in obj && (typeof obj.current_slide === 'number' || typeof obj.current_slide === 'undefined')) ||
+        ('is_paused' in obj && (typeof obj.is_paused === 'boolean' || typeof obj.is_paused === 'undefined'))
+      );
+    }
   const { control } = useAuctionBannerControl();
   const { activeSeason } = useActiveSeason();
   const [showCelebration, setShowCelebration] = useState(false);
@@ -50,9 +57,7 @@ export default function AuctionDayBannerTest() {
   const lastTeamRef = useRef<string | null>(null);
   const soldTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Modern UI background effect
-  // Add a fixed, beautiful background with gradient, blur, and pattern overlay
-  // This will be rendered at the top level of the page
+  // Modern UI background effect (no stats shown)
 
   // Listen to live auction state
   const { data: liveAuction } = useQuery({
@@ -212,19 +217,10 @@ export default function AuctionDayBannerTest() {
           <rect width="100%" height="100%" fill="url(#dots)" />
         </svg>
       </div>
-      {/* Custom Player Info Card Example */}
+      {/* Player Info Card (restored, no stats) */}
       {liveAuction?.current_player_id && (
         <div className="flex flex-col items-center justify-center py-8 animate-fade-in">
-          <div
-            className={
-              [
-                'relative rounded-3xl shadow-2xl p-10 w-full max-w-2xl flex flex-col items-center border-4 border-primary/40',
-                'bg-white/10 backdrop-blur-md', // glassmorphism effect
-                'hover:bg-white/20 transition-colors',
-                'ring-1 ring-white/30',
-              ].join(' ')
-            }
-          >
+          <div className="relative rounded-3xl shadow-2xl p-10 w-full max-w-2xl flex flex-col items-center border-4 border-primary/40 bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors ring-1 ring-white/30">
             {/* Player Photo with glow */}
             <div className="relative mb-6">
               {currentPlayer?.photo_url ? (
@@ -237,38 +233,12 @@ export default function AuctionDayBannerTest() {
               ) : (
                 <div className="w-44 h-44 rounded-full bg-muted shadow-2xl border-4 border-white/80 animate-pulse" />
               )}
-              {/* Team logo overlay */}
-              {/* Hide logo overlay when player is selected for auction */}
-              {(() => {
-                if (!liveAuction.current_bidding_team_id || !allTeams) return null;
-                // Hide the logo overlay if a player is selected for auction
-                if (liveAuction.current_player_id) return null;
-                const team = allTeams.find((t: any) => t.id === liveAuction.current_bidding_team_id);
-                if (!team?.logo_url) return null;
-                return (
-                  <img
-                    src={team.logo_url}
-                    alt={team.name}
-                    className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full border-4 border-primary bg-white shadow-xl animate-pop-in"
-                    style={{ background: '#fff' }}
-                  />
-                );
-              })()}
             </div>
             {/* Player Name */}
-            <h2 className="text-7xl font-extrabold text-primary drop-shadow-xl mb-2 text-center tracking-tight animate-fade-in-up">
+            <h2 className="text-5xl font-extrabold text-primary drop-shadow-xl mb-2 text-center tracking-tight animate-fade-in-up">
               {currentPlayer?.full_name || "Player Name"}
             </h2>
-            
-            {/* Residency Status (example: QLD/OS) */}
-            <div className="text-3xl font-bold text-blue-300 mb-4 text-center animate-fade-in-up delay-100">
-              {/* TODO: Replace with actual residency status if available */}
-              Residency: <span className="text-white">QLD</span>
-            </div>
-            {/* Player Role and Season - moved down */}
-            <div className="text-2xl font-semibold text-blue-200 mb-2 text-center animate-fade-in-up delay-200">Auction Player</div>
-            <div className="text-lg text-blue-300 mb-8 text-center animate-fade-in-up delay-300">Season 1</div>
-            {/* Bid Price & Bidding Team - closer together */}
+            {/* Current Bid */}
             <div className="flex flex-row items-center justify-center gap-2 bg-primary/20 border border-primary/40 rounded-2xl px-10 py-6 w-full max-w-md mb-4 animate-fade-in-up delay-400">
               <div className="flex flex-row items-center gap-3">
                 <div className="text-5xl font-extrabold text-primary drop-shadow">${liveAuction.current_bid?.toLocaleString() ?? 0}</div>
@@ -281,7 +251,19 @@ export default function AuctionDayBannerTest() {
                 })()}
               </div>
             </div>
-            {/* Show all team logos below the stats */}
+            {/* Residency Status */}
+            <div className="text-2xl font-bold text-blue-300 mb-4 text-center animate-fade-in-up delay-100">
+              Residency: <span className="text-white">{(currentPlayer as any)?.player_season_registrations?.[0]?.residency_type || "-"}</span>
+            </div>
+            {/* Player Role */}
+            <div className="text-xl font-semibold text-blue-200 mb-2 text-center animate-fade-in-up delay-200">
+              {(() => {
+                // Try to get role from topBids or currentPlayer if available
+                const player = topBids?.data?.find((p: any) => p.player?.id === liveAuction.current_player_id)?.player;
+                return player?.role || "Auction Player";
+              })()}
+            </div>
+            {/* All Teams Logo Bar */}
             {allTeams && (
               <div className="flex flex-row items-center justify-center gap-6 mt-6">
                 {allTeams.map((team: any) => {
@@ -303,16 +285,15 @@ export default function AuctionDayBannerTest() {
                 })}
               </div>
             )}
-            {/* Visual effect: animated underline */}
-            <div className="w-2/3 h-1 bg-gradient-to-r from-primary to-blue-400 rounded-full my-6 animate-pulse" />
-            {/* Callout */}
-            <div className="text-2xl text-white/80 text-center animate-fade-in-up delay-500">
-              Ready for bidding!<br />Who will win this player?
-            </div>
           </div>
         </div>
       )}
-      <AuctionDayBanner key={acquisitionKey} control={control} />
+      {/* Only pass control if it matches the expected type */}
+      {isValidControl(control) ? (
+        <AuctionDayBanner key={acquisitionKey} control={control} />
+      ) : (
+        <AuctionDayBanner key={acquisitionKey} />
+      )}
       {/* Debug and Test Celebration buttons removed as requested */}
       {debug && (
         <div className="absolute top-10 right-2 z-50 bg-white text-black p-2 rounded shadow text-xs max-w-xs w-72">

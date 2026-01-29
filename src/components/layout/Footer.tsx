@@ -129,8 +129,16 @@ export function Footer() {
           </div>
         )}
 
-        <div className="mt-12 pt-8 border-t border-border text-center">
-          <p className="text-muted-foreground text-sm">
+        {/* Acknowledgement of Traditional Owners - Full Footer Plain Text */}
+        <div className="w-full bg-background text-white flex flex-col items-center justify-center py-10 mt-12 border-t border-border">
+          <img src="/abo.jpg" alt="Aboriginal Flag" className="w-24 h-16 mb-4" />
+          <div className="max-w-4xl w-full flex flex-col items-center px-4">
+            <span className="text-2xl md:text-3xl font-bold mb-2">Acknowledgement of Country</span>
+            <p className="text-base md:text-lg font-normal leading-relaxed text-center">
+              We acknowledge the Traditional Owners of the lands and waters upon which we work, play, live, and sustain ourselves. This land was never ceded, and we acknowledge that the Queensland Aboriginal people are its continuing custodians. We pay our respects to Elders past and present.
+            </p>
+          </div>
+          <p className="text-xs text-gray-400 mt-6">
             © {new Date().getFullYear()} Gold Coast Nepalese Premier League 2026. All rights reserved.
           </p>
         </div>

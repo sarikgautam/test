@@ -119,24 +119,27 @@ export default function Broadcast() {
   return (
     <div
       style={{
-        width: "1920px",
-        height: "1080px",
-        minHeight: "100vh",
-        background: `#0a0d16`,
+        width: '100vw',
+        height: '100vh',
+        minHeight: '100vh',
+        background: '#0a0d16',
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        overflow: 'hidden',
       }}
       className="flex items-center justify-center overflow-hidden relative"
     >
       {/* Main Container */}
-      <div className="relative z-10 flex w-[1600px] h-[900px] bg-gradient-to-br from-[#181f2e] to-[#0a0d16] rounded-3xl shadow-2xl border-8 border-primary/40 overflow-hidden">
+      <div className="relative z-10 flex flex-col md:flex-row w-full h-full bg-gradient-to-br from-[#181f2e] to-[#0a0d16] rounded-none md:rounded-3xl shadow-2xl border-0 md:border-8 border-primary/40 overflow-hidden" style={{maxWidth:'100vw',maxHeight:'100vh'}}>
         {/* Left: Player Photo */}
-        <div className="relative flex flex-col items-center justify-center w-[600px] h-full bg-black/60">
+        <div className="relative flex flex-col items-center justify-center w-full md:w-[38vw] h-[40vh] md:h-full bg-black/60 p-2 md:p-0">
           {/* GCNPL logo above profile pic */}
-          <div className="flex items-center justify-center">
-            <span className="inline-flex items-center justify-center w-80 h-36 bg-white rounded-xl shadow-lg border-2 border-primary">
-              <img src="/gcnpl-logo.png" alt="GCNPL Logo" className="w-72 h-32 object-contain" />
+          <div className="flex items-center justify-center w-full">
+            <span className="inline-flex items-center justify-center w-[30vw] h-[7vw] bg-white rounded-xl shadow-lg border-2 border-primary">
+              <img src="/gcnpl-logo.png" alt="GCNPL Logo" className="w-[6vw] h-[6vw] object-contain" />
             </span>
           </div>
-          <div className="relative w-[500px] h-[650px] rounded-2xl overflow-hidden shadow-2xl border-4 border-white/10 flex items-center justify-center mb-4">
+          <div className="relative w-[28vw] h-[36vw] md:w-[22vw] md:h-[28vw] rounded-2xl overflow-hidden shadow-2xl border-4 border-white/10 flex items-center justify-center mb-2 md:mb-4">
             {currentPlayer?.photo_url ? (
               <img
                 src={currentPlayer.photo_url}
@@ -145,17 +148,17 @@ export default function Broadcast() {
                 style={{ filter: "drop-shadow(0 0 50px #fff8)" }}
               />
             ) : (
-              <User className="w-48 h-48 text-muted-foreground/50" />
+              <User className="w-32 h-32 md:w-48 md:h-48 text-muted-foreground/50" />
             )}
           </div>
           {/* On Auction Badge below profile pic */}
-          <span className="bg-green-500 text-white text-2xl font-bold px-8 py-2 rounded-full shadow-lg border-4 border-white/20 animate-fade-in">
+          <span className="bg-green-500 text-white text-lg md:text-2xl font-bold px-4 md:px-8 py-1 md:py-2 rounded-full shadow-lg border-4 border-white/20 animate-fade-in mt-2 md:mt-0">
             ON AUCTION
           </span>
         </div>
 
         {/* Right: Player Info and Bidding */}
-        <div className="flex-1 flex flex-col justify-between p-16">
+        <div className="flex-1 flex flex-col justify-between p-2 md:p-8 lg:p-16 min-w-0 overflow-x-auto">
           <div>
             {/* Suspense Animation Reveal for Player Name, Stats, Profile */}
             <div className="relative">
@@ -220,43 +223,7 @@ export default function Broadcast() {
                 )}
               </div>
               {/* Key Player Stats - moved further down */}
-              {playerStats && (
-                (playerStats.matches === 0 && playerStats.runs_scored === 0 && playerStats.wickets === 0) ? (
-                  <div className="flex flex-col items-center justify-center mb-10 mt-10 px-12 py-6 rounded-3xl bg-white/10 backdrop-blur-md shadow-2xl animate-suspense-reveal-delay3">
-                    <span className="text-xl text-white/80 mb-2">No GCNPL stats yet</span>
-                    <span className="text-base text-primary font-semibold mb-2">Player did not play last GCNPL season</span>
-                    <div className="flex-1 flex items-center justify-center gap-2 mt-2">
-                      <span className="text-xs text-white/60 font-semibold tracking-wide px-2 py-1 rounded bg-primary/10">GCNPL S1</span>
-                      <span className="inline-flex items-center justify-center w-28 h-20 bg-white rounded-lg shadow border border-primary">
-                        <img src="/gcnpl-logo.png" alt="GCNPL Logo" className="w-24 h-16 object-contain" />
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex justify-center gap-24 mb-10 mt-10 px-12 py-6 rounded-3xl bg-white/10 backdrop-blur-md shadow-2xl animate-suspense-reveal-delay3 items-center">
-                    <div className="flex flex-col items-center">
-                      <span className="text-6xl font-extrabold text-primary drop-shadow-xl">{playerStats.matches}</span>
-                      <span className="text-2xl text-white/80 mt-2 tracking-wide">Matches</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-6xl font-extrabold text-primary drop-shadow-xl">{playerStats.runs_scored}</span>
-                      <span className="text-2xl text-white/80 mt-2 tracking-wide">Runs</span>
-                    </div>
-                    {!(currentPlayer?.role === 'batsman' || currentPlayer?.role === 'wicketkeeper') && (
-                      <div className="flex flex-col items-center">
-                        <span className="text-6xl font-extrabold text-primary drop-shadow-xl">{playerStats.wickets}</span>
-                        <span className="text-2xl text-white/80 mt-2 tracking-wide">Wickets</span>
-                      </div>
-                    )}
-                    <div className="flex flex-col items-center justify-center ml-8">
-                      <span className="text-3xl text-white/80 font-extrabold tracking-widest mb-2">GCNPL S1</span>
-                      <span className="inline-flex items-center justify-center w-40 h-32 bg-white rounded-2xl shadow-lg">
-                        <img src="/gcnpl-logo.png" alt="GCNPL Logo" className="w-36 h-28 object-contain" />
-                      </span>
-                    </div>
-                  </div>
-                )
-              )}
+              {/* Stats containers removed as requested */}
             </div>
             {/* Team Logo Bar - all teams, highlight and zoom last bidded (moved above current bid) */}
             {/* ...existing code... */}
@@ -279,45 +246,7 @@ export default function Broadcast() {
                       <span className="text-2xl text-white/80 mt-1">Current Team</span>
                     </div>
                   </div>
-                  {currentPlayer?.team_stats && (
-                    <div className="mt-4 px-10 py-6 rounded-2xl bg-gradient-to-r from-primary/10 to-blue-200/10 shadow-xl min-h-[3rem] flex flex-wrap items-center justify-center gap-4">
-                      {currentPlayer.team_stats.split(/\s+/).map((stat: string, idx: number) => {
-                        const [label, value] = stat.split(":");
-                        return (
-                          <div
-                            key={idx}
-                            className="flex flex-col items-center bg-white/80 px-6 py-3 rounded-xl shadow border-2 border-primary/20 min-w-[80px] transition-transform duration-500 animate-fade-in-top"
-                            style={{ animationDelay: `${idx * 0.12}s` }}
-                          >
-                            <span className="text-lg font-bold text-primary uppercase tracking-widest">{label}</span>
-                            <span className="text-3xl font-extrabold text-blue-900 mt-1">{value}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                Stats are retrieved from PlayHQ profile based on player's recent registration
-                <style jsx global>{`
-                  .animate-fade-in-top {
-                    opacity: 0;
-                    transform: translateY(-40px) scale(0.98);
-                    animation: fadeInTop 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-                  }
-                  @keyframes fadeInTop {
-                    0% {
-                      opacity: 0;
-                      transform: translateY(-40px) scale(0.98);
-                    }
-                    80% {
-                      opacity: 1;
-                      transform: translateY(8px) scale(1.01);
-                    }
-                    100% {
-                      opacity: 1;
-                      transform: translateY(0) scale(1);
-                    }
-                  }
-                `}</style>
+                  {/* team_stats and stats block removed */}
                 </div>
               );
             })()}
@@ -353,7 +282,7 @@ export default function Broadcast() {
               </div>
               {/* Team Logo Bar - all teams, highlight and zoom last bidded (now to the right of current bid) */}
               {allTeams && allTeams.length > 0 && (
-                <div className="flex items-center gap-6 ml-8 px-4 py-2 rounded-2xl bg-white/5 backdrop-blur-md shadow-lg">
+                <div className="flex flex-wrap items-center gap-4 md:gap-6 ml-2 md:ml-8 px-2 md:px-4 py-1 md:py-2 rounded-2xl bg-white/5 backdrop-blur-md shadow-lg" style={{maxHeight:'12vh',overflow:'hidden'}}>
                   {allTeams.map((team: any) => {
                     const isBidding = team.id === biddingTeamId;
                     return (
@@ -370,7 +299,7 @@ export default function Broadcast() {
                           <img
                             src={team.logo_url}
                             alt={team.name}
-                            className="w-16 h-16 object-contain mb-1"
+                            className="w-12 h-12 md:w-16 md:h-16 object-contain mb-1"
                             style={{ boxShadow: isBidding ? `0 0 40px ${team.primary_color}` : "none" }}
                           />
                         ) : (
@@ -381,7 +310,7 @@ export default function Broadcast() {
                             {team.short_name}
                           </div>
                         )}
-                        <span className={`text-xs font-bold mt-0.5 ${isBidding ? "text-white" : "text-primary"}`}>{team.short_name}</span>
+                        <span className={`text-[10px] md:text-xs font-bold mt-0.5 ${isBidding ? "text-white" : "text-primary"}`}>{team.short_name}</span>
                       </div>
                     );
                   })}

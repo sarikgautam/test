@@ -532,7 +532,6 @@ export default function AuctionStats() {
             </CardContent>
           </Card>
         )}
-
         {/* Retained Players */}
         {retainedPlayers && retainedPlayers.length > 0 && (
           <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-background to-background overflow-hidden">
