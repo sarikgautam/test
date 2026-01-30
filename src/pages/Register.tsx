@@ -346,7 +346,6 @@ const Register = () => {
       try {
         const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
         const response = await fetch(
-          `${SUPABASE_URL}/functions/v1/send-registration-email`,
           {
             method: "POST",
             headers: {
